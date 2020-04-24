@@ -1,0 +1,10 @@
+[package]
+authors = ["Vivian Hellyer <vivian@hellyer.dev>"]
+edition = "2018"
+name = "imms"
+version = "0.1.0"
+
+[dependencies]
+dashmap = { default-features = true, version = "^3.11.1" }
+float-cmp = { default-features = false, version = "^0.6.0" }
+log = { default-features = false, version = "0.4" }

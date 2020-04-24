@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "bin",
+    "bin/examples/imms-basic-command",
+    "client",
+    "lib",
+]
