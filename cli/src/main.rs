@@ -1,36 +1,66 @@
+mod input;
+
 use async_std::task;
 use hop::Client;
+use hop_lib::command::CommandType;
 use std::{
-    env,
     error::Error,
-    io::{self, StdinLock, StdoutLock, Write},
-    net::SocketAddr,
-    str::FromStr,
+    io::{self, Write},
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let addr = address().unwrap();
-
-    let client = task::block_on(Client::connect(addr))?;
+    let mut client = Client::memory();
     let stdin = io::stdin();
     let mut stdin = stdin.lock();
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
+    let mut input = String::new();
 
     loop {
         write!(stdout, "> ")?;
         stdout.flush()?;
-        let cmd = command(&mut stdin);
+        let mut req = input::process_command(&mut stdin, &mut input)?;
+        input.clear();
+
+        match req.kind() {
+            CommandType::DecrementInt => {
+                let key = match req.key() {
+                    Some(key) => key,
+                    None => {
+                        writeln!(stdout, "Key required.")?;
+
+                        continue;
+                    },
+                };
+
+                let v = task::block_on(client.decrement_int(key)).unwrap();
+
+                writeln!(stdout, "{}", v)?;
+            },
+            CommandType::Echo => {
+                if let Some(args) = req.flatten_args() {
+                    let v = task::block_on(client.echo(args)).unwrap();
+
+                    writeln!(stdout, "{}", String::from_utf8_lossy(&v))?;
+                } else {
+                    writeln!(stdout, )?;
+                }
+            },
+            CommandType::IncrementInt => {
+                let key = match req.key() {
+                    Some(key) => key,
+                    None => {
+                        writeln!(stdout, "Key required.")?;
+
+                        continue;
+                    },
+                };
+
+                let v = task::block_on(client.increment_int(key)).unwrap();
+
+                writeln!(stdout, "{}", v)?;
+            },
+            _ => {},
+        }
     }
-}
-
-fn address() -> Option<SocketAddr> {
-    let arg = env::args().skip(1).next()?;
-
-    SocketAddr::from_str(&arg).ok()
-}
-
-fn command(lock: &mut StdinLock) -> String {
-    let mut s = String::new();
-    s
 }
