@@ -1,18 +1,17 @@
+pub mod r#impl;
 pub mod protocol;
 
 mod error;
 mod kind;
-mod r#impl;
 
 pub use self::{
     error::{Error as CommandError, Result as CommandResult},
     kind::{CommandType, InvalidCommandType},
 };
 
-use super::state::State;
+use self::r#impl::*;
 use alloc::vec::Vec;
-use protocol::CommandInfo;
-use r#impl::*;
+use crate::Hop;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ArgumentNotation {
@@ -21,24 +20,28 @@ pub enum ArgumentNotation {
     One,
 }
 
-pub trait Command<'a> {
-    fn new(state: &'a State) -> Self
-    where
-        Self: Sized;
-    fn dispatch(self, req: Request) -> CommandResult<Response>;
+pub trait Dispatch {
+    fn dispatch(hop: &Hop, req: &mut Request) -> CommandResult<Response>;
 }
 
-pub struct Request<'a> {
-    pub args: Option<&'a [Vec<u8>]>,
+pub struct Request {
+    args: Option<Vec<Vec<u8>>>,
+    kind: CommandType,
 }
 
-impl Request<'_> {
-    pub fn arg(&self, idx: usize) -> Option<&[u8]> {
-        self.args.and_then(|args| args.get(idx)).map(|x| x.as_ref())
+impl Request {
+    pub fn new(kind: CommandType, args: Option<Vec<Vec<u8>>>) -> Self {
+        Self { args, kind }
     }
 
-    pub fn flatten_args(self) -> Option<Vec<u8>> {
-        Some(self.args?.iter().fold(Vec::new(), |mut acc, arg| {
+    pub fn arg(&self, idx: usize) -> Option<&[u8]> {
+        self.args.as_ref().and_then(|args| args.get(idx)).map(|x| x.as_ref())
+    }
+
+    pub fn flatten_args(&self) -> Option<Vec<u8>> {
+        let start = if self.kind.has_key() { 1 } else { 0 };
+
+        Some(self.args.as_ref()?.get(start..)?.iter().fold(Vec::new(), |mut acc, arg| {
             acc.extend_from_slice(arg);
 
             acc
@@ -46,7 +49,19 @@ impl Request<'_> {
     }
 
     pub fn key(&mut self) -> Option<&[u8]> {
-        self.args.and_then(|args| args.get(0).map(|x| x.as_slice()))
+        if !self.kind.has_key() {
+            return None;
+        }
+
+        self.args.as_ref().and_then(|args| args.get(0).map(|x| x.as_slice()))
+    }
+
+    pub fn kind(&self) -> CommandType {
+        self.kind
+    }
+
+    pub fn into_args(mut self) -> Option<Vec<Vec<u8>>> {
+        self.args.take()
     }
 }
 
@@ -89,20 +104,16 @@ impl<T: Into<Vec<u8>>> From<T> for Response {
     }
 }
 
-pub fn dispatch(state: &State, command: &CommandInfo) -> CommandResult<Response> {
-    let req = Request {
-        args: command.arguments.as_deref(),
-    };
-
-    match command.kind {
-        CommandType::Append => Append::new(state).dispatch(req),
-        CommandType::DecrementIntBy => DecrementIntBy::new(state).dispatch(req),
-        CommandType::DecrementInt => DecrementInt::new(state).dispatch(req),
-        CommandType::Echo => Echo::new(state).dispatch(req),
-        CommandType::IncrementInt => IncrementInt::new(state).dispatch(req),
-        CommandType::IncrementIntBy => IncrementIntBy::new(state).dispatch(req),
-        CommandType::Stats => Stats::new(state).dispatch(req),
-        CommandType::StringLength => StringLength::new(state).dispatch(req),
+pub fn dispatch(hop: &Hop, req: &mut Request) -> CommandResult<Response> {
+    match req.kind() {
+        CommandType::Append => Append::dispatch(hop, req),
+        CommandType::DecrementIntBy => DecrementIntBy::dispatch(hop, req),
+        CommandType::DecrementInt => DecrementInt::dispatch(hop, req),
+        CommandType::Echo => Echo::dispatch(hop, req),
+        CommandType::IncrementInt => IncrementInt::dispatch(hop, req),
+        CommandType::IncrementIntBy => IncrementIntBy::dispatch(hop, req),
+        CommandType::Stats => Stats::dispatch(hop, req),
+        CommandType::StringLength => StringLength::dispatch(hop, req),
     }
 }
 

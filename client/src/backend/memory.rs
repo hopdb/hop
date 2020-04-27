@@ -1,7 +1,7 @@
 use super::Backend;
 use async_trait::async_trait;
 use hop_lib::{
-    command::{self, protocol::CommandInfo, CommandError, CommandType},
+    command::{self, CommandError, CommandType, Request},
     Hop,
 };
 use std::convert::TryInto;
@@ -32,11 +32,9 @@ impl Backend for MemoryBackend {
     type Error = Error;
 
     async fn decrement_int(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
-        let cmd = CommandInfo {
-            arguments: Some(vec![key.to_vec()]),
-            kind: CommandType::DecrementInt,
-        };
-        let resp = command::dispatch(self.hop.state(), &cmd)?.into_bytes();
+        let mut req = Request::new(CommandType::DecrementInt, Some(vec![key.to_vec()]));
+
+        let resp = command::dispatch(&self.hop, &mut req)?.into_bytes();
 
         let arr = resp.get(..8).unwrap().try_into().unwrap();
         let num = i64::from_be_bytes(arr);
@@ -45,11 +43,8 @@ impl Backend for MemoryBackend {
     }
 
     async fn increment(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
-        let cmd = CommandInfo {
-            arguments: Some(vec![key.to_vec()]),
-            kind: CommandType::IncrementInt,
-        };
-        let resp = command::dispatch(self.hop.state(), &cmd)?.into_bytes();
+        let mut req = Request::new(CommandType::IncrementInt, Some(vec![key.to_vec()]));
+        let resp = command::dispatch(&self.hop, &mut req)?.into_bytes();
 
         let arr = resp.get(..8).unwrap().try_into().unwrap();
         let num = i64::from_be_bytes(arr);
@@ -58,11 +53,8 @@ impl Backend for MemoryBackend {
     }
 
     async fn increment_int(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
-        let cmd = CommandInfo {
-            arguments: Some(vec![key.to_vec()]),
-            kind: CommandType::IncrementInt,
-        };
-        let resp = command::dispatch(self.hop.state(), &cmd)?.into_bytes();
+        let mut cmd = Request::new(CommandType::IncrementInt, Some(vec![key.to_vec()]));
+        let resp = command::dispatch(&self.hop, &mut cmd)?.into_bytes();
 
         let arr = resp.get(..8).unwrap().try_into().unwrap();
         let num = i64::from_be_bytes(arr);

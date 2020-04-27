@@ -5,7 +5,7 @@ use async_std::{
     task,
 };
 use hop::{
-    command::{self, protocol::Context},
+    command::protocol::Context,
     Hop,
 };
 use log::{debug, warn};
@@ -63,9 +63,7 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
             break;
         }
 
-        let res = ctx.feed(&mut input);
-
-        let cmd = match res {
+        let mut req = match ctx.feed(&input) {
             Ok(Some(cmd)) => cmd,
             Ok(None) => continue,
             Err(why) => {
@@ -75,12 +73,12 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
             }
         };
 
-        let resp = command::dispatch(hop.state(), &cmd).unwrap();
+        let resp = hop.dispatch(&mut req).unwrap();
 
         writer.write_all(resp.bytes()).await?;
 
-        if let Some(arguments) = cmd.arguments {
-            ctx.reset(arguments);
+        if let Some(args) = req.into_args() {
+            ctx.reset(args);
         }
 
         input.clear();

@@ -1,20 +1,12 @@
 use super::{decrement_int_by::DecrementIntBy, prelude::*};
 
-pub struct DecrementInt<'a> {
-    state: &'a State,
-}
+pub struct DecrementInt;
 
-impl<'a> Command<'a> for DecrementInt<'a> {
-    fn new(state: &'a State) -> Self {
-        Self { state }
-    }
-
-    fn dispatch(self, mut req: Request) -> Result<Response> {
+impl Dispatch for DecrementInt {
+    fn dispatch(hop: &Hop, req: &mut Request) -> Result<Response> {
         let key = req.key().ok_or(Error::KeyRetrieval)?;
 
-        let inner = DecrementIntBy { state: self.state };
-
-        let new = inner.decrement(key, 1)?;
+        let new = DecrementIntBy::decrement(hop, key, 1)?;
 
         Ok(Response::from_int(new))
     }

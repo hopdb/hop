@@ -1,15 +1,9 @@
 use super::prelude::*;
 
-pub struct Stats<'a> {
-    state: &'a State,
-}
+pub struct Stats;
 
-impl<'a> Command<'a> for Stats<'a> {
-    fn new(state: &'a State) -> Self {
-        Self { state }
-    }
-
-    fn dispatch(self, _: Request) -> Result<Response> {
+impl Dispatch for Stats {
+    fn dispatch(_: &Hop, _: &mut Request) -> Result<Response> {
         Ok("Pong!".into())
     }
 }

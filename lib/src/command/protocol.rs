@@ -1,14 +1,8 @@
-use super::CommandType;
+use super::{CommandType, Request};
 use crate::pool::Pool;
 use alloc::vec::Vec;
 use core::convert::{TryFrom, TryInto};
 use log::warn;
-
-#[derive(Clone, Debug)]
-pub struct CommandInfo {
-    pub arguments: Option<Vec<Vec<u8>>>,
-    pub kind: CommandType,
-}
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -32,7 +26,7 @@ impl Default for Stage {
 }
 
 enum StageConclusion {
-    Finished(CommandInfo),
+    Finished(Request),
     Incomplete,
     Next,
 }
@@ -52,7 +46,7 @@ impl Context {
         Default::default()
     }
 
-    pub fn feed(&mut self, buf: &[u8]) -> Result<Option<CommandInfo>, ParseError> {
+    pub fn feed(&mut self, buf: &[u8]) -> Result<Option<Request>, ParseError> {
         loop {
             // We need to do this check on the first iteration to make sure we
             // were actually given *any* data, and after each iteration to make
@@ -104,8 +98,8 @@ impl Context {
         if kind.is_simple() {
             self.reset_light();
 
-            return Ok(StageConclusion::Finished(CommandInfo {
-                arguments: None,
+            return Ok(StageConclusion::Finished(Request {
+                args: None,
                 kind,
             }));
         }
@@ -158,8 +152,8 @@ impl Context {
         if self.arg_count() == argument_count as usize {
             let args = self.buf_args.take();
 
-            Ok(StageConclusion::Finished(CommandInfo {
-                arguments: args,
+            Ok(StageConclusion::Finished(Request {
+                args,
                 kind,
             }))
         } else {
