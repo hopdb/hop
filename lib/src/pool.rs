@@ -1,7 +1,4 @@
-use alloc::{
-    boxed::Box,
-    vec::Vec,
-};
+use alloc::{boxed::Box, vec::Vec};
 use core::fmt::{Debug, Formatter, Result as FmtResult};
 
 // A growable pool of items to be used and then pushed back into the pool.

@@ -22,14 +22,13 @@ impl Client<ServerBackend> {
     /// let client = Client::connect("localhost:14000").await?;
     /// println!("Increment value: {}", client.increment_int("foo").await?);
     /// # Ok(()) }
-    pub async fn connect(addrs: impl ToSocketAddrs) -> Result<Self, <ServerBackend as Backend>::Error> {
+    pub async fn connect(
+        addrs: impl ToSocketAddrs,
+    ) -> Result<Self, <ServerBackend as Backend>::Error> {
         let backend = ServerBackend::connect(addrs).await.unwrap();
 
-        Ok(Self {
-            backend,
-        })
+        Ok(Self { backend })
     }
-
 }
 
 impl Client<MemoryBackend> {

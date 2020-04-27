@@ -1,3 +1,4 @@
+use super::Backend;
 use async_std::{
     io::BufReader,
     net::{TcpStream, ToSocketAddrs},
@@ -11,15 +12,12 @@ use std::{
     io::Error as IoError,
     result::Result as StdResult,
 };
-use super::Backend;
 
 pub type Result<T> = StdResult<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
-    Connecting {
-        source: IoError,
-    }
+    Connecting { source: IoError },
 }
 
 impl Display for Error {
@@ -44,11 +42,12 @@ pub struct ServerBackend {
 
 impl ServerBackend {
     pub async fn connect(addrs: impl ToSocketAddrs) -> Result<Self> {
-        let stream = TcpStream::connect(addrs).await.map_err(|source| Error::Connecting { source })?;
+        let stream = TcpStream::connect(addrs)
+            .await
+            .map_err(|source| Error::Connecting { source })?;
 
         Ok(Self { stream })
     }
-
 }
 
 #[async_trait]

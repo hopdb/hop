@@ -1,7 +1,4 @@
-use super::{
-    increment_int_by::IncrementIntBy,
-    prelude::*,
-};
+use super::{increment_int_by::IncrementIntBy, prelude::*};
 
 pub struct IncrementInt<'a> {
     state: &'a State,
@@ -9,16 +6,12 @@ pub struct IncrementInt<'a> {
 
 impl<'a> Command<'a> for IncrementInt<'a> {
     fn new(state: &'a State) -> Self {
-        Self {
-            state,
-        }
+        Self { state }
     }
 
     fn dispatch(self, mut req: Request) -> Result<Response> {
         let key = req.key().ok_or(Error::KeyRetrieval)?;
-        let inner = IncrementIntBy {
-            state: self.state,
-        };
+        let inner = IncrementIntBy { state: self.state };
 
         let new = inner.increment(key, 1)?;
 

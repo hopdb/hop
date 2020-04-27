@@ -4,13 +4,12 @@ use async_std::{
     prelude::*,
     task,
 };
-use hop::{command::{self, protocol::Context}, Hop};
-use log::{debug, warn};
-use std::{
-    error::Error,
-    net::SocketAddr,
-    str::FromStr as _,
+use hop::{
+    command::{self, protocol::Context},
+    Hop,
 };
+use log::{debug, warn};
+use std::{error::Error, net::SocketAddr, str::FromStr as _};
 
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
@@ -21,7 +20,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 async fn run() -> Result<(), Box<dyn Error>> {
     debug!("Binding socket");
     let addr = SocketAddr::from_str("127.0.0.1:14000")?;
-
 
     debug!("Making TCP listener");
     let listener = TcpListener::bind(&addr).await?;
@@ -74,7 +72,7 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
                 warn!("Failed to feed to context: {:?}", why);
 
                 break;
-            },
+            }
         };
 
         let resp = command::dispatch(hop.state(), &cmd).unwrap();

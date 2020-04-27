@@ -1,7 +1,4 @@
-use super::{
-    decrement_int_by::DecrementIntBy,
-    prelude::*,
-};
+use super::{decrement_int_by::DecrementIntBy, prelude::*};
 
 pub struct DecrementInt<'a> {
     state: &'a State,
@@ -9,17 +6,13 @@ pub struct DecrementInt<'a> {
 
 impl<'a> Command<'a> for DecrementInt<'a> {
     fn new(state: &'a State) -> Self {
-        Self {
-            state,
-        }
+        Self { state }
     }
 
     fn dispatch(self, mut req: Request) -> Result<Response> {
         let key = req.key().ok_or(Error::KeyRetrieval)?;
 
-        let inner = DecrementIntBy {
-            state: self.state,
-        };
+        let inner = DecrementIntBy { state: self.state };
 
         let new = inner.decrement(key, 1)?;
 

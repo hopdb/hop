@@ -1,25 +1,16 @@
 pub mod error;
 pub mod object;
 
-use alloc::{
-    borrow::ToOwned,
-    sync::Arc,
-    string::String,
-    vec::Vec,
+use self::{
+    error::{Result, RetrievalError},
+    object::Object,
 };
+use alloc::{borrow::ToOwned, string::String, sync::Arc, vec::Vec};
 use core::{
     convert::TryFrom,
     ops::{Deref, DerefMut},
 };
-use dashmap::{
-    mapref::one::RefMut,
-    DashMap,
-    DashSet,
-};
-use self::{
-    error::{RetrievalError, Result},
-    object::Object,
-};
+use dashmap::{mapref::one::RefMut, DashMap, DashSet};
 
 #[derive(Clone, Debug)]
 #[repr(u8)]
@@ -254,7 +245,7 @@ impl State {
                     self.0.insert(key.to_owned(), f());
 
                     continue;
-                },
+                }
             }
         }
     }

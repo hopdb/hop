@@ -1,10 +1,7 @@
 mod memory;
 mod server;
 
-pub use self::{
-    memory::MemoryBackend,
-    server::ServerBackend,
-};
+pub use self::{memory::MemoryBackend, server::ServerBackend};
 
 use async_trait::async_trait;
 

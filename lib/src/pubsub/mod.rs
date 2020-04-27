@@ -1,10 +1,7 @@
 mod key_update;
 mod manager;
 
-pub use self::{
-    key_update::KeyUpdate,
-    manager::PubSubManager,
-};
+pub use self::{key_update::KeyUpdate, manager::PubSubManager};
 
 use futures_core::stream::Stream;
 use futures_intrusive::channel::UnbufferedChannel;

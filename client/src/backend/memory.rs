@@ -1,21 +1,14 @@
+use super::Backend;
 use async_trait::async_trait;
 use hop_lib::{
-    command::{
-        self,
-        protocol::CommandInfo,
-        CommandError,
-        CommandType,
-    },
+    command::{self, protocol::CommandInfo, CommandError, CommandType},
     Hop,
 };
 use std::convert::TryInto;
-use super::Backend;
 
 #[derive(Debug)]
 pub enum Error {
-    RunningCommand {
-        source: CommandError,
-    },
+    RunningCommand { source: CommandError },
 }
 
 impl From<CommandError> for Error {
@@ -30,9 +23,7 @@ pub struct MemoryBackend {
 
 impl MemoryBackend {
     pub fn new() -> Self {
-        Self {
-            hop: Hop::new(),
-        }
+        Self { hop: Hop::new() }
     }
 }
 

@@ -9,12 +9,8 @@ pub mod state;
 
 mod pool;
 
+use self::{pubsub::PubSubManager, session::SessionManager, state::State};
 use alloc::sync::Arc;
-use self::{
-    pubsub::PubSubManager,
-    session::SessionManager,
-    state::State,
-};
 
 #[derive(Debug, Default)]
 struct HopRef {

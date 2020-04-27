@@ -5,7 +5,7 @@ pub struct DecrementIntBy<'a> {
 }
 
 impl DecrementIntBy<'_> {
-    pub fn decrement(&self, key: &[u8], amount: i64) -> Result<i64>  {
+    pub fn decrement(&self, key: &[u8], amount: i64) -> Result<i64> {
         let mut int = self.state.int(key).map_err(|_| Error::KeyRetrieval)?;
 
         *int -= amount;
@@ -16,9 +16,7 @@ impl DecrementIntBy<'_> {
 
 impl<'a> Command<'a> for DecrementIntBy<'a> {
     fn new(state: &'a State) -> Self {
-        Self {
-            state,
-        }
+        Self { state }
     }
 
     fn dispatch(self, mut req: Request) -> Result<Response> {

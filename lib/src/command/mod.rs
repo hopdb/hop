@@ -5,11 +5,11 @@ mod r#impl;
 
 pub use error::{Error as CommandError, Result as CommandResult};
 
+use super::state::State;
 use alloc::vec::Vec;
 use core::convert::TryFrom;
-use r#impl::*;
 use protocol::CommandInfo;
-use super::state::State;
+use r#impl::*;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ArgumentNotation {
@@ -78,7 +78,9 @@ impl TryFrom<u8> for CommandType {
 }
 
 pub trait Command<'a> {
-    fn new(state: &'a State) -> Self where Self: Sized;
+    fn new(state: &'a State) -> Self
+    where
+        Self: Sized;
     fn dispatch(self, req: Request) -> CommandResult<Response>;
 }
 
@@ -151,12 +153,15 @@ pub fn dispatch(state: &State, command: &CommandInfo) -> CommandResult<Response>
 
 #[cfg(test)]
 mod tests {
-    use alloc::borrow::ToOwned;
     use super::Response;
+    use alloc::borrow::ToOwned;
 
     #[test]
     fn test_response_int() {
         assert_eq!(Response::from_int(7).0, [0, 0, 0, 0, 0, 0, 0, 7].to_owned());
-        assert_eq!(Response::from_int(68125).0, [0, 0, 0, 0, 0, 1, 10, 29].to_owned());
+        assert_eq!(
+            Response::from_int(68125).0,
+            [0, 0, 0, 0, 0, 1, 10, 29].to_owned()
+        );
     }
 }

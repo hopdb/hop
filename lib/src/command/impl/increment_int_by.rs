@@ -5,7 +5,7 @@ pub struct IncrementIntBy<'a> {
 }
 
 impl IncrementIntBy<'_> {
-    pub fn increment(&self, key: &[u8], amount: i64) -> Result<i64>  {
+    pub fn increment(&self, key: &[u8], amount: i64) -> Result<i64> {
         let mut int = self.state.int(key).map_err(|_| Error::KeyRetrieval)?;
 
         *int += amount;
@@ -16,9 +16,7 @@ impl IncrementIntBy<'_> {
 
 impl<'a> Command<'a> for IncrementIntBy<'a> {
     fn new(state: &'a State) -> Self {
-        Self {
-            state,
-        }
+        Self { state }
     }
 
     fn dispatch(self, mut req: Request) -> Result<Response> {

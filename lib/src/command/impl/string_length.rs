@@ -1,5 +1,5 @@
-use crate::state::object::Object;
 use super::prelude::*;
+use crate::state::object::Object;
 
 pub struct StringLength<'a> {
     state: &'a State,
@@ -7,9 +7,7 @@ pub struct StringLength<'a> {
 
 impl<'a> Command<'a> for StringLength<'a> {
     fn new(state: &'a State) -> Self {
-        Self {
-            state,
-        }
+        Self { state }
     }
 
     fn dispatch(self, mut req: Request) -> Result<Response> {

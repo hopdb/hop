@@ -1,7 +1,10 @@
+use super::Session;
 use alloc::sync::Arc;
 use core::sync::atomic::{AtomicU32, Ordering};
-use dashmap::{mapref::{entry::Entry, one::RefMut}, DashMap};
-use super::Session;
+use dashmap::{
+    mapref::{entry::Entry, one::RefMut},
+    DashMap,
+};
 
 #[derive(Debug, Default)]
 struct SessionManagerRef {
@@ -23,13 +26,13 @@ impl SessionManager {
         let value = match self.0.sessions.entry(self.next_id()) {
             Entry::Occupied(_) => {
                 unreachable!();
-            },
-            Entry::Vacant(v) => {
-                v.insert(session)
-            },
+            }
+            Entry::Vacant(v) => v.insert(session),
         };
 
-        self.0.next_id.store(self.next_id().wrapping_add(1), Ordering::SeqCst);
+        self.0
+            .next_id
+            .store(self.next_id().wrapping_add(1), Ordering::SeqCst);
 
         value
     }

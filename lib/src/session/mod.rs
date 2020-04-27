@@ -13,9 +13,6 @@ pub struct Session {
 
 impl Session {
     pub fn new(client_token: [u8; 32], id: u32) -> Self {
-        Self {
-            client_token,
-            id,
-        }
+        Self { client_token, id }
     }
 }

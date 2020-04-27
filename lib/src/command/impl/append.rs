@@ -6,9 +6,7 @@ pub struct Append<'a> {
 
 impl<'a> Command<'a> for Append<'a> {
     fn new(state: &'a State) -> Self {
-        Self {
-            state,
-        }
+        Self { state }
     }
 
     fn dispatch(self, req: Request) -> Result<Response> {

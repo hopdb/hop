@@ -1,8 +1,8 @@
+use super::CommandType;
+use crate::pool::Pool;
 use alloc::vec::Vec;
 use core::convert::{TryFrom, TryInto};
-use crate::pool::Pool;
 use log::warn;
-use super::CommandType;
 
 #[derive(Clone, Debug)]
 pub struct CommandInfo {
@@ -64,7 +64,10 @@ impl Context {
             let conclusion = match self.stage {
                 Stage::Init => self.stage_init(buf)?,
                 Stage::Kind(kind) => self.stage_kind(buf, kind)?,
-                Stage::ArgumentParsing { argument_count, kind } => self.stage_argument_parsing(buf, kind, argument_count)?,
+                Stage::ArgumentParsing {
+                    argument_count,
+                    kind,
+                } => self.stage_argument_parsing(buf, kind, argument_count)?,
             };
 
             match conclusion {
@@ -128,7 +131,12 @@ impl Context {
         Ok(StageConclusion::Next)
     }
 
-    fn stage_argument_parsing(&mut self, buf: &[u8], kind: CommandType, argument_count: u8) -> Result<StageConclusion, ParseError> {
+    fn stage_argument_parsing(
+        &mut self,
+        buf: &[u8],
+        kind: CommandType,
+        argument_count: u8,
+    ) -> Result<StageConclusion, ParseError> {
         let len_bytes = match buf.get(self.idx..self.idx + Self::ARG_LEN_BYTES) {
             Some(bytes) => bytes.try_into().unwrap(),
             None => return Ok(StageConclusion::Incomplete),
@@ -141,7 +149,7 @@ impl Context {
                 let mut pooled_arg = self.argument_pool.pull();
                 pooled_arg.extend_from_slice(arg);
                 self.push_arg(pooled_arg);
-            },
+            }
             None => return Ok(StageConclusion::Incomplete),
         };
 
@@ -181,7 +189,7 @@ impl Context {
                 args.push(arg);
 
                 self.buf_args.replace(args);
-            },
+            }
         }
     }
 
@@ -203,7 +211,10 @@ impl Default for Context {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::{CommandType, error::Result}, Context};
+    use super::{
+        super::{error::Result, CommandType},
+        Context,
+    };
 
     #[test]
     fn test_increment_foo() -> Result<()> {
@@ -217,14 +228,12 @@ mod tests {
         //   is the argument
         let mut cmd = [
             // command type 0 is "increment int"
-            0,
-            // there is 1 argument
-            1,
-            // the argument has a length of 3 bytes
-            0, 0, 0, 3,
-            // the argument is 'foo'
+            0, // there is 1 argument
+            1, // the argument has a length of 3 bytes
+            0, 0, 0, 3, // the argument is 'foo'
             b'f', b'o', b'o',
-        ].to_vec();
+        ]
+        .to_vec();
 
         // the context might not be given all of the data upfront (eg large
         // streams of data, just because of how tcp works, etc.), so often you
@@ -232,7 +241,8 @@ mod tests {
         // command request
         let mut ctx = Context::new();
         // but here we're feeding in all the data in one go
-        let cmd = ctx.feed(&mut cmd)
+        let cmd = ctx
+            .feed(&mut cmd)
             .expect("parses correctly")
             .expect("returns a command");
 
