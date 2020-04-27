@@ -9,7 +9,6 @@ pub use self::{
     kind::{CommandType, InvalidCommandType},
 };
 
-use self::r#impl::*;
 use alloc::vec::Vec;
 use crate::Hop;
 
@@ -101,19 +100,6 @@ impl<T: Into<Vec<u8>>> From<T> for Response {
         }
 
         Self(vec)
-    }
-}
-
-pub fn dispatch(hop: &Hop, req: &mut Request) -> CommandResult<Response> {
-    match req.kind() {
-        CommandType::Append => Append::dispatch(hop, req),
-        CommandType::DecrementIntBy => DecrementIntBy::dispatch(hop, req),
-        CommandType::DecrementInt => DecrementInt::dispatch(hop, req),
-        CommandType::Echo => Echo::dispatch(hop, req),
-        CommandType::IncrementInt => IncrementInt::dispatch(hop, req),
-        CommandType::IncrementIntBy => IncrementIntBy::dispatch(hop, req),
-        CommandType::Stats => Stats::dispatch(hop, req),
-        CommandType::StringLength => StringLength::dispatch(hop, req),
     }
 }
 
