@@ -67,6 +67,13 @@ impl<B: Backend> Client<B> {
         self.backend.decrement_int(key.as_ref()).await
     }
 
+    /// Echos the provided content back at you.
+    ///
+    /// Returns the input content.
+    pub async fn echo(&mut self, content: impl AsRef<[u8]>) -> Result<Vec<u8>, B::Error> {
+        self.backend.echo(content.as_ref()).await
+    }
+
     /// Increments a float or integer key by one.
     ///
     /// Returns the new value on success.

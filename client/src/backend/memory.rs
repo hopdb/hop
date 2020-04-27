@@ -42,6 +42,18 @@ impl Backend for MemoryBackend {
         Ok(num)
     }
 
+    async fn echo(&mut self, content: &[u8]) -> Result<Vec<u8>, Self::Error> {
+        let mut req = Request::new(CommandType::Echo, Some(vec![content.to_vec()]));
+
+        let mut resp = self.hop.dispatch(&mut req)?.into_bytes();
+
+        if !resp.is_empty() {
+            resp.remove(resp.len() - 1);
+        }
+
+        Ok(resp)
+    }
+
     async fn increment(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
         let mut req = Request::new(CommandType::IncrementInt, Some(vec![key.to_vec()]));
         let resp = self.hop.dispatch(&mut req)?.into_bytes();

@@ -5,6 +5,7 @@ use async_std::{
     prelude::*,
 };
 use async_trait::async_trait;
+use hop_lib::command::CommandType;
 use std::{
     convert::TryInto,
     error::Error as StdError,
@@ -69,6 +70,20 @@ impl Backend for ServerBackend {
         let num = i64::from_be_bytes(arr);
 
         Ok(num)
+    }
+
+    async fn echo(&mut self, content: &[u8]) -> Result<Vec<u8>> {
+        let mut cmd = vec![CommandType::Echo as u8, 1, 0, 0, 0, content.len() as u8];
+        cmd.extend_from_slice(content);
+        cmd.push(b'\n');
+
+        self.stream.write_all(&cmd).await.unwrap();
+
+        let mut s = Vec::new();
+        let mut reader = BufReader::new(&self.stream);
+        reader.read_until(b'\n', &mut s).await.unwrap();
+
+        Ok(s)
     }
 
     async fn increment(&mut self, key: &[u8]) -> Result<i64> {
