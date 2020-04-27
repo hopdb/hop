@@ -1,13 +1,16 @@
 pub mod protocol;
 
 mod error;
+mod kind;
 mod r#impl;
 
-pub use error::{Error as CommandError, Result as CommandResult};
+pub use self::{
+    error::{Error as CommandError, Result as CommandResult},
+    kind::{CommandType, InvalidCommandType},
+};
 
 use super::state::State;
 use alloc::vec::Vec;
-use core::convert::TryFrom;
 use protocol::CommandInfo;
 use r#impl::*;
 
@@ -16,65 +19,6 @@ pub enum ArgumentNotation {
     Multiple,
     None,
     One,
-}
-
-#[derive(Debug)]
-pub struct InvalidCommandType;
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-#[repr(u8)]
-pub enum CommandType {
-    IncrementInt = 0,
-    DecrementInt = 1,
-    IncrementIntBy = 2,
-    DecrementIntBy = 3,
-    Append = 20,
-    StringLength = 21,
-    Echo = 100,
-    Stats = 101,
-}
-
-impl CommandType {
-    pub fn argument_notation(self) -> ArgumentNotation {
-        use ArgumentNotation::*;
-        use CommandType::*;
-
-        match self {
-            Append => One,
-            Echo => Multiple,
-            IncrementInt => None,
-            IncrementIntBy => One,
-            DecrementInt => None,
-            DecrementIntBy => One,
-            Stats => None,
-            StringLength => One,
-        }
-    }
-
-    pub fn has_key(self) -> bool {
-        use CommandType::*;
-
-        match self {
-            Stats => false,
-            _ => true,
-        }
-    }
-
-    pub fn is_simple(self) -> bool {
-        self.argument_notation() == ArgumentNotation::None && !self.has_key()
-    }
-}
-
-impl TryFrom<u8> for CommandType {
-    type Error = InvalidCommandType;
-
-    fn try_from(num: u8) -> Result<Self, Self::Error> {
-        Ok(match num {
-            0 => CommandType::IncrementInt,
-            1 => CommandType::DecrementInt,
-            _ => return Err(InvalidCommandType),
-        })
-    }
 }
 
 pub trait Command<'a> {
