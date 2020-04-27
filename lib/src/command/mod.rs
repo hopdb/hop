@@ -62,18 +62,30 @@ impl Response {
         self.0
     }
 
-    fn from_int(v: i64) -> Self {
-        Self(v.to_be_bytes().to_vec())
+    fn from_int(value: i64) -> Self {
+        let mut bytes = value.to_be_bytes().to_vec();
+        bytes.push(b'\n');
+
+        Self(bytes)
     }
 
-    fn from_usize(v: usize) -> Self {
-        Self(v.to_be_bytes().to_vec())
+    fn from_usize(value: usize) -> Self {
+        let mut bytes = value.to_be_bytes().to_vec();
+        bytes.push(b'\n');
+
+        Self(bytes)
     }
 }
 
 impl<T: Into<Vec<u8>>> From<T> for Response {
     fn from(v: T) -> Self {
-        Self(v.into())
+        let mut vec: Vec<u8> = v.into();
+
+        if !vec.ends_with(&[b'\n']) {
+            vec.push(b'\n');
+        }
+
+        Self(vec)
     }
 }
 
@@ -82,7 +94,7 @@ pub fn dispatch(state: &State, command: &CommandInfo) -> CommandResult<Response>
         args: command.arguments.as_deref(),
     };
 
-    let mut resp = match command.kind {
+    match command.kind {
         CommandType::Append => Append::new(state).dispatch(req),
         CommandType::DecrementIntBy => DecrementIntBy::new(state).dispatch(req),
         CommandType::DecrementInt => DecrementInt::new(state).dispatch(req),
@@ -91,11 +103,7 @@ pub fn dispatch(state: &State, command: &CommandInfo) -> CommandResult<Response>
         CommandType::IncrementIntBy => IncrementIntBy::new(state).dispatch(req),
         CommandType::Stats => Stats::new(state).dispatch(req),
         CommandType::StringLength => StringLength::new(state).dispatch(req),
-    }?;
-
-    resp.0.push(b'\n');
-
-    Ok(resp)
+    }
 }
 
 #[cfg(test)]
