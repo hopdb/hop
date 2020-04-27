@@ -8,6 +8,6 @@ impl Command<'_> for Echo {
     }
 
     fn dispatch(self, req: Request) -> Result<Response> {
-        Ok(req.flatten_args().into())
+        Ok(req.flatten_args().unwrap_or_default().into())
     }
 }

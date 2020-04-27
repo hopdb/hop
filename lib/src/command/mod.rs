@@ -93,9 +93,12 @@ impl Request<'_> {
         self.args.and_then(|args| args.get(idx)).map(|x| x.as_ref())
     }
 
-    pub fn flatten_args(self) -> Vec<u8> {
-        // self.args.unwrap().cloned().flatten().collect()
-        Vec::new()
+    pub fn flatten_args(self) -> Option<Vec<u8>> {
+        Some(self.args?.iter().fold(Vec::new(), |mut acc, arg| {
+            acc.extend_from_slice(arg);
+
+            acc
+        }))
     }
 
     pub fn key(&mut self) -> Option<&[u8]> {
