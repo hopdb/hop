@@ -3,7 +3,7 @@ use super::prelude::*;
 pub struct Ping;
 
 impl Command<'_> for Ping {
-    fn new(_: &mut State) -> Self {
+    fn new(_: &State) -> Self {
         Self
     }
 

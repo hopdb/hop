@@ -1,74 +1,94 @@
-use async_std::{
-    io::BufReader,
-    net::{TcpStream, ToSocketAddrs},
-    prelude::*,
-};
-use std::{
-    convert::TryInto,
-    io::Result,
-};
+pub mod backend;
 
-pub struct Client {
-    stream: TcpStream,
+use async_std::net::ToSocketAddrs;
+use backend::{Backend, MemoryBackend, ServerBackend};
+
+/// A client for interfacing over Hop instances.
+pub struct Client<B: Backend> {
+    backend: B,
 }
 
-impl Client {
-    pub async fn connect(addrs: impl ToSocketAddrs) -> Result<Self> {
-        let stream = TcpStream::connect(addrs).await?;
+impl Client<ServerBackend> {
+    /// Connect to a server instance of Hop by address.
+    ///
+    /// # Examples
+    ///
+    /// Connect to an instance of Hop on port 14000 of localhost:
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::connect("localhost:14000").await?;
+    /// println!("Increment value: {}", client.increment_int("foo").await?);
+    /// # Ok(()) }
+    pub async fn connect(addrs: impl ToSocketAddrs) -> Result<Self, <ServerBackend as Backend>::Error> {
+        let backend = ServerBackend::connect(addrs).await.unwrap();
 
         Ok(Self {
-            stream,
+            backend,
         })
     }
 
-    pub async fn decrement_int(&mut self, key: impl AsRef<str>) -> Result<i64> {
-        let mut cmd = vec![1, 1, 0, 0, 0, key.as_ref().as_bytes().len() as u8];
-        cmd.extend_from_slice(key.as_ref().as_bytes());
-        cmd.push(b'\n');
+}
 
-        self.stream.write_all(&cmd).await?;
+impl Client<MemoryBackend> {
+    /// Create a local memory-backend Hop instance.
+    ///
+    /// This is similar to opening an in-memory SQLite instance.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use hop::Client;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// println!("Incremented value: {}", client.increment_int("foo").await?);
+    /// println!("Incremented again: {}", client.increment_int("foo").await?);
+    /// # Ok(()) }
+    /// ```
+    pub fn memory() -> Self {
+        Self {
+            backend: MemoryBackend::new(),
+        }
+    }
+}
 
-        let mut s = Vec::new();
-        let mut reader = BufReader::new(&self.stream);
-        reader.read_until(b'\n', &mut s).await?;
-
-        let arr = s.get(..8).unwrap().try_into().unwrap();
-        let num = i64::from_be_bytes(arr);
-
-        Ok(num)
+impl<B: Backend> Client<B> {
+    /// Decrements an integer key by one.
+    ///
+    /// Returns the new value on success.
+    ///
+    /// If the key does not exist, it is created with a value of 0 and then
+    /// decremented by 1, resulting in the value being -1.
+    ///
+    /// This is an `O(1)` time complexity operation.
+    pub async fn decrement_int(&mut self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
+        self.backend.decrement_int(key.as_ref()).await
     }
 
-    pub async fn increment(&mut self, key: impl AsRef<str>) -> Result<i64> {
-        let mut cmd = vec![0, 1, 0, 0, 0, key.as_ref().as_bytes().len() as u8];
-        cmd.extend_from_slice(key.as_ref().as_bytes());
-        cmd.push(b'\n');
-
-        self.stream.write_all(&cmd).await?;
-
-        let mut s = Vec::new();
-        let mut reader = BufReader::new(&self.stream);
-        reader.read_until(b'\n', &mut s).await?;
-
-        let arr = s.get(..8).unwrap().try_into().unwrap();
-        let num = i64::from_be_bytes(arr);
-
-        Ok(num)
+    /// Increments a float or integer key by one.
+    ///
+    /// Returns the new value on success.
+    ///
+    /// If the key does not exist, an integer key is created with a value of 0
+    /// and then incremented by 1, resulting in the value being 1.
+    ///
+    /// This is an `O(1)` time complexity operation.
+    pub async fn increment(&mut self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
+        self.backend.increment_int(key.as_ref()).await
     }
 
-    pub async fn increment_int(&mut self, key: impl AsRef<str>) -> Result<i64> {
-        let mut cmd = vec![0, 1, 0, 0, 0, key.as_ref().as_bytes().len() as u8];
-        cmd.extend_from_slice(key.as_ref().as_bytes());
-        cmd.push(b'\n');
-
-        self.stream.write_all(&cmd).await?;
-
-        let mut s = Vec::new();
-        let mut reader = BufReader::new(&self.stream);
-        reader.read_until(b'\n', &mut s).await?;
-
-        let arr = s.get(..8).unwrap().try_into().unwrap();
-        let num = i64::from_be_bytes(arr);
-
-        Ok(num)
+    /// Increments an integer key by one.
+    ///
+    /// Returns the new value on success.
+    ///
+    /// If the key does not exist, it is created with a value of 0 and then
+    /// incremented by 1, resulting in the value being 1.
+    ///
+    /// This is an `O(1)` time complexity operation.
+    pub async fn increment_int(&mut self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
+        self.backend.increment_int(key.as_ref()).await
     }
 }

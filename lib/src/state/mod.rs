@@ -1,19 +1,58 @@
 pub mod error;
+pub mod object;
 
-mod object;
-
-pub use object::Object;
-
+use alloc::{
+    borrow::ToOwned,
+    sync::Arc,
+    string::String,
+    vec::Vec,
+};
+use core::{
+    convert::TryFrom,
+    ops::{Deref, DerefMut},
+};
 use dashmap::{
     mapref::one::RefMut,
     DashMap,
+    DashSet,
 };
-use self::error::{DispatchError, Result};
-use std::{
-    collections::{HashMap, HashSet},
-    ops::{Deref, DerefMut},
-    sync::Arc,
+use self::{
+    error::{RetrievalError, Result},
+    object::Object,
 };
+
+#[derive(Clone, Debug)]
+#[repr(u8)]
+pub enum KeyType {
+    Bytes = 0,
+    Boolean = 1,
+    Float = 2,
+    Integer = 3,
+    String = 4,
+    List = 5,
+    Map = 6,
+    Set = 7,
+}
+
+impl TryFrom<u8> for KeyType {
+    type Error = ();
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        use KeyType::*;
+
+        Ok(match v {
+            0 => Bytes,
+            1 => Boolean,
+            2 => Float,
+            3 => Integer,
+            4 => String,
+            5 => List,
+            6 => Map,
+            7 => Set,
+            _ => return Err(()),
+        })
+    }
+}
 
 pub struct Boolean<'a>(RefMut<'a, Vec<u8>, Object>);
 
@@ -128,7 +167,7 @@ impl<'a> DerefMut for List<'a> {
 pub struct Map<'a>(RefMut<'a, Vec<u8>, Object>);
 
 impl<'a> Deref for Map<'a> {
-    type Target = HashMap<Vec<u8>, Vec<u8>>;
+    type Target = DashMap<Vec<u8>, Vec<u8>>;
 
     fn deref(&self) -> &Self::Target {
         match self.0.value() {
@@ -150,7 +189,7 @@ impl<'a> DerefMut for Map<'a> {
 pub struct Set<'a>(RefMut<'a, Vec<u8>, Object>);
 
 impl<'a> Deref for Set<'a> {
-    type Target = HashSet<Vec<u8>>;
+    type Target = DashSet<Vec<u8>>;
 
     fn deref(&self) -> &Self::Target {
         match self.0.value() {
@@ -201,12 +240,12 @@ impl State {
 }
 
 impl State {
-    pub fn key<'a>(&'a mut self, key: &[u8], f: impl Fn() -> Object) -> RefMut<'a, Vec<u8>, Object> {
-        if key.starts_with(b"__imms__:") {
+    pub fn key<'a>(&'a self, key: &[u8], f: impl Fn() -> Object) -> RefMut<'a, Vec<u8>, Object> {
+        if key.starts_with(b"__hop__:") {
             panic!("Accessed internal key: {}", String::from_utf8_lossy(key));
         }
 
-        debug_assert!(key.len() > 0);
+        debug_assert!(!key.is_empty());
 
         loop {
             match self.0.get_mut(key) {
@@ -220,75 +259,85 @@ impl State {
         }
     }
 
-    pub fn bool(&mut self, key: &[u8]) -> Result<Boolean<'_>> {
+    pub fn key_optional<'a>(&'a self, key: &[u8]) -> Option<RefMut<'a, Vec<u8>, Object>> {
+        if key.starts_with(b"__hop__:") {
+            panic!("Accessed internal key: {}", String::from_utf8_lossy(key));
+        }
+
+        debug_assert!(!key.is_empty());
+
+        self.0.get_mut(key)
+    }
+
+    pub fn bool(&self, key: &[u8]) -> Result<Boolean<'_>> {
         let mut r = self.key(key, Object::boolean);
 
         match r.value_mut() {
             Object::Boolean(_) => Ok(Boolean(r)),
-            _ => Err(DispatchError::KeyWrongType),
+            _ => Err(RetrievalError::TypeWrong),
         }
     }
 
-    pub fn int(&mut self, key: &[u8]) -> Result<Integer<'_>> {
+    pub fn int(&self, key: &[u8]) -> Result<Integer<'_>> {
         let mut r = self.key(key, Object::integer);
 
         match r.value_mut() {
             Object::Integer(_) => Ok(Integer(r)),
-            _ => Err(DispatchError::KeyWrongType),
+            _ => Err(RetrievalError::TypeWrong),
         }
     }
 
-    pub fn bytes(&mut self, key: &[u8]) -> Result<Bytes<'_>> {
+    pub fn bytes(&self, key: &[u8]) -> Result<Bytes<'_>> {
         let mut r = self.key(key, Object::bytes);
 
         match r.value_mut() {
             Object::Bytes(_) => Ok(Bytes(r)),
-            _ => Err(DispatchError::KeyWrongType),
+            _ => Err(RetrievalError::TypeWrong),
         }
     }
 
-    pub fn float(&mut self, key: &[u8]) -> Result<Float<'_>> {
+    pub fn float(&self, key: &[u8]) -> Result<Float<'_>> {
         let mut r = self.key(key, Object::float);
 
         match r.value_mut() {
             Object::Float(_) => Ok(Float(r)),
-            _ => Err(DispatchError::KeyWrongType),
+            _ => Err(RetrievalError::TypeWrong),
         }
     }
 
-    pub fn list(&mut self, key: &[u8]) -> Result<List<'_>> {
+    pub fn list(&self, key: &[u8]) -> Result<List<'_>> {
         let mut r = self.key(key, Object::list);
 
         match r.value_mut() {
             Object::List(_) => Ok(List(r)),
-            _ => Err(DispatchError::KeyWrongType),
+            _ => Err(RetrievalError::TypeWrong),
         }
     }
 
-    pub fn map(&mut self, key: &[u8]) -> Result<Map<'_>> {
+    pub fn map(&self, key: &[u8]) -> Result<Map<'_>> {
         let mut r = self.key(key, Object::map);
 
         match r.value_mut() {
             Object::Map(_) => Ok(Map(r)),
-            _ => Err(DispatchError::KeyWrongType),
+            _ => Err(RetrievalError::TypeWrong),
         }
     }
 
-    pub fn set(&mut self, key: &[u8]) -> Result<Set<'_>> {
+    pub fn set(&self, key: &[u8]) -> Result<Set<'_>> {
         let mut r = self.key(key, Object::set);
 
         match r.value_mut() {
             Object::Set(_) => Ok(Set(r)),
-            _ => Err(DispatchError::KeyWrongType),
+            _ => Err(RetrievalError::TypeWrong),
         }
     }
 
-    pub fn str(&mut self, key: &[u8]) -> Result<Str> {
+    pub fn str(&self, key: &[u8]) -> Result<Str> {
         let mut r = self.key(key, Object::string);
 
         match r.value_mut() {
             Object::String(_) => Ok(Str(r)),
-            _ => Err(DispatchError::KeyWrongType),
+            _ => Err(RetrievalError::TypeWrong),
         }
     }
 }

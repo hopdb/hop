@@ -1,9 +1,10 @@
 [package]
-name = "imms-client"
+name = "hop"
 version = "0.1.0"
 authors = ["Vivian Hellyer <vivian@hellyer.dev>"]
 edition = "2018"
 
 [dependencies]
 async-std = "^1.5.0"
-imms = { path = "../lib" }
+async-trait = "^0.1.30"
+hop-lib = { path = "../lib" }

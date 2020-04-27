@@ -4,7 +4,6 @@ use alloc::{
 };
 use core::fmt::{Debug, Formatter, Result as FmtResult};
 
-
 // A growable pool of items to be used and then pushed back into the pool.
 //
 // This is intended for single-threaded use, where the same items can be used

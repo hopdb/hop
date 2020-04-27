@@ -1,7 +1,13 @@
 [workspace]
 members = [
     "bin",
-    "bin/examples/imms-basic-command",
     "client",
+    "cli",
     "lib",
 ]
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+lto = true

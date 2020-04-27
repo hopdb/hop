@@ -1,22 +1,23 @@
-use std::{
-    error::Error as StdError,
+use core::{
     fmt::{Display, Formatter, Result as FmtResult},
-    result::Result as StdResult,
+    result::Result as CoreResult,
 };
 
-pub type Result<T, E = Error> = StdResult<T, E>;
+pub type Result<T, E = Error> = CoreResult<T, E>;
 
 #[derive(Debug)]
 pub enum Error {
+    ArgumentRetrieval,
     KeyRetrieval,
+    WrongType,
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
+            Self::ArgumentRetrieval => f.write_str("couldn't retrieve required argument"),
             Self::KeyRetrieval => f.write_str("couldn't retrieve key"),
+            Self::WrongType => f.write_str("the key has the wrong type"),
         }
     }
 }
-
-impl StdError for Error {}

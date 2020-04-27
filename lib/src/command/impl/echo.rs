@@ -3,7 +3,7 @@ use super::prelude::*;
 pub struct Echo;
 
 impl Command<'_> for Echo {
-    fn new(_: &mut State) -> Self {
+    fn new(_: &State) -> Self {
         Self
     }
 

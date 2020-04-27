@@ -1,14 +1,10 @@
-use std::result::Result as StdResult;
+use core::result::Result as CoreResult;
 
-pub type Result<T, E = DispatchError> = StdResult<T, E>;
+pub type Result<T, E = RetrievalError> = CoreResult<T, E>;
 
 #[derive(Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[repr(u8)]
-pub enum DispatchError {
-    BooleanValueInvalid = 0,
-    KeyNonexistant = 1,
-    KeyWrongType = 2,
-    FloatTooSmall = 3,
-    IntegerTooSmall = 4,
-    TooFewArguments = 5,
+pub enum RetrievalError {
+    Nonexistant = 0,
+    TypeWrong = 1,
 }

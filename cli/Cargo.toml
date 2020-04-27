@@ -1,9 +1,9 @@
 [package]
-name = "imms-basic-command"
-version = "0.1.0"
 authors = ["Vivian Hellyer <vivian@hellyer.dev>"]
 edition = "2018"
+name = "hop-cli"
+version = "0.1.0"
 
 [dependencies]
 async-std = { features = ["attributes"], version = "^1.5.0" }
-imms = { path = "../../../client", package = "imms-client" }
+hop = { path = "../client" }

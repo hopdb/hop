@@ -78,43 +78,6 @@
 //         Ok(())
 //     }
 
-//     pub fn decrement_int(&mut self, d: Dispatch) -> Result<i64> {
-//         log::debug!("{:?}", d);
-//         let key = d.key();
-
-//         Self::_decrement_int_by(self.get_int(key)?, 1)
-//     }
-
-//     pub fn decrement_int_by(&mut self, key: Vec<u8>, bytes: Vec<u8>) -> Result<i64> {
-//         let amount = utils::into_integer(&bytes)?;
-
-//         Self::_decrement_int_by(self.get_int(key)?, amount)
-//     }
-
-//     #[inline]
-//     fn _decrement_int_by(int: &mut i64, amount: i64) -> Result<i64> {
-//         *int = int.saturating_sub(amount);
-
-//         Ok(*int)
-//     }
-
-//      pub fn increment_int(&mut self, d: Dispatch) -> Result<i64> {
-//          let key = d.key();
-
-//          Self::_increment_int_by(self.get_int(key)?, 1)
-//      }
-
-//      pub fn increment_int_by(&mut self, key: Vec<u8>, amount: i64) -> Result<i64> {
-//          Self::_increment_int_by(self.get_int(key)?, amount)
-//      }
-
-//      #[inline]
-//      fn _increment_int_by(int: &mut i64, amount: i64) -> Result<i64> {
-//          *int = int.saturating_add(amount);
-
-//          Ok(*int)
-//      }
-
 //     #[inline]
 //     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) -> Result<()> {
 //         Self::_set(self.get_bytes(key)?, value)
@@ -148,29 +111,6 @@
 //         *boolean = utils::into_boolean(value[0])?;
 
 //         Ok(())
-//     }
-
-//     /// Returns the number of bytes contained in a string.
-//     ///
-//     /// This is an O(1) operation.
-//     ///
-//     /// *Note**: This returns the number of _bytes_, not the number of
-//     /// _characters_.
-//     ///
-//     /// # Errors
-//     ///
-//     /// Returns [DispatchError::KeyNonexistant] if the key does not exist.
-//     ///
-//     /// Returns [DispatchError::KeyWrongType] if the key's value is not a
-//     /// [Value::String].
-//     #[inline]
-//     pub fn strlen(&mut self, key: Vec<u8>) -> Result<usize> {
-//         self.get_string(key).map(Self::_strlen)
-//     }
-
-//     #[inline]
-//     fn _strlen(string: &mut String) -> usize {
-//         string.len()
 //     }
 
 //     /// Returns the number of keys in the state.

@@ -1,8 +1,7 @@
+use alloc::vec::Vec;
+use core::convert::{TryFrom, TryInto};
 use crate::pool::Pool;
-use std::{
-    convert::{TryFrom, TryInto},
-    mem,
-};
+use log::warn;
 use super::CommandType;
 
 #[derive(Clone, Debug)]
@@ -32,6 +31,12 @@ impl Default for Stage {
     }
 }
 
+enum StageConclusion {
+    Finished(CommandInfo),
+    Incomplete,
+    Next,
+}
+
 #[derive(Debug)]
 pub struct Context {
     argument_pool: Pool<Vec<u8>>,
@@ -41,7 +46,152 @@ pub struct Context {
 }
 
 impl Context {
+    const ARG_LEN_BYTES: usize = 4;
+
     pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn feed(&mut self, buf: &[u8]) -> Result<Option<CommandInfo>, ParseError> {
+        loop {
+            // We need to do this check on the first iteration to make sure we
+            // were actually given *any* data, and after each iteration to make
+            // sure that there's more data to process.
+            if buf.get(self.idx..).is_none() {
+                return Ok(None);
+            }
+
+            let conclusion = match self.stage {
+                Stage::Init => self.stage_init(buf)?,
+                Stage::Kind(kind) => self.stage_kind(buf, kind)?,
+                Stage::ArgumentParsing { argument_count, kind } => self.stage_argument_parsing(buf, kind, argument_count)?,
+            };
+
+            match conclusion {
+                StageConclusion::Finished(command_info) => return Ok(Some(command_info)),
+                StageConclusion::Incomplete => return Ok(None),
+                StageConclusion::Next => continue,
+            }
+        }
+    }
+
+    pub fn reset(&mut self, mut args: Vec<Vec<u8>>) {
+        self.reset_light();
+        self.idx = 0;
+
+        for mut vec in args.drain(..) {
+            vec.clear();
+
+            self.argument_pool.push(vec);
+        }
+
+        self.buf_args.replace(args);
+    }
+
+    fn stage_init(&mut self, buf: &[u8]) -> Result<StageConclusion, ParseError> {
+        let byte = match buf.first() {
+            Some(byte) => *byte,
+            None => return Ok(StageConclusion::Incomplete),
+        };
+
+        let kind = CommandType::try_from(byte).map_err(|_| ParseError::CommandTypeInvalid)?;
+
+        // If the command type is simple and has no arguments or keys, then
+        // we can just return a successful command here.
+        if kind.is_simple() {
+            self.reset_light();
+
+            return Ok(StageConclusion::Finished(CommandInfo {
+                arguments: None,
+                kind,
+            }));
+        }
+
+        self.stage = Stage::Kind(kind);
+        self.idx = self.idx.wrapping_add(1);
+
+        Ok(StageConclusion::Next)
+    }
+
+    fn stage_kind(&mut self, buf: &[u8], kind: CommandType) -> Result<StageConclusion, ParseError> {
+        let argument_count = match buf.get(self.idx) {
+            Some(argument_count) => *argument_count,
+            None => return Ok(StageConclusion::Incomplete),
+        };
+
+        self.stage = Stage::ArgumentParsing {
+            argument_count,
+            kind,
+        };
+        self.idx = self.idx.saturating_add(1);
+
+        Ok(StageConclusion::Next)
+    }
+
+    fn stage_argument_parsing(&mut self, buf: &[u8], kind: CommandType, argument_count: u8) -> Result<StageConclusion, ParseError> {
+        let len_bytes = match buf.get(self.idx..self.idx + Self::ARG_LEN_BYTES) {
+            Some(bytes) => bytes.try_into().unwrap(),
+            None => return Ok(StageConclusion::Incomplete),
+        };
+
+        let arg_len = u32::from_be_bytes(len_bytes) as usize;
+
+        match buf.get(self.idx..self.idx + arg_len) {
+            Some(arg) => {
+                let mut pooled_arg = self.argument_pool.pull();
+                pooled_arg.extend_from_slice(arg);
+                self.push_arg(pooled_arg);
+            },
+            None => return Ok(StageConclusion::Incomplete),
+        };
+
+        self.idx += 4 + arg_len;
+
+        if self.arg_count() == argument_count as usize {
+            let args = self.buf_args.take();
+
+            Ok(StageConclusion::Finished(CommandInfo {
+                arguments: args,
+                kind,
+            }))
+        } else {
+            Ok(StageConclusion::Next)
+        }
+    }
+
+    fn arg_count(&mut self) -> usize {
+        if let Some(args) = self.buf_args.as_ref() {
+            args.len()
+        } else {
+            warn!("Got into a weird state! Args don't exist to count, fixing");
+
+            self.buf_args.replace(Vec::new());
+
+            0
+        }
+    }
+
+    fn push_arg(&mut self, arg: Vec<u8>) {
+        match self.buf_args.as_mut() {
+            Some(args) => args.push(arg),
+            None => {
+                warn!("Got into a weird state! Args don't exist to push to, fixing");
+
+                let mut args = Vec::new();
+                args.push(arg);
+
+                self.buf_args.replace(args);
+            },
+        }
+    }
+
+    fn reset_light(&mut self) {
+        self.stage = Stage::default();
+    }
+}
+
+impl Default for Context {
+    fn default() -> Self {
         Self {
             argument_pool: Pool::new(1, Vec::new),
             buf_args: Some(Vec::new()),
@@ -49,110 +199,14 @@ impl Context {
             stage: Stage::default(),
         }
     }
-
-    pub fn feed(&mut self, buf: &mut Vec<u8>) -> Result<Option<CommandInfo>, ParseError> {
-        loop {
-            // We need to do this check on the first iteration to make sure we
-            // were actually given *any* data, and after each iteration to make
-            // sure that there's more data to process.
-            if buf.is_empty() {
-                return Ok(None);
-            }
-
-            match self.stage {
-                Stage::Init => {
-                    let byte = buf[0];
-                    let kind = CommandType::try_from(byte).map_err(|_| ParseError::CommandTypeInvalid)?;
-
-                    // If the command type is simple and has no arguments or keys, then
-                    // we can just return a successful command here.
-                    if kind.is_simple() {
-                        self.reset_light();
-
-                        return Ok(Some(CommandInfo {
-                            arguments: None,
-                            kind,
-                        }));
-                    }
-
-                    self.stage = Stage::Kind(kind);
-                    self.idx += 1;
-                },
-                Stage::Kind(kind) => {
-                    let argument_count = buf[self.idx];
-
-                    self.stage = Stage::ArgumentParsing {
-                        argument_count,
-                        kind,
-                    };
-                    self.idx += 1;
-                },
-                Stage::ArgumentParsing { argument_count, .. } => {
-                    // panic!("{} {:?}", self.idx, buf);
-                    let len_bytes = buf[self.idx..self.idx + 4].try_into().unwrap();
-                    let arg_len = u32::from_be_bytes(len_bytes) as usize;
-
-                    if buf[self.idx..].len() < arg_len as usize {
-                        return Ok(None);
-                    }
-
-                    let arg = &buf[self.idx..self.idx + arg_len];
-                    let mut owned_arg = self.argument_pool.pull();
-                    owned_arg.extend_from_slice(arg);
-                    self.buf_args.as_mut().unwrap().push(owned_arg);
-
-                    self.idx += 4 + arg_len;
-
-                    if self.buf_args.as_mut().unwrap().len() as u8 == argument_count {
-                        break;
-                    }
-                },
-            }
-        }
-
-        let stage = mem::replace(&mut self.stage, Stage::default());
-
-        if let Stage::ArgumentParsing { kind, .. } = stage {
-            let args = if !self.buf_args.as_ref().unwrap().is_empty() {
-                self.buf_args.take()
-            } else {
-                None
-            };
-
-            return Ok(Some(CommandInfo {
-                arguments: args,
-                kind,
-            }));
-        } else {
-            unreachable!();
-        }
-    }
-
-    pub fn reset(&mut self, mut args: Vec<Vec<u8>>) {
-        self.reset_light();
-
-        args.drain(..).for_each(|mut vec| {
-            vec.clear();
-
-            self.argument_pool.push(vec);
-        });
-
-        self.buf_args.replace(args);
-    }
-
-    fn reset_light(&mut self) {
-        self.idx = 0;
-        self.stage = Stage::default();
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::error::Error;
-    use super::{super::CommandType, Context};
+    use super::{super::{CommandType, error::Result}, Context};
 
     #[test]
-    fn test_increment_foo() -> Result<(), Box<dyn Error>> {
+    fn test_increment_foo() -> Result<()> {
         // - the first byte is the command type's ID (up to ID 255)
         // - the second byte, if the command type has arguments, is the number of
         //   arguments (up to 255)
@@ -178,7 +232,10 @@ mod tests {
         // command request
         let mut ctx = Context::new();
         // but here we're feeding in all the data in one go
-        let cmd = ctx.feed(&mut cmd).unwrap().unwrap();
+        let cmd = ctx.feed(&mut cmd)
+            .expect("parses correctly")
+            .expect("returns a command");
+
         assert_eq!(cmd.kind, CommandType::IncrementInt);
 
         Ok(())

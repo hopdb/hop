@@ -1,10 +1,12 @@
 [package]
 authors = ["Vivian Hellyer <vivian@hellyer.dev>"]
 edition = "2018"
-name = "imms"
+name = "hop-lib"
 version = "0.1.0"
 
 [dependencies]
 dashmap = { default-features = true, version = "^3.11.1" }
 float-cmp = { default-features = false, version = "^0.6.0" }
+futures-intrusive = { branch = "add-alloc-support", default-features = false, features = ["alloc"], git = "https://github.com/vivianhellyer/futures-intrusive" }
+futures-core = { default-features = false, version = "^0.3.4" }
 log = { default-features = false, version = "0.4" }
