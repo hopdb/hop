@@ -1,16 +1,19 @@
 pub mod error;
-pub mod object;
+pub mod value;
 
-use self::{
-    error::{Result, RetrievalError},
-    object::Object,
+pub use self::{
+    value::Value,
 };
+
+use self::error::{Result, RetrievalError};
 use alloc::{borrow::ToOwned, string::String, sync::Arc, vec::Vec};
 use core::{
     convert::TryFrom,
     ops::{Deref, DerefMut},
 };
 use dashmap::{mapref::one::RefMut, DashMap, DashSet};
+
+pub type Key = Vec<u8>;
 
 #[derive(Clone, Debug)]
 #[repr(u8)]
@@ -45,14 +48,14 @@ impl TryFrom<u8> for KeyType {
     }
 }
 
-pub struct Boolean<'a>(RefMut<'a, Vec<u8>, Object>);
+pub struct Boolean<'a>(RefMut<'a, Key, Value>);
 
 impl<'a> Deref for Boolean<'a> {
     type Target = bool;
 
     fn deref(&self) -> &Self::Target {
         match self.0.value() {
-            Object::Boolean(boolean) => boolean,
+            Value::Boolean(boolean) => boolean,
             _ => unreachable!("didn't get a boolean"),
         }
     }
@@ -61,20 +64,20 @@ impl<'a> Deref for Boolean<'a> {
 impl<'a> DerefMut for Boolean<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self.0.value_mut() {
-            Object::Boolean(boolean) => boolean,
+            Value::Boolean(boolean) => boolean,
             _ => unreachable!("didn't get a boolean"),
         }
     }
 }
 
-pub struct Bytes<'a>(RefMut<'a, Vec<u8>, Object>);
+pub struct Bytes<'a>(RefMut<'a, Key, Value>);
 
 impl<'a> Deref for Bytes<'a> {
     type Target = Vec<u8>;
 
     fn deref(&self) -> &Self::Target {
         match self.0.value() {
-            Object::Bytes(bytes) => bytes,
+            Value::Bytes(bytes) => bytes,
             _ => unreachable!("didn't get a bytes"),
         }
     }
@@ -83,20 +86,20 @@ impl<'a> Deref for Bytes<'a> {
 impl<'a> DerefMut for Bytes<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self.0.value_mut() {
-            Object::Bytes(bytes) => bytes,
+            Value::Bytes(bytes) => bytes,
             _ => unreachable!("didn't get a bytes"),
         }
     }
 }
 
-pub struct Float<'a>(RefMut<'a, Vec<u8>, Object>);
+pub struct Float<'a>(RefMut<'a, Key, Value>);
 
 impl<'a> Deref for Float<'a> {
     type Target = f64;
 
     fn deref(&self) -> &Self::Target {
         match self.0.value() {
-            Object::Float(float) => float,
+            Value::Float(float) => float,
             _ => unreachable!("didn't get a float"),
         }
     }
@@ -105,20 +108,20 @@ impl<'a> Deref for Float<'a> {
 impl<'a> DerefMut for Float<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self.0.value_mut() {
-            Object::Float(float) => float,
+            Value::Float(float) => float,
             _ => unreachable!("didn't get a float"),
         }
     }
 }
 
-pub struct Integer<'a>(RefMut<'a, Vec<u8>, Object>);
+pub struct Integer<'a>(RefMut<'a, Key, Value>);
 
 impl<'a> Deref for Integer<'a> {
     type Target = i64;
 
     fn deref(&self) -> &Self::Target {
         match self.0.value() {
-            Object::Integer(integer) => integer,
+            Value::Integer(integer) => integer,
             _ => unreachable!("didn't get an integer"),
         }
     }
@@ -127,20 +130,20 @@ impl<'a> Deref for Integer<'a> {
 impl<'a> DerefMut for Integer<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self.0.value_mut() {
-            Object::Integer(integer) => integer,
+            Value::Integer(integer) => integer,
             _ => unreachable!("didn't get an integer"),
         }
     }
 }
 
-pub struct List<'a>(RefMut<'a, Vec<u8>, Object>);
+pub struct List<'a>(RefMut<'a, Key, Value>);
 
 impl<'a> Deref for List<'a> {
     type Target = Vec<Vec<u8>>;
 
     fn deref(&self) -> &Self::Target {
         match self.0.value() {
-            Object::List(list) => list,
+            Value::List(list) => list,
             _ => unreachable!("didn't get an list"),
         }
     }
@@ -149,20 +152,20 @@ impl<'a> Deref for List<'a> {
 impl<'a> DerefMut for List<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self.0.value_mut() {
-            Object::List(list) => list,
+            Value::List(list) => list,
             _ => unreachable!("didn't get an integer"),
         }
     }
 }
 
-pub struct Map<'a>(RefMut<'a, Vec<u8>, Object>);
+pub struct Map<'a>(RefMut<'a, Key, Value>);
 
 impl<'a> Deref for Map<'a> {
     type Target = DashMap<Vec<u8>, Vec<u8>>;
 
     fn deref(&self) -> &Self::Target {
         match self.0.value() {
-            Object::Map(map) => map,
+            Value::Map(map) => map,
             _ => unreachable!("didn't get a map"),
         }
     }
@@ -171,20 +174,20 @@ impl<'a> Deref for Map<'a> {
 impl<'a> DerefMut for Map<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self.0.value_mut() {
-            Object::Map(map) => map,
+            Value::Map(map) => map,
             _ => unreachable!("didn't get a map"),
         }
     }
 }
 
-pub struct Set<'a>(RefMut<'a, Vec<u8>, Object>);
+pub struct Set<'a>(RefMut<'a, Key, Value>);
 
 impl<'a> Deref for Set<'a> {
     type Target = DashSet<Vec<u8>>;
 
     fn deref(&self) -> &Self::Target {
         match self.0.value() {
-            Object::Set(set) => set,
+            Value::Set(set) => set,
             _ => unreachable!("didn't get a set"),
         }
     }
@@ -193,20 +196,20 @@ impl<'a> Deref for Set<'a> {
 impl<'a> DerefMut for Set<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self.0.value_mut() {
-            Object::Set(set) => set,
+            Value::Set(set) => set,
             _ => unreachable!("didn't get a set"),
         }
     }
 }
 
-pub struct Str<'a>(RefMut<'a, Vec<u8>, Object>);
+pub struct Str<'a>(RefMut<'a, Key, Value>);
 
 impl<'a> Deref for Str<'a> {
     type Target = String;
 
     fn deref(&self) -> &Self::Target {
         match self.0.value() {
-            Object::String(string) => string,
+            Value::String(string) => string,
             _ => unreachable!("didn't get a string"),
         }
     }
@@ -215,14 +218,14 @@ impl<'a> Deref for Str<'a> {
 impl<'a> DerefMut for Str<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self.0.value_mut() {
-            Object::String(string) => string,
+            Value::String(string) => string,
             _ => unreachable!("didn't get a string"),
         }
     }
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct State(Arc<DashMap<Vec<u8>, Object>>);
+pub struct State(Arc<DashMap<Key, Value>>);
 
 impl State {
     pub fn new() -> Self {
@@ -231,7 +234,7 @@ impl State {
 }
 
 impl State {
-    pub fn key<'a>(&'a self, key: &[u8], f: impl Fn() -> Object) -> RefMut<'a, Vec<u8>, Object> {
+    pub fn key<'a>(&'a self, key: &[u8], f: impl Fn() -> Value) -> RefMut<'a, Key, Value> {
         if key.starts_with(b"__hop__:") {
             panic!("Accessed internal key: {}", String::from_utf8_lossy(key));
         }
@@ -250,7 +253,7 @@ impl State {
         }
     }
 
-    pub fn key_optional<'a>(&'a self, key: &[u8]) -> Option<RefMut<'a, Vec<u8>, Object>> {
+    pub fn key_optional<'a>(&'a self, key: &[u8]) -> Option<RefMut<'a, Key, Value>> {
         if key.starts_with(b"__hop__:") {
             panic!("Accessed internal key: {}", String::from_utf8_lossy(key));
         }
@@ -261,73 +264,73 @@ impl State {
     }
 
     pub fn bool(&self, key: &[u8]) -> Result<Boolean<'_>> {
-        let mut r = self.key(key, Object::boolean);
+        let mut r = self.key(key, Value::boolean);
 
         match r.value_mut() {
-            Object::Boolean(_) => Ok(Boolean(r)),
+            Value::Boolean(_) => Ok(Boolean(r)),
             _ => Err(RetrievalError::TypeWrong),
         }
     }
 
     pub fn int(&self, key: &[u8]) -> Result<Integer<'_>> {
-        let mut r = self.key(key, Object::integer);
+        let mut r = self.key(key, Value::integer);
 
         match r.value_mut() {
-            Object::Integer(_) => Ok(Integer(r)),
+            Value::Integer(_) => Ok(Integer(r)),
             _ => Err(RetrievalError::TypeWrong),
         }
     }
 
     pub fn bytes(&self, key: &[u8]) -> Result<Bytes<'_>> {
-        let mut r = self.key(key, Object::bytes);
+        let mut r = self.key(key, Value::bytes);
 
         match r.value_mut() {
-            Object::Bytes(_) => Ok(Bytes(r)),
+            Value::Bytes(_) => Ok(Bytes(r)),
             _ => Err(RetrievalError::TypeWrong),
         }
     }
 
     pub fn float(&self, key: &[u8]) -> Result<Float<'_>> {
-        let mut r = self.key(key, Object::float);
+        let mut r = self.key(key, Value::float);
 
         match r.value_mut() {
-            Object::Float(_) => Ok(Float(r)),
+            Value::Float(_) => Ok(Float(r)),
             _ => Err(RetrievalError::TypeWrong),
         }
     }
 
     pub fn list(&self, key: &[u8]) -> Result<List<'_>> {
-        let mut r = self.key(key, Object::list);
+        let mut r = self.key(key, Value::list);
 
         match r.value_mut() {
-            Object::List(_) => Ok(List(r)),
+            Value::List(_) => Ok(List(r)),
             _ => Err(RetrievalError::TypeWrong),
         }
     }
 
     pub fn map(&self, key: &[u8]) -> Result<Map<'_>> {
-        let mut r = self.key(key, Object::map);
+        let mut r = self.key(key, Value::map);
 
         match r.value_mut() {
-            Object::Map(_) => Ok(Map(r)),
+            Value::Map(_) => Ok(Map(r)),
             _ => Err(RetrievalError::TypeWrong),
         }
     }
 
     pub fn set(&self, key: &[u8]) -> Result<Set<'_>> {
-        let mut r = self.key(key, Object::set);
+        let mut r = self.key(key, Value::set);
 
         match r.value_mut() {
-            Object::Set(_) => Ok(Set(r)),
+            Value::Set(_) => Ok(Set(r)),
             _ => Err(RetrievalError::TypeWrong),
         }
     }
 
     pub fn str(&self, key: &[u8]) -> Result<Str> {
-        let mut r = self.key(key, Object::string);
+        let mut r = self.key(key, Value::string);
 
         match r.value_mut() {
-            Object::String(_) => Ok(Str(r)),
+            Value::String(_) => Ok(Str(r)),
             _ => Err(RetrievalError::TypeWrong),
         }
     }

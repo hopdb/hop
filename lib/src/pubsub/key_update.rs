@@ -1,12 +1,12 @@
-use crate::state::object::{Object, ObjectKey};
+use crate::state::{Key, Value};
 
 pub enum KeyUpdate {
     /// The value of the subscribed key was deleted, meaning that the key did
     /// have a value but no longer does.
-    Deleted(Object),
+    Deleted(Value),
     /// The value of the subscribed key was initialized, meaning that the key
     /// didn't have a value but now does.
-    Initialized(Object),
+    Initialized(Value),
     /// The value of the key was moved to a different key.
     ///
     /// The key that the value was moved to is provided.
@@ -16,8 +16,8 @@ pub enum KeyUpdate {
     /// they want.
     Renamed {
         /// The key that the value was moved to.
-        to: ObjectKey,
+        to: Key,
     },
     /// The value of the subscribed key was updated.
-    Updated(Object),
+    Updated(Value),
 }

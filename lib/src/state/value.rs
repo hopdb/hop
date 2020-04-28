@@ -1,11 +1,8 @@
 use alloc::{string::String, vec::Vec};
 use dashmap::{DashMap, DashSet};
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct ObjectKey(Vec<u8>);
-
 #[derive(Debug)]
-pub enum Object {
+pub enum Value {
     Boolean(bool),
     Bytes(Vec<u8>),
     Float(f64),
@@ -16,7 +13,7 @@ pub enum Object {
     String(String),
 }
 
-impl Object {
+impl Value {
     pub fn boolean() -> Self {
         Self::Boolean(false)
     }

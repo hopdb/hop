@@ -1,12 +1,12 @@
 use super::Subscription;
-use crate::{session::SessionId, state::object::ObjectKey};
+use crate::{session::SessionId, state::Key};
 use alloc::sync::{Arc, Weak};
 use dashmap::{mapref::entry::Entry, DashMap, DashSet};
 
 #[derive(Debug, Default)]
 struct PubSubManagerRef {
-    keys: DashMap<ObjectKey, DashSet<SessionId>>,
-    sessions: DashMap<SessionId, DashMap<ObjectKey, Arc<Subscription>>>,
+    keys: DashMap<Key, DashSet<SessionId>>,
+    sessions: DashMap<SessionId, DashMap<Key, Arc<Subscription>>>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -14,7 +14,7 @@ pub struct PubSubManager(Arc<PubSubManagerRef>);
 
 impl PubSubManager {
     /// Retrieves a session's subscription for a key, if it exists.
-    pub fn get(&self, object_key: &ObjectKey, session_id: SessionId) -> Option<Weak<Subscription>> {
+    pub fn get(&self, object_key: &Key, session_id: SessionId) -> Option<Weak<Subscription>> {
         let session = self.0.sessions.get(&session_id)?;
         let sub = session.get(object_key)?;
 
@@ -27,7 +27,7 @@ impl PubSubManager {
     /// if the subscription already existed.
     pub fn subscribe(
         &self,
-        object_key: ObjectKey,
+        object_key: Key,
         session_id: SessionId,
     ) -> Option<Weak<Subscription>> {
         let session = self.0.sessions.entry(session_id.clone()).or_default();
@@ -59,7 +59,7 @@ impl PubSubManager {
     ///
     /// Returns whether unsubscribing was successful. This will only be
     /// unsuccessful if the session wasn't subscribed to the key.
-    pub fn unsubscribe(&self, object_key: &ObjectKey, session_id: SessionId) -> bool {
+    pub fn unsubscribe(&self, object_key: &Key, session_id: SessionId) -> bool {
         let key_unsubbed = self
             .0
             .keys

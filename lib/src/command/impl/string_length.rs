@@ -1,5 +1,5 @@
 use super::prelude::*;
-use crate::state::object::Object;
+use crate::state::Value;
 
 pub struct StringLength;
 
@@ -12,7 +12,7 @@ impl Dispatch for StringLength {
         };
 
         let s = match value.value() {
-            Object::String(string) => string,
+            Value::String(string) => string,
             _ => return Err(Error::WrongType),
         };
 
