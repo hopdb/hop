@@ -5,8 +5,7 @@ name = "hop-bin"
 version = "0.1.0"
 
 [dependencies]
+async-std = { default-features = true, version = "^1.5.0" }
 env_logger = { default-features = false, version = "^0.7.0" }
-futures-util = { default-features = false, version = "^0.3.4" }
 log = { default-features = false, version = "^0.4.8" }
 hop = { package = "hop-lib", path = "../lib" }
-smol = { default-features = false, version = "^0.1.2" }
