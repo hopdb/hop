@@ -1,7 +1,10 @@
+use super::prelude::*;
+use crate::state::{
+    object::{Bytes, List, Str},
+    KeyType,
+};
 use alloc::borrow::ToOwned;
 use core::str;
-use crate::state::{object::{Bytes, List, Str}, KeyType};
-use super::prelude::*;
 
 pub struct Append;
 
@@ -12,14 +15,17 @@ impl Dispatch for Append {
 
         match req.key_type() {
             Some(KeyType::Bytes) | None => {
-                let mut bytes = hop.state().typed_key::<Bytes>(key).ok_or(Error::WrongType)?;
+                let mut bytes = hop
+                    .state()
+                    .typed_key::<Bytes>(key)
+                    .ok_or(Error::WrongType)?;
 
                 for arg in args {
                     bytes.extend_from_slice(arg);
                 }
 
                 Ok(Response::from_bytes(&bytes))
-            },
+            }
             Some(KeyType::List) => {
                 let mut list = hop.state().typed_key::<List>(key).ok_or(Error::WrongType)?;
 
@@ -38,10 +44,10 @@ impl Dispatch for Append {
                 }
 
                 Ok(Response::from_string(&string))
-            },
+            }
             Some(_) => {
                 return Err(Error::WrongType);
-            },
+            }
         }
     }
 }

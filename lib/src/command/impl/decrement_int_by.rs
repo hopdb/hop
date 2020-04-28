@@ -5,7 +5,10 @@ pub struct DecrementIntBy;
 
 impl DecrementIntBy {
     pub fn decrement(hop: &Hop, key: &[u8], amount: i64) -> Result<i64> {
-        let mut int = hop.state().typed_key::<Integer>(key).ok_or(Error::KeyRetrieval)?;
+        let mut int = hop
+            .state()
+            .typed_key::<Integer>(key)
+            .ok_or(Error::KeyRetrieval)?;
 
         *int -= amount;
 

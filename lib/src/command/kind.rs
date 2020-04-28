@@ -117,34 +117,58 @@ impl<'a> TryFrom<&'a str> for CommandType {
 
 #[cfg(test)]
 mod tests {
-    use core::{
-        convert::TryFrom,
-        str::FromStr,
-    };
     use super::CommandType;
+    use core::{convert::TryFrom, str::FromStr};
 
     #[test]
     fn test_from_str() {
-        assert_eq!(CommandType::Append, CommandType::from_str("append").unwrap());
-        assert_eq!(CommandType::DecrementIntBy, CommandType::from_str("decrement:int:by").unwrap());
-        assert_eq!(CommandType::DecrementInt, CommandType::from_str("decrement:int").unwrap());
+        assert_eq!(
+            CommandType::Append,
+            CommandType::from_str("append").unwrap()
+        );
+        assert_eq!(
+            CommandType::DecrementIntBy,
+            CommandType::from_str("decrement:int:by").unwrap()
+        );
+        assert_eq!(
+            CommandType::DecrementInt,
+            CommandType::from_str("decrement:int").unwrap()
+        );
         assert_eq!(CommandType::Echo, CommandType::from_str("echo").unwrap());
-        assert_eq!(CommandType::IncrementIntBy, CommandType::from_str("increment:int:by").unwrap());
-        assert_eq!(CommandType::IncrementInt, CommandType::from_str("increment:int").unwrap());
+        assert_eq!(
+            CommandType::IncrementIntBy,
+            CommandType::from_str("increment:int:by").unwrap()
+        );
+        assert_eq!(
+            CommandType::IncrementInt,
+            CommandType::from_str("increment:int").unwrap()
+        );
         assert_eq!(CommandType::Stats, CommandType::from_str("stats").unwrap());
-        assert_eq!(CommandType::StringLength, CommandType::from_str("string:length").unwrap());
+        assert_eq!(
+            CommandType::StringLength,
+            CommandType::from_str("string:length").unwrap()
+        );
     }
 
     #[test]
     fn test_try_from_u8() {
         assert_eq!(CommandType::Append, CommandType::try_from(20).unwrap());
-        assert_eq!(CommandType::DecrementIntBy, CommandType::try_from(3).unwrap());
+        assert_eq!(
+            CommandType::DecrementIntBy,
+            CommandType::try_from(3).unwrap()
+        );
         assert_eq!(CommandType::DecrementInt, CommandType::try_from(1).unwrap());
         assert_eq!(CommandType::Echo, CommandType::try_from(100).unwrap());
-        assert_eq!(CommandType::IncrementIntBy, CommandType::try_from(2).unwrap());
+        assert_eq!(
+            CommandType::IncrementIntBy,
+            CommandType::try_from(2).unwrap()
+        );
         assert_eq!(CommandType::IncrementInt, CommandType::try_from(0).unwrap());
         assert_eq!(CommandType::Stats, CommandType::try_from(101).unwrap());
-        assert_eq!(CommandType::StringLength, CommandType::try_from(21).unwrap());
+        assert_eq!(
+            CommandType::StringLength,
+            CommandType::try_from(21).unwrap()
+        );
     }
 
     #[test]

@@ -11,8 +11,8 @@ mod pool;
 
 use self::{
     command::{r#impl::*, CommandResult, CommandType, Dispatch, Request, Response},
-    pubsub::{PubSubManager},
-    session::{SessionManager},
+    pubsub::PubSubManager,
+    session::SessionManager,
     state::State,
 };
 use alloc::sync::Arc;

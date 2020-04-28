@@ -8,13 +8,9 @@ use std::{
 
 #[derive(Debug)]
 pub enum InputError {
-    InvalidCommandType {
-        provided_name: String,
-    },
+    InvalidCommandType { provided_name: String },
     NoCommandProvided,
-    Retrieval {
-        source: IoError,
-    },
+    Retrieval { source: IoError },
 }
 
 impl Display for InputError {
@@ -22,7 +18,7 @@ impl Display for InputError {
         match self {
             Self::InvalidCommandType { provided_name } => {
                 write!(f, "the command '{}' is invalid", provided_name)
-            },
+            }
             Self::NoCommandProvided => f.write_str("no command was provided"),
             Self::Retrieval { .. } => f.write_str("failed to retrieve a line of input"),
         }
@@ -40,7 +36,8 @@ impl Error for InputError {
 }
 
 pub fn process_command(lock: &mut StdinLock, input: &mut String) -> Result<Request, InputError> {
-    lock.read_line(input).map_err(|source| InputError::Retrieval { source })?;
+    lock.read_line(input)
+        .map_err(|source| InputError::Retrieval { source })?;
     let input = input.trim();
 
     let mut split = input.split(' ');
@@ -49,13 +46,11 @@ pub fn process_command(lock: &mut StdinLock, input: &mut String) -> Result<Reque
         Some(cmd_name) if !cmd_name.is_empty() => cmd_name,
         _ => {
             return Err(InputError::NoCommandProvided);
-        },
+        }
     };
 
-    let cmd_type = CommandType::from_str(cmd_name).map_err(|_| {
-        InputError::InvalidCommandType {
-            provided_name: cmd_name.to_owned(),
-        }
+    let cmd_type = CommandType::from_str(cmd_name).map_err(|_| InputError::InvalidCommandType {
+        provided_name: cmd_name.to_owned(),
     })?;
 
     let mut arg_iter = split.peekable();

@@ -1,8 +1,5 @@
 use super::{CommandType, Request};
-use crate::{
-    pool::Pool,
-    state::KeyType,
-};
+use crate::{pool::Pool, state::KeyType};
 use alloc::vec::Vec;
 use core::convert::{TryFrom, TryInto};
 use log::warn;
@@ -68,7 +65,8 @@ impl Context {
                 Stage::Kind { cmd_type, key_type } => self.stage_kind(buf, key_type, cmd_type)?,
                 Stage::ArgumentParsing {
                     argument_count,
-                    cmd_type, key_type,
+                    cmd_type,
+                    key_type,
                 } => self.stage_argument_parsing(buf, cmd_type, key_type, argument_count)?,
             };
 
@@ -126,16 +124,18 @@ impl Context {
             }));
         }
 
-        self.stage = Stage::Kind {
-            cmd_type,
-            key_type,
-        };
+        self.stage = Stage::Kind { cmd_type, key_type };
         self.idx = self.idx.wrapping_add(1);
 
         Ok(StageConclusion::Next)
     }
 
-    fn stage_kind(&mut self, buf: &[u8], key_type: Option<KeyType>, cmd_type: CommandType) -> Result<StageConclusion, ParseError> {
+    fn stage_kind(
+        &mut self,
+        buf: &[u8],
+        key_type: Option<KeyType>,
+        cmd_type: CommandType,
+    ) -> Result<StageConclusion, ParseError> {
         let argument_count = match buf.get(self.idx) {
             Some(argument_count) => *argument_count,
             None => return Ok(StageConclusion::Incomplete),

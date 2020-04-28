@@ -9,9 +9,9 @@ pub use self::{
     kind::{CommandType, InvalidCommandType},
 };
 
+use crate::{state::KeyType, Hop};
 use alloc::vec::Vec;
 use core::slice::SliceIndex;
-use crate::{state::KeyType, Hop};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ArgumentNotation {
@@ -39,7 +39,10 @@ impl Request {
         }
     }
 
-    pub fn arg<I: SliceIndex<[Vec<u8>]>>(&self, index: I) -> Option<&<I as SliceIndex<[Vec<u8>]>>::Output> {
+    pub fn arg<I: SliceIndex<[Vec<u8>]>>(
+        &self,
+        index: I,
+    ) -> Option<&<I as SliceIndex<[Vec<u8>]>>::Output> {
         let args = self.args.as_ref()?;
 
         let refs = args.get(index)?;
@@ -50,11 +53,17 @@ impl Request {
     pub fn flatten_args(&self) -> Option<Vec<u8>> {
         let start = if self.kind.has_key() { 1 } else { 0 };
 
-        Some(self.args.as_ref()?.get(start..)?.iter().fold(Vec::new(), |mut acc, arg| {
-            acc.extend_from_slice(arg);
+        Some(
+            self.args
+                .as_ref()?
+                .get(start..)?
+                .iter()
+                .fold(Vec::new(), |mut acc, arg| {
+                    acc.extend_from_slice(arg);
 
-            acc
-        }))
+                    acc
+                }),
+        )
     }
 
     pub fn key(&mut self) -> Option<&[u8]> {
@@ -62,7 +71,9 @@ impl Request {
             return None;
         }
 
-        self.args.as_ref().and_then(|args| args.get(0).map(|x| x.as_slice()))
+        self.args
+            .as_ref()
+            .and_then(|args| args.get(0).map(|x| x.as_slice()))
     }
 
     /// Returns the requested type of key to work with, if any.
@@ -154,7 +165,10 @@ mod tests {
 
     #[test]
     fn test_response_int() {
-        assert_eq!(Response::from_int(7).0, [0, 0, 0, 0, 0, 0, 0, 7, b'\n'].to_owned());
+        assert_eq!(
+            Response::from_int(7).0,
+            [0, 0, 0, 0, 0, 0, 0, 7, b'\n'].to_owned()
+        );
         assert_eq!(
             Response::from_int(68125).0,
             [0, 0, 0, 0, 0, 1, 10, 29, b'\n'].to_owned()

@@ -1,15 +1,11 @@
 pub mod object;
 pub mod value;
 
-pub use self::{
-    value::Value,
-};
+pub use self::value::Value;
 
 use self::object::Object;
 use alloc::{borrow::ToOwned, string::String, sync::Arc, vec::Vec};
-use core::{
-    convert::TryFrom,
-};
+use core::convert::TryFrom;
 use dashmap::{mapref::one::RefMut, DashMap};
 
 pub type Key = Vec<u8>;

@@ -30,22 +30,22 @@ fn main() -> Result<(), Box<dyn Error>> {
                         writeln!(stdout, "Key required.")?;
 
                         continue;
-                    },
+                    }
                 };
 
                 let v = task::block_on(client.decrement_int(key)).unwrap();
 
                 writeln!(stdout, "{}", v)?;
-            },
+            }
             CommandType::Echo => {
                 if let Some(args) = req.flatten_args() {
                     let v = task::block_on(client.echo(args)).unwrap();
 
                     writeln!(stdout, "{}", String::from_utf8_lossy(&v))?;
                 } else {
-                    writeln!(stdout, )?;
+                    writeln!(stdout,)?;
                 }
-            },
+            }
             CommandType::IncrementInt => {
                 let key = match req.key() {
                     Some(key) => key,
@@ -53,14 +53,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                         writeln!(stdout, "Key required.")?;
 
                         continue;
-                    },
+                    }
                 };
 
                 let v = task::block_on(client.increment_int(key)).unwrap();
 
                 writeln!(stdout, "{}", v)?;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 }
