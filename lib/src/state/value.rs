@@ -1,3 +1,4 @@
+use super::KeyType;
 use alloc::{string::String, vec::Vec};
 use dashmap::{DashMap, DashSet};
 
@@ -14,6 +15,19 @@ pub enum Value {
 }
 
 impl Value {
+    pub fn kind(&self) -> KeyType {
+        match self {
+            Self::Boolean(_) => KeyType::Boolean,
+            Self::Bytes(_) => KeyType::Bytes,
+            Self::Float(_) => KeyType::Float,
+            Self::Integer(_) => KeyType::Integer,
+            Self::List(_) => KeyType::List,
+            Self::Map(_) => KeyType::Map,
+            Self::Set(_) => KeyType::Set,
+            Self::String(_) => KeyType::String,
+        }
+    }
+
     pub fn boolean() -> Self {
         Self::Boolean(false)
     }

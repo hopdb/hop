@@ -1,4 +1,4 @@
-pub mod r#impl;
+pub(crate) mod r#impl;
 pub mod protocol;
 
 mod error;
@@ -10,7 +10,7 @@ pub use self::{
 };
 
 use alloc::vec::Vec;
-use crate::Hop;
+use crate::{state::KeyType, Hop};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ArgumentNotation {
@@ -25,12 +25,17 @@ pub trait Dispatch {
 
 pub struct Request {
     args: Option<Vec<Vec<u8>>>,
+    key_type: Option<KeyType>,
     kind: CommandType,
 }
 
 impl Request {
     pub fn new(kind: CommandType, args: Option<Vec<Vec<u8>>>) -> Self {
-        Self { args, kind }
+        Self {
+            args,
+            key_type: None,
+            kind,
+        }
     }
 
     pub fn arg(&self, idx: usize) -> Option<&[u8]> {
@@ -53,6 +58,18 @@ impl Request {
         }
 
         self.args.as_ref().and_then(|args| args.get(0).map(|x| x.as_slice()))
+    }
+
+    /// Returns the requested type of key to work with, if any.
+    ///
+    /// Some commands only work with one type of key, such as a boolean, where
+    /// this isn't taken into account. Other commands, such as [`Append`], can
+    /// work with bytes, lists, and strings in unique ways. Commands like
+    /// `Append` check the key type to know what type of key to work with.
+    ///
+    /// [`Append`]: impl/struct.Append.html
+    pub fn key_type(&self) -> Option<KeyType> {
+        self.key_type
     }
 
     pub fn kind(&self) -> CommandType {
@@ -110,10 +127,10 @@ mod tests {
 
     #[test]
     fn test_response_int() {
-        assert_eq!(Response::from_int(7).0, [0, 0, 0, 0, 0, 0, 0, 7].to_owned());
+        assert_eq!(Response::from_int(7).0, [0, 0, 0, 0, 0, 0, 0, 7, b'\n'].to_owned());
         assert_eq!(
             Response::from_int(68125).0,
-            [0, 0, 0, 0, 0, 1, 10, 29].to_owned()
+            [0, 0, 0, 0, 0, 1, 10, 29, b'\n'].to_owned()
         );
     }
 }

@@ -1,5 +1,8 @@
 use super::{CommandType, Request};
-use crate::pool::Pool;
+use crate::{
+    pool::Pool,
+    state::KeyType,
+};
 use alloc::vec::Vec;
 use core::convert::{TryFrom, TryInto};
 use log::warn;
@@ -7,15 +10,20 @@ use log::warn;
 #[derive(Debug)]
 pub enum ParseError {
     CommandTypeInvalid,
+    KeyTypeInvalid,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Stage {
     Init,
-    Kind(CommandType),
+    Kind {
+        cmd_type: CommandType,
+        key_type: Option<KeyType>,
+    },
     ArgumentParsing {
         argument_count: u8,
-        kind: CommandType,
+        cmd_type: CommandType,
+        key_type: Option<KeyType>,
     },
 }
 
@@ -57,11 +65,11 @@ impl Context {
 
             let conclusion = match self.stage {
                 Stage::Init => self.stage_init(buf)?,
-                Stage::Kind(kind) => self.stage_kind(buf, kind)?,
+                Stage::Kind { cmd_type, key_type } => self.stage_kind(buf, key_type, cmd_type)?,
                 Stage::ArgumentParsing {
                     argument_count,
-                    kind,
-                } => self.stage_argument_parsing(buf, kind, argument_count)?,
+                    cmd_type, key_type,
+                } => self.stage_argument_parsing(buf, cmd_type, key_type, argument_count)?,
             };
 
             match conclusion {
@@ -91,26 +99,43 @@ impl Context {
             None => return Ok(StageConclusion::Incomplete),
         };
 
-        let kind = CommandType::try_from(byte).map_err(|_| ParseError::CommandTypeInvalid)?;
+        // If the first bit is flipped, then this byte is denoting the type of
+        // key to work with. This means that byte idx 2 is the argument length.
+        //
+        // If the first bit is 0, then this byte is the argument length, and the
+        // type of key to work with is not a requirement.
+        let key_type = if byte >> 7 == 1 {
+            let key_type_id = byte >> 1;
+
+            Some(KeyType::try_from(key_type_id).map_err(|_| ParseError::KeyTypeInvalid)?)
+        } else {
+            None
+        };
+
+        let cmd_type = CommandType::try_from(byte).map_err(|_| ParseError::CommandTypeInvalid)?;
 
         // If the command type is simple and has no arguments or keys, then
         // we can just return a successful command here.
-        if kind.is_simple() {
+        if cmd_type.is_simple() {
             self.reset_light();
 
             return Ok(StageConclusion::Finished(Request {
                 args: None,
-                kind,
+                key_type: None,
+                kind: cmd_type,
             }));
         }
 
-        self.stage = Stage::Kind(kind);
+        self.stage = Stage::Kind {
+            cmd_type,
+            key_type,
+        };
         self.idx = self.idx.wrapping_add(1);
 
         Ok(StageConclusion::Next)
     }
 
-    fn stage_kind(&mut self, buf: &[u8], kind: CommandType) -> Result<StageConclusion, ParseError> {
+    fn stage_kind(&mut self, buf: &[u8], key_type: Option<KeyType>, cmd_type: CommandType) -> Result<StageConclusion, ParseError> {
         let argument_count = match buf.get(self.idx) {
             Some(argument_count) => *argument_count,
             None => return Ok(StageConclusion::Incomplete),
@@ -118,7 +143,8 @@ impl Context {
 
         self.stage = Stage::ArgumentParsing {
             argument_count,
-            kind,
+            cmd_type,
+            key_type,
         };
         self.idx = self.idx.saturating_add(1);
 
@@ -128,7 +154,8 @@ impl Context {
     fn stage_argument_parsing(
         &mut self,
         buf: &[u8],
-        kind: CommandType,
+        cmd_type: CommandType,
+        key_type: Option<KeyType>,
         argument_count: u8,
     ) -> Result<StageConclusion, ParseError> {
         let len_bytes = match buf.get(self.idx..self.idx + Self::ARG_LEN_BYTES) {
@@ -154,7 +181,8 @@ impl Context {
 
             Ok(StageConclusion::Finished(Request {
                 args,
-                kind,
+                key_type,
+                kind: cmd_type,
             }))
         } else {
             Ok(StageConclusion::Next)
