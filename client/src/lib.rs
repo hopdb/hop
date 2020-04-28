@@ -1,6 +1,5 @@
 pub mod backend;
 
-use async_std::net::ToSocketAddrs;
 use backend::{Backend, MemoryBackend, ServerBackend};
 
 /// A client for interfacing over Hop instances.
@@ -23,7 +22,7 @@ impl Client<ServerBackend> {
     /// println!("Increment value: {}", client.increment_int("foo").await?);
     /// # Ok(()) }
     pub async fn connect(
-        addrs: impl ToSocketAddrs,
+        addrs: impl ToString,
     ) -> Result<Self, <ServerBackend as Backend>::Error> {
         let backend = ServerBackend::connect(addrs).await.unwrap();
 

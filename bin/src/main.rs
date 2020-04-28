@@ -1,20 +1,23 @@
-use async_std::{
-    io::BufReader,
-    net::{TcpListener, TcpStream},
-    prelude::*,
-    task,
+use futures_util::{
+    io::{BufReader, AsyncBufReadExt, AsyncWriteExt},
+    stream::StreamExt,
 };
 use hop::{
     command::protocol::Context,
     Hop,
 };
 use log::{debug, warn};
-use std::{error::Error, net::SocketAddr, str::FromStr as _};
+use smol::{Async, Task};
+use std::{
+    error::Error,
+    net::{SocketAddr, TcpListener, TcpStream},
+    str::FromStr as _,
+};
 
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
-    task::block_on(run())
+    smol::run(run())
 }
 
 async fn run() -> Result<(), Box<dyn Error>> {
@@ -22,7 +25,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     let addr = SocketAddr::from_str("127.0.0.1:14000")?;
 
     debug!("Making TCP listener");
-    let listener = TcpListener::bind(&addr).await?;
+    let listener = Async::<TcpListener>::bind(&addr)?;
 
     let hop = Hop::new();
 
@@ -31,14 +34,14 @@ async fn run() -> Result<(), Box<dyn Error>> {
     debug!("Listening");
 
     while let Some(Ok(socket)) = incoming.next().await {
-        task::spawn(handle_socket(socket, hop.clone()));
+        Task::spawn(handle_socket(socket, hop.clone())).detach();
     }
 
     Ok(())
 }
 
-async fn handle_socket(socket: TcpStream, hop: Hop) {
-    let addr = socket.peer_addr().unwrap();
+async fn handle_socket(socket: Async<TcpStream>, hop: Hop) {
+    let addr = socket.get_ref().peer_addr().unwrap();
 
     log::debug!("Connected to peer {}", addr);
 
@@ -48,11 +51,12 @@ async fn handle_socket(socket: TcpStream, hop: Hop) {
     }
 }
 
-async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn Error>> {
+async fn handle_socket_inner(socket: Async<TcpStream>, hop: Hop) -> Result<(), Box<dyn Error>> {
     let mut input = Vec::new();
     let mut ctx = Context::new();
 
-    let mut writer = socket.clone();
+    let writer = socket.get_ref().try_clone()?;
+    let mut writer = Async::new(writer)?;
     let mut reader = BufReader::new(socket);
 
     while let Ok(size) = reader.read_until(b'\n', &mut input).await {

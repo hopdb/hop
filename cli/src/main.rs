@@ -1,6 +1,5 @@
 mod input;
 
-use async_std::task;
 use hop::Client;
 use hop_lib::command::CommandType;
 use std::{
@@ -33,13 +32,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                     },
                 };
 
-                let v = task::block_on(client.decrement_int(key)).unwrap();
+                let v = smol::block_on(client.decrement_int(key)).unwrap();
 
                 writeln!(stdout, "{}", v)?;
             },
             CommandType::Echo => {
                 if let Some(args) = req.flatten_args() {
-                    let v = task::block_on(client.echo(args)).unwrap();
+                    let v = smol::block_on(client.echo(args)).unwrap();
 
                     writeln!(stdout, "{}", String::from_utf8_lossy(&v))?;
                 } else {
@@ -56,7 +55,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     },
                 };
 
-                let v = task::block_on(client.increment_int(key)).unwrap();
+                let v = smol::block_on(client.increment_int(key)).unwrap();
 
                 writeln!(stdout, "{}", v)?;
             },

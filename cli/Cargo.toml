@@ -5,6 +5,6 @@ name = "hop-cli"
 version = "0.1.0"
 
 [dependencies]
-async-std = { features = ["attributes"], version = "^1.5.0" }
 hop = { path = "../client" }
 hop-lib = { path = "../lib" }
+smol = { default-features = false, version = "^0.1.2" }

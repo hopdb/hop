@@ -5,6 +5,7 @@ authors = ["Vivian Hellyer <vivian@hellyer.dev>"]
 edition = "2018"
 
 [dependencies]
-async-std = "^1.5.0"
 async-trait = "^0.1.30"
+futures-util = { default-features = false, version = "^0.3.4" }
 hop-lib = { path = "../lib" }
+smol = { default-features = false, version = "^0.1.2" }

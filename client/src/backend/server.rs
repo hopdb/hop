@@ -1,16 +1,14 @@
 use super::Backend;
-use async_std::{
-    io::BufReader,
-    net::{TcpStream, ToSocketAddrs},
-    prelude::*,
-};
 use async_trait::async_trait;
+use futures_util::io::{AsyncWriteExt, AsyncBufReadExt, BufReader};
 use hop_lib::command::CommandType;
+use smol::Async;
 use std::{
     convert::TryInto,
     error::Error as StdError,
     fmt::{Display, Formatter, Result as FmtResult},
     io::Error as IoError,
+    net::TcpStream,
     result::Result as StdResult,
 };
 
@@ -38,12 +36,12 @@ impl StdError for Error {
 }
 
 pub struct ServerBackend {
-    stream: TcpStream,
+    stream: Async<TcpStream>,
 }
 
 impl ServerBackend {
-    pub async fn connect(addrs: impl ToSocketAddrs) -> Result<Self> {
-        let stream = TcpStream::connect(addrs)
+    pub async fn connect(addrs: impl ToString) -> Result<Self> {
+        let stream = Async::<TcpStream>::connect(addrs)
             .await
             .map_err(|source| Error::Connecting { source })?;
 
