@@ -4,7 +4,7 @@ use async_std::{
     prelude::*,
     task,
 };
-use hop::{command::protocol::Context, Hop};
+use hop::{command::request::Context, Hop};
 use log::{debug, warn};
 use std::{error::Error, net::SocketAddr, str::FromStr as _};
 
