@@ -14,7 +14,7 @@ pub struct PubSubManager(Arc<PubSubManagerRef>);
 
 impl PubSubManager {
     /// Retrieves a session's subscription for a key, if it exists.
-    pub fn get(&self, object_key: &Key, session_id: SessionId) -> Option<Weak<Subscription>> {
+    pub fn get(&self, object_key: &[u8], session_id: SessionId) -> Option<Weak<Subscription>> {
         let session = self.0.sessions.get(&session_id)?;
         let sub = session.get(object_key)?;
 
@@ -55,7 +55,7 @@ impl PubSubManager {
     ///
     /// Returns whether unsubscribing was successful. This will only be
     /// unsuccessful if the session wasn't subscribed to the key.
-    pub fn unsubscribe(&self, object_key: &Key, session_id: SessionId) -> bool {
+    pub fn unsubscribe(&self, object_key: &[u8], session_id: SessionId) -> bool {
         let key_unsubbed = self
             .0
             .keys

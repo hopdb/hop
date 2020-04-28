@@ -96,7 +96,6 @@ impl State {
     /// # Examples
     ///
     /// ```rust
-    /// # fn main() { try_main().unwrap(); }
     /// # fn try_main() -> Option<()> {
     /// use hop_lib::state::{object::{Integer, Object}, State};
     ///
@@ -107,6 +106,7 @@ impl State {
     ///
     /// *int += 100;
     /// # Some(()) }
+    /// # try_main().unwrap();
     /// ```
     pub fn typed_key<'a, K: Object<'a>>(&'a self, key: &[u8]) -> Option<K> {
         let key = self.key(key, K::default);

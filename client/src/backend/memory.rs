@@ -17,13 +17,14 @@ impl From<CommandError> for Error {
     }
 }
 
+#[derive(Debug, Default)]
 pub struct MemoryBackend {
     hop: Hop,
 }
 
 impl MemoryBackend {
     pub fn new() -> Self {
-        Self { hop: Hop::new() }
+        Default::default()
     }
 }
 

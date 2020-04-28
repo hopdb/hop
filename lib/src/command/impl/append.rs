@@ -45,9 +45,7 @@ impl Dispatch for Append {
 
                 Ok(Response::from_string(&string))
             }
-            Some(_) => {
-                return Err(Error::WrongType);
-            }
+            Some(_) => Err(Error::WrongType),
         }
     }
 }
