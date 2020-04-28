@@ -10,6 +10,7 @@ pub use self::{
 };
 
 use alloc::vec::Vec;
+use core::slice::SliceIndex;
 use crate::{state::KeyType, Hop};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -38,8 +39,12 @@ impl Request {
         }
     }
 
-    pub fn arg(&self, idx: usize) -> Option<&[u8]> {
-        self.args.as_ref().and_then(|args| args.get(idx)).map(|x| x.as_ref())
+    pub fn arg<I: SliceIndex<[Vec<u8>]>>(&self, index: I) -> Option<&<I as SliceIndex<[Vec<u8>]>>::Output> {
+        let args = self.args.as_ref()?;
+
+        let refs = args.get(index)?;
+
+        Some(refs)
     }
 
     pub fn flatten_args(&self) -> Option<Vec<u8>> {
@@ -93,6 +98,13 @@ impl Response {
         self.0
     }
 
+    fn from_bytes(value: &[u8]) -> Self {
+        let mut bytes = value.to_vec();
+        bytes.push(b'\n');
+
+        Self(bytes)
+    }
+
     fn from_int(value: i64) -> Self {
         let mut bytes = value.to_be_bytes().to_vec();
         bytes.push(b'\n');
@@ -100,8 +112,23 @@ impl Response {
         Self(bytes)
     }
 
+    fn from_list() -> Self {
+        // let mut bytes = value.as_bytes().to_vec();
+        let mut bytes = Vec::new();
+        bytes.push(b'\n');
+
+        Self(bytes)
+    }
+
     fn from_usize(value: usize) -> Self {
         let mut bytes = value.to_be_bytes().to_vec();
+        bytes.push(b'\n');
+
+        Self(bytes)
+    }
+
+    fn from_string(value: &str) -> Self {
+        let mut bytes = value.as_bytes().to_vec();
         bytes.push(b'\n');
 
         Self(bytes)
