@@ -165,10 +165,7 @@ mod tests {
         assert_eq!(CommandType::IncrementBy, CommandType::try_from(2).unwrap());
         assert_eq!(CommandType::Increment, CommandType::try_from(0).unwrap());
         assert_eq!(CommandType::Stats, CommandType::try_from(101).unwrap());
-        assert_eq!(
-            CommandType::Length,
-            CommandType::try_from(21).unwrap()
-        );
+        assert_eq!(CommandType::Length, CommandType::try_from(21).unwrap());
     }
 
     #[test]

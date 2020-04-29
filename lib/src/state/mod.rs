@@ -80,7 +80,7 @@ impl State {
             match self.0.get_mut(key) {
                 Some(v) => {
                     break v;
-                },
+                }
                 None => {
                     self.0.insert(key.to_owned(), f());
 
