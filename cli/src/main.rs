@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     loop {
         write!(stdout, "> ")?;
         stdout.flush()?;
-        let mut req = input::process_command(&mut stdin, &mut input)?;
+        let req = input::process_command(&mut stdin, &mut input)?;
         input.clear();
 
         match req.kind() {

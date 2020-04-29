@@ -32,7 +32,7 @@ impl Hop {
         Default::default()
     }
 
-    pub fn dispatch(&self, req: &mut Request) -> CommandResult<Response> {
+    pub fn dispatch(&self, req: &Request) -> CommandResult<Response> {
         match req.kind() {
             CommandType::Append => Append::dispatch(self, req),
             CommandType::DecrementIntBy => DecrementIntBy::dispatch(self, req),

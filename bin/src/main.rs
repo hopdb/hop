@@ -60,7 +60,7 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
             break;
         }
 
-        let mut req = match ctx.feed(&input) {
+        let req = match ctx.feed(&input) {
             Ok(Some(cmd)) => cmd,
             Ok(None) => continue,
             Err(why) => {
@@ -70,7 +70,7 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
             }
         };
 
-        let resp = hop.dispatch(&mut req).unwrap();
+        let resp = hop.dispatch(&req).unwrap();
 
         writer.write_all(resp.bytes()).await?;
 

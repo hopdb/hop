@@ -17,7 +17,7 @@ impl IncrementIntBy {
 }
 
 impl Dispatch for IncrementIntBy {
-    fn dispatch(hop: &Hop, req: &mut Request) -> Result<Response> {
+    fn dispatch(hop: &Hop, req: &Request) -> Result<Response> {
         let key = req.key().ok_or(Error::KeyRetrieval)?;
         let new = Self::increment(hop, key, 1)?;
 

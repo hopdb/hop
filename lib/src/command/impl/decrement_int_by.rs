@@ -17,7 +17,7 @@ impl DecrementIntBy {
 }
 
 impl Dispatch for DecrementIntBy {
-    fn dispatch(hop: &Hop, req: &mut Request) -> Result<Response> {
+    fn dispatch(hop: &Hop, req: &Request) -> Result<Response> {
         let key = req.key().ok_or(Error::KeyRetrieval)?;
         let new = Self::decrement(hop, key, 1)?;
 

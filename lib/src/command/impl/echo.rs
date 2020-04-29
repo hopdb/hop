@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 pub struct Echo;
 
 impl Dispatch for Echo {
-    fn dispatch(_: &Hop, req: &mut Request) -> Result<Response> {
+    fn dispatch(_: &Hop, req: &Request) -> Result<Response> {
         match req.args() {
             Some(args) => Ok(Response::from(args)),
             None => {

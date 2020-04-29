@@ -54,7 +54,7 @@ impl Request {
         )
     }
 
-    pub fn key(&mut self) -> Option<&[u8]> {
+    pub fn key(&self) -> Option<&[u8]> {
         if !self.kind.has_key() {
             return None;
         }

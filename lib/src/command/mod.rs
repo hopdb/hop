@@ -15,5 +15,5 @@ pub use self::{
 use crate::Hop;
 
 pub trait Dispatch {
-    fn dispatch(hop: &Hop, req: &mut Request) -> CommandResult<Response>;
+    fn dispatch(hop: &Hop, req: &Request) -> CommandResult<Response>;
 }

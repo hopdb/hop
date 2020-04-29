@@ -9,7 +9,7 @@ use core::str;
 pub struct Append;
 
 impl Dispatch for Append {
-    fn dispatch(hop: &Hop, req: &mut Request) -> Result<Response> {
+    fn dispatch(hop: &Hop, req: &Request) -> Result<Response> {
         let key = req.arg(0).ok_or(Error::KeyRetrieval)?;
         let args = req.arg(1..).ok_or(Error::ArgumentRetrieval)?;
 
