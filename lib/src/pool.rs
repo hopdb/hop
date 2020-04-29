@@ -47,3 +47,48 @@ impl<T: Debug> Debug for Pool<T> {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Pool;
+    use alloc::{string::String, vec::Vec};
+    use core::fmt::Write;
+
+    #[test]
+    fn test_pull() {
+        let mut pool: Pool<Vec<u64>> = Pool::new(1, Vec::new);
+
+        assert!(pool.pull().is_empty());
+        assert!(pool.items.is_empty());
+    }
+
+    #[test]
+    fn test_pull_doesnt_always_initialize() {
+        let mut pool: Pool<Vec<u64>> = Pool::new(1, Vec::new);
+
+        let mut item = pool.pull();
+        assert!(pool.items.is_empty());
+        item.push(0);
+        pool.push(item);
+        assert!(!pool.pull().is_empty());
+    }
+
+    #[test]
+    fn test_pull_is_additive() {
+        let mut pool: Pool<Vec<u64>> = Pool::new(1, Vec::new);
+
+        pool.pull();
+        assert!(pool.items.is_empty());
+        assert!(pool.pull().is_empty());
+        assert!(pool.items.is_empty());
+    }
+
+    #[test]
+    fn test_debug() {
+        let pool: Pool<Vec<u64>> = Pool::new(1, Vec::new);
+        let mut s = String::new();
+        write!(s, "{:?}", pool).unwrap();
+
+        assert_eq!(s, r#"Pool { init: "function to init items", items: [[]] }"#);
+    }
+}
