@@ -312,7 +312,7 @@ impl Context {
 impl Default for Context {
     fn default() -> Self {
         Self {
-            argument_pool: Pool::new(1, Vec::new),
+            argument_pool: Pool::new(Vec::new),
             buf_args: Some(Vec::new()),
             idx: 0,
             stage: Stage::default(),

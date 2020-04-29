@@ -11,16 +11,10 @@ pub struct Pool<T> {
 }
 
 impl<T> Pool<T> {
-    pub fn new(initial_size: usize, init: impl Fn() -> T + Send + 'static) -> Self {
-        let mut items = Vec::new();
-
-        for _ in 0..initial_size {
-            items.push(init());
-        }
-
+    pub fn new(init: impl Fn() -> T + Send + 'static) -> Self {
         Self {
             init: Box::new(init),
-            items,
+            items: Vec::new(),
         }
     }
 
@@ -56,7 +50,7 @@ mod tests {
 
     #[test]
     fn test_pull() {
-        let mut pool: Pool<Vec<u64>> = Pool::new(1, Vec::new);
+        let mut pool: Pool<Vec<u64>> = Pool::new(Vec::new);
 
         assert!(pool.pull().is_empty());
         assert!(pool.items.is_empty());
@@ -64,7 +58,7 @@ mod tests {
 
     #[test]
     fn test_pull_doesnt_always_initialize() {
-        let mut pool: Pool<Vec<u64>> = Pool::new(1, Vec::new);
+        let mut pool: Pool<Vec<u64>> = Pool::new(Vec::new);
 
         let mut item = pool.pull();
         assert!(pool.items.is_empty());
@@ -75,7 +69,7 @@ mod tests {
 
     #[test]
     fn test_pull_is_additive() {
-        let mut pool: Pool<Vec<u64>> = Pool::new(1, Vec::new);
+        let mut pool: Pool<Vec<u64>> = Pool::new(Vec::new);
 
         pool.pull();
         assert!(pool.items.is_empty());
@@ -85,10 +79,10 @@ mod tests {
 
     #[test]
     fn test_debug() {
-        let pool: Pool<Vec<u64>> = Pool::new(1, Vec::new);
+        let pool: Pool<Vec<u64>> = Pool::new(Vec::new);
         let mut s = String::new();
         write!(s, "{:?}", pool).unwrap();
 
-        assert_eq!(s, r#"Pool { init: "function to init items", items: [[]] }"#);
+        assert_eq!(s, r#"Pool { init: "function to init items", items: [] }"#);
     }
 }
