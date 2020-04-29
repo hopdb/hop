@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         input.clear();
 
         match req.kind() {
-            CommandType::DecrementInt => {
+            CommandType::Decrement => {
                 let key = match req.key() {
                     Some(key) => key,
                     None => {
@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     }
                 };
 
-                let v = task::block_on(client.decrement_int(key)).unwrap();
+                let v = task::block_on(client.decrement(key)).unwrap();
 
                 writeln!(stdout, "{}", v)?;
             }
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     writeln!(stdout,)?;
                 }
             }
-            CommandType::IncrementInt => {
+            CommandType::Increment => {
                 let key = match req.key() {
                     Some(key) => key,
                     None => {
@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     }
                 };
 
-                let v = task::block_on(client.increment_int(key)).unwrap();
+                let v = task::block_on(client.increment(key)).unwrap();
 
                 writeln!(stdout, "{}", v)?;
             }

@@ -55,16 +55,16 @@ impl Client<MemoryBackend> {
 }
 
 impl<B: Backend> Client<B> {
-    /// Decrements an integer key by one.
+    /// Decrements a float or integer key by one.
     ///
     /// Returns the new value on success.
     ///
-    /// If the key does not exist, it is created with a value of 0 and then
-    /// decremented by 1, resulting in the value being -1.
+    /// If the key does not exist, an integer key is created with a value of 0
+    /// and then decremented by 1, resulting in the value being -1.
     ///
     /// This is an `O(1)` time complexity operation.
-    pub async fn decrement_int(&mut self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
-        self.backend.decrement_int(key.as_ref()).await
+    pub async fn decrement(&mut self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
+        self.backend.decrement(key.as_ref()).await
     }
 
     /// Echos the provided content back at you.
@@ -83,18 +83,6 @@ impl<B: Backend> Client<B> {
     ///
     /// This is an `O(1)` time complexity operation.
     pub async fn increment(&mut self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
-        self.backend.increment_int(key.as_ref()).await
-    }
-
-    /// Increments an integer key by one.
-    ///
-    /// Returns the new value on success.
-    ///
-    /// If the key does not exist, it is created with a value of 0 and then
-    /// incremented by 1, resulting in the value being 1.
-    ///
-    /// This is an `O(1)` time complexity operation.
-    pub async fn increment_int(&mut self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
-        self.backend.increment_int(key.as_ref()).await
+        self.backend.increment(key.as_ref()).await
     }
 }

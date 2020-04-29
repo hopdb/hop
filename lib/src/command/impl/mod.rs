@@ -1,15 +1,15 @@
 mod append;
-mod decrement_int;
-mod decrement_int_by;
+mod decrement;
+mod decrement_by;
 mod echo;
-mod increment_int;
-mod increment_int_by;
+mod increment;
+mod increment_by;
 mod prelude;
 mod stats;
 mod string_length;
 
 pub use self::{
-    append::Append, decrement_int::DecrementInt, decrement_int_by::DecrementIntBy, echo::Echo,
-    increment_int::IncrementInt, increment_int_by::IncrementIntBy, stats::Stats,
+    append::Append, decrement::Decrement, decrement_by::DecrementBy, echo::Echo,
+    increment::Increment, increment_by::IncrementBy, stats::Stats,
     string_length::StringLength,
 };

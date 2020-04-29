@@ -349,7 +349,7 @@ mod tests {
             .expect("parses correctly")
             .expect("returns a command");
 
-        assert_eq!(cmd.kind, CommandType::IncrementInt);
+        assert_eq!(cmd.kind, CommandType::Increment);
 
         Ok(())
     }

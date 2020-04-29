@@ -35,11 +35,11 @@ impl Hop {
     pub fn dispatch(&self, req: &Request) -> CommandResult<Response> {
         match req.kind() {
             CommandType::Append => Append::dispatch(self, req),
-            CommandType::DecrementIntBy => DecrementIntBy::dispatch(self, req),
-            CommandType::DecrementInt => DecrementInt::dispatch(self, req),
+            CommandType::DecrementBy => DecrementBy::dispatch(self, req),
+            CommandType::Decrement => Decrement::dispatch(self, req),
             CommandType::Echo => Echo::dispatch(self, req),
-            CommandType::IncrementInt => IncrementInt::dispatch(self, req),
-            CommandType::IncrementIntBy => IncrementIntBy::dispatch(self, req),
+            CommandType::Increment => Increment::dispatch(self, req),
+            CommandType::IncrementBy => IncrementBy::dispatch(self, req),
             CommandType::Stats => Stats::dispatch(self, req),
             CommandType::StringLength => StringLength::dispatch(self, req),
         }

@@ -32,8 +32,8 @@ impl MemoryBackend {
 impl Backend for MemoryBackend {
     type Error = Error;
 
-    async fn decrement_int(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
-        let mut req = Request::new(CommandType::DecrementInt, Some(vec![key.to_vec()]));
+    async fn decrement(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
+        let mut req = Request::new(CommandType::Decrement, Some(vec![key.to_vec()]));
 
         let resp = self.hop.dispatch(&mut req)?.into_bytes();
 
@@ -56,18 +56,8 @@ impl Backend for MemoryBackend {
     }
 
     async fn increment(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
-        let mut req = Request::new(CommandType::IncrementInt, Some(vec![key.to_vec()]));
+        let mut req = Request::new(CommandType::Increment, Some(vec![key.to_vec()]));
         let resp = self.hop.dispatch(&mut req)?.into_bytes();
-
-        let arr = resp.get(..8).unwrap().try_into().unwrap();
-        let num = i64::from_be_bytes(arr);
-
-        Ok(num)
-    }
-
-    async fn increment_int(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
-        let mut cmd = Request::new(CommandType::IncrementInt, Some(vec![key.to_vec()]));
-        let resp = self.hop.dispatch(&mut cmd)?.into_bytes();
 
         let arr = resp.get(..8).unwrap().try_into().unwrap();
         let num = i64::from_be_bytes(arr);
