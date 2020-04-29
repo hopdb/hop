@@ -41,7 +41,7 @@ impl Hop {
             CommandType::Increment => Increment::dispatch(self, req),
             CommandType::IncrementBy => IncrementBy::dispatch(self, req),
             CommandType::Stats => Stats::dispatch(self, req),
-            CommandType::StringLength => StringLength::dispatch(self, req),
+            CommandType::Length => Length::dispatch(self, req),
         }
     }
 

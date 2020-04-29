@@ -43,8 +43,9 @@ impl TryFrom<u8> for KeyType {
     }
 }
 
+// The inner map is public to the crate solely for testing purposes.
 #[derive(Clone, Debug, Default)]
-pub struct State(Arc<DashMap<Key, Value>>);
+pub struct State(pub(crate) Arc<DashMap<Key, Value>>);
 
 impl State {
     pub fn new() -> Self {
@@ -77,7 +78,9 @@ impl State {
 
         loop {
             match self.0.get_mut(key) {
-                Some(v) => return v,
+                Some(v) => {
+                    break v;
+                },
                 None => {
                     self.0.insert(key.to_owned(), f());
 

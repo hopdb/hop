@@ -23,6 +23,14 @@ impl Request {
         }
     }
 
+    pub fn new_with_type(kind: CommandType, args: Option<Vec<Vec<u8>>>, key_type: KeyType) -> Self {
+        Self {
+            args,
+            key_type: Some(key_type),
+            kind,
+        }
+    }
+
     pub fn args(&self) -> Option<&[Vec<u8>]> {
         self.args.as_deref()
     }

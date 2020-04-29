@@ -5,7 +5,7 @@ use core::{
 
 pub type Result<T, E = Error> = CoreResult<T, E>;
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Error {
     ArgumentRetrieval,
     KeyRetrieval,

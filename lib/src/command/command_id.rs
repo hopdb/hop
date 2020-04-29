@@ -22,7 +22,7 @@ pub enum CommandType {
     IncrementBy = 2,
     DecrementBy = 3,
     Append = 20,
-    StringLength = 21,
+    Length = 21,
     Echo = 100,
     Stats = 101,
 }
@@ -40,7 +40,7 @@ impl CommandType {
             Decrement => None,
             DecrementBy => One,
             Stats => None,
-            StringLength => One,
+            Length => One,
         }
     }
 
@@ -66,7 +66,7 @@ impl CommandType {
             Self::IncrementBy => "increment:by",
             Self::Increment => "increment",
             Self::Stats => "stats",
-            Self::StringLength => "string:length",
+            Self::Length => "length",
         }
     }
 }
@@ -89,7 +89,7 @@ impl FromStr for CommandType {
             "increment:by" => Self::IncrementBy,
             "increment" => Self::Increment,
             "stats" => Self::Stats,
-            "string:length" => Self::StringLength,
+            "length" => Self::Length,
             _ => return Err(InvalidCommandType),
         })
     }
@@ -105,7 +105,7 @@ impl TryFrom<u8> for CommandType {
             2 => Self::IncrementBy,
             3 => Self::DecrementBy,
             20 => Self::Append,
-            21 => Self::StringLength,
+            21 => Self::Length,
             100 => Self::Echo,
             101 => Self::Stats,
             _ => return Err(InvalidCommandType),
@@ -151,8 +151,8 @@ mod tests {
         );
         assert_eq!(CommandType::Stats, CommandType::from_str("stats").unwrap());
         assert_eq!(
-            CommandType::StringLength,
-            CommandType::from_str("string:length").unwrap()
+            CommandType::Length,
+            CommandType::from_str("length").unwrap()
         );
     }
 
@@ -166,7 +166,7 @@ mod tests {
         assert_eq!(CommandType::Increment, CommandType::try_from(0).unwrap());
         assert_eq!(CommandType::Stats, CommandType::try_from(101).unwrap());
         assert_eq!(
-            CommandType::StringLength,
+            CommandType::Length,
             CommandType::try_from(21).unwrap()
         );
     }
@@ -180,6 +180,6 @@ mod tests {
         assert_eq!("increment:by", CommandType::IncrementBy.name());
         assert_eq!("increment", CommandType::Increment.name());
         assert_eq!("stats", CommandType::Stats.name());
-        assert_eq!("string:length", CommandType::StringLength.name());
+        assert_eq!("length", CommandType::Length.name());
     }
 }
