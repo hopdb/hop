@@ -159,16 +159,10 @@ mod tests {
     #[test]
     fn test_try_from_u8() {
         assert_eq!(CommandType::Append, CommandType::try_from(20).unwrap());
-        assert_eq!(
-            CommandType::DecrementBy,
-            CommandType::try_from(3).unwrap()
-        );
+        assert_eq!(CommandType::DecrementBy, CommandType::try_from(3).unwrap());
         assert_eq!(CommandType::Decrement, CommandType::try_from(1).unwrap());
         assert_eq!(CommandType::Echo, CommandType::try_from(100).unwrap());
-        assert_eq!(
-            CommandType::IncrementBy,
-            CommandType::try_from(2).unwrap()
-        );
+        assert_eq!(CommandType::IncrementBy, CommandType::try_from(2).unwrap());
         assert_eq!(CommandType::Increment, CommandType::try_from(0).unwrap());
         assert_eq!(CommandType::Stats, CommandType::try_from(101).unwrap());
         assert_eq!(
