@@ -4,7 +4,11 @@ use hop_lib::{
     command::{CommandError, CommandType, Request},
     Hop,
 };
-use std::convert::TryInto;
+use std::{
+    convert::TryInto,
+    error::Error as StdError,
+    fmt::{Display, Formatter, Result as FmtResult},
+};
 
 #[derive(Debug)]
 pub enum Error {
@@ -14,6 +18,22 @@ pub enum Error {
 impl From<CommandError> for Error {
     fn from(source: CommandError) -> Self {
         Self::RunningCommand { source }
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            Self::RunningCommand { source } => f.write_fmt(format_args!("{}", source)),
+        }
+    }
+}
+
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            Self::RunningCommand { .. } => None,
+        }
     }
 }
 

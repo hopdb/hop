@@ -15,12 +15,12 @@ impl Client<ServerBackend> {
     ///
     /// Connect to an instance of Hop on port 14000 of localhost:
     ///
-    /// ```
+    /// ```no_run
+    /// # #[async_std::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use hop::Client;
     ///
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let client = Client::connect("localhost:14000").await?;
-    /// println!("Increment value: {}", client.increment_int("foo").await?);
+    /// let mut client = Client::connect("localhost:14000").await?;
+    /// println!("Increment value: {}", client.increment("foo").await?);
     /// # Ok(()) }
     pub async fn connect(
         addrs: impl ToSocketAddrs,
@@ -39,12 +39,12 @@ impl Client<MemoryBackend> {
     /// # Examples
     ///
     /// ```rust
+    /// # #[async_std::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use hop::Client;
     ///
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let client = Client::memory();
-    /// println!("Incremented value: {}", client.increment_int("foo").await?);
-    /// println!("Incremented again: {}", client.increment_int("foo").await?);
+    /// let mut client = Client::memory();
+    /// println!("Incremented value: {}", client.increment("foo").await?);
+    /// println!("Incremented again: {}", client.increment("foo").await?);
     /// # Ok(()) }
     /// ```
     pub fn memory() -> Self {
