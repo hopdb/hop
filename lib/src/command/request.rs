@@ -1,14 +1,11 @@
+use super::CommandType;
+use crate::{pool::Pool, state::KeyType};
 use alloc::vec::Vec;
 use core::{
     convert::{TryFrom, TryInto},
     slice::SliceIndex,
 };
-use crate::{
-    pool::Pool,
-    state::KeyType,
-};
 use log::warn;
-use super::CommandType;
 
 #[derive(Debug)]
 pub struct Request {
@@ -24,6 +21,10 @@ impl Request {
             key_type: None,
             kind,
         }
+    }
+
+    pub fn args(&self) -> Option<&[Vec<u8>]> {
+        self.args.as_deref()
     }
 
     pub fn arg<I: SliceIndex<[Vec<u8>]>>(

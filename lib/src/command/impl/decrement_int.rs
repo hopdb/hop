@@ -8,6 +8,6 @@ impl Dispatch for DecrementInt {
 
         let new = DecrementIntBy::decrement(hop, key, 1)?;
 
-        Ok(Response::from_int(new))
+        Ok(Response::from(new))
     }
 }

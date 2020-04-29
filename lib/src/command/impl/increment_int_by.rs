@@ -21,6 +21,6 @@ impl Dispatch for IncrementIntBy {
         let key = req.key().ok_or(Error::KeyRetrieval)?;
         let new = Self::increment(hop, key, 1)?;
 
-        Ok(Response::from_int(new))
+        Ok(Response::from(new))
     }
 }

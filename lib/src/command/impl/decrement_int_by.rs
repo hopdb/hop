@@ -21,6 +21,6 @@ impl Dispatch for DecrementIntBy {
         let key = req.key().ok_or(Error::KeyRetrieval)?;
         let new = Self::decrement(hop, key, 1)?;
 
-        Ok(Response::from_int(new))
+        Ok(Response::from(new))
     }
 }

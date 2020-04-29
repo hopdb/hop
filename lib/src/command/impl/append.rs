@@ -24,15 +24,14 @@ impl Dispatch for Append {
                     bytes.extend_from_slice(arg);
                 }
 
-                Ok(Response::from_bytes(&bytes))
+                Ok(Response::from(bytes.as_slice()))
             }
             Some(KeyType::List) => {
                 let mut list = hop.state().typed_key::<List>(key).ok_or(Error::WrongType)?;
 
                 list.append(&mut args.to_owned());
 
-                Ok(Response::from_list())
-                // Ok(Response::from_list(list.as_slice().map(|x| x.as_slice())))
+                Ok(Response::from(list.as_slice()))
             }
             Some(KeyType::String) => {
                 let mut string = hop.state().typed_key::<Str>(key).ok_or(Error::WrongType)?;
@@ -43,7 +42,7 @@ impl Dispatch for Append {
                     }
                 }
 
-                Ok(Response::from_string(&string))
+                Ok(Response::from(string.as_str()))
             }
             Some(_) => Err(Error::WrongType),
         }

@@ -8,6 +8,6 @@ impl Dispatch for IncrementInt {
 
         let new = IncrementIntBy::increment(hop, key, 1)?;
 
-        Ok(Response::from_int(new))
+        Ok(Response::from(new))
     }
 }

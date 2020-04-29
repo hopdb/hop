@@ -8,9 +8,9 @@ impl Dispatch for StringLength {
         let key = req.key().ok_or(Error::KeyRetrieval)?;
         let string = match hop.state().typed_key::<Str>(key) {
             Some(string) => string,
-            None => return Ok(Response::from_usize(0)),
+            None => return Ok(Response::from(0i64)),
         };
 
-        Ok(Response::from_usize(string.len()))
+        Ok(Response::from(string.len() as i64))
     }
 }
