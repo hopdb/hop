@@ -8,3 +8,6 @@ edition = "2018"
 async-std = "^1.5.0"
 async-trait = "^0.1.30"
 hop-lib = { path = "../lib" }
+
+[dev-dependencies]
+async-std = { default-features = true, features = ["attributes"], version = "^1.5.0" }
