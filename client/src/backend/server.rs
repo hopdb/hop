@@ -5,7 +5,7 @@ use async_std::{
     prelude::*,
 };
 use async_trait::async_trait;
-use hop_lib::command::CommandType;
+use hop_lib::command::CommandId;
 use std::{
     convert::TryInto,
     error::Error as StdError,
@@ -73,7 +73,7 @@ impl Backend for ServerBackend {
     }
 
     async fn echo(&mut self, content: &[u8]) -> Result<Vec<u8>> {
-        let mut cmd = vec![CommandType::Echo as u8, 1, 0, 0, 0, content.len() as u8];
+        let mut cmd = vec![CommandId::Echo as u8, 1, 0, 0, 0, content.len() as u8];
         cmd.extend_from_slice(content);
         cmd.push(b'\n');
 

@@ -2,7 +2,7 @@ mod input;
 
 use async_std::task;
 use hop::Client;
-use hop_lib::command::CommandType;
+use hop_lib::command::CommandId;
 use std::{
     error::Error,
     io::{self, Write},
@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         input.clear();
 
         match req.kind() {
-            CommandType::Decrement => {
+            CommandId::Decrement => {
                 let key = match req.key() {
                     Some(key) => key,
                     None => {
@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 writeln!(stdout, "{}", v)?;
             }
-            CommandType::Echo => {
+            CommandId::Echo => {
                 if let Some(args) = req.flatten_args() {
                     let v = task::block_on(client.echo(args)).unwrap();
 
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     writeln!(stdout,)?;
                 }
             }
-            CommandType::Increment => {
+            CommandId::Increment => {
                 let key = match req.key() {
                     Some(key) => key,
                     None => {

@@ -6,7 +6,7 @@ mod command_id;
 mod error;
 
 pub use self::{
-    command_id::{CommandType, InvalidCommandType},
+    command_id::{CommandId, InvalidCommandId},
     error::{Error as CommandError, Result as CommandResult},
     request::Request,
     response::Response,

@@ -62,7 +62,7 @@ impl Dispatch for Length {
 mod tests {
     use super::Length;
     use crate::{
-        command::{CommandError, CommandType, Dispatch, Request, Response},
+        command::{CommandError, CommandId, Dispatch, Request, Response},
         state::{KeyType, Value},
         Hop,
     };
@@ -71,7 +71,7 @@ mod tests {
     #[test]
     fn test_no_args() {
         let hop = Hop::new();
-        let req = Request::new(CommandType::Length, None);
+        let req = Request::new(CommandId::Length, None);
 
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap_err(),
@@ -95,7 +95,7 @@ mod tests {
         ];
 
         for kind in types.iter() {
-            let req = Request::new_with_type(CommandType::Length, Some(args.clone()), *kind);
+            let req = Request::new_with_type(CommandId::Length, Some(args.clone()), *kind);
 
             assert_eq!(
                 Length::dispatch(&hop, &req).unwrap_err(),
@@ -109,7 +109,7 @@ mod tests {
         let hop = Hop::new();
         let mut args = Vec::new();
         args.push(b"foo".to_vec());
-        let req = Request::new(CommandType::Length, Some(args));
+        let req = Request::new(CommandId::Length, Some(args));
 
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap().into_bytes(),
@@ -126,7 +126,7 @@ mod tests {
             .insert(b"foo".to_vec(), Value::Bytes([1, 2, 3].to_vec()));
         let mut args = Vec::new();
         args.push(b"foo".to_vec());
-        let req = Request::new(CommandType::Length, Some(args));
+        let req = Request::new(CommandId::Length, Some(args));
 
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap().into_bytes(),
@@ -143,7 +143,7 @@ mod tests {
         hop.state().0.insert(b"hop".to_vec(), Value::List(list));
         let mut args = Vec::new();
         args.push(b"hop".to_vec());
-        let req = Request::new(CommandType::Length, Some(args));
+        let req = Request::new(CommandId::Length, Some(args));
 
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap().into_bytes(),
@@ -166,7 +166,7 @@ mod tests {
 
         let mut args = Vec::new();
         args.push(b"foo".to_vec());
-        let req = Request::new(CommandType::Length, Some(args.clone()));
+        let req = Request::new(CommandId::Length, Some(args.clone()));
 
         // length of a simple string, 4 bytes and 4 chars
         assert_eq!(
@@ -177,7 +177,7 @@ mod tests {
         // length of a simple string, 4 bytes but 1 char
         args.pop();
         args.push(b"cowboy".to_vec());
-        let req = Request::new(CommandType::Length, Some(args.clone()));
+        let req = Request::new(CommandId::Length, Some(args.clone()));
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap().into_bytes(),
             Response::from(1).into_bytes()

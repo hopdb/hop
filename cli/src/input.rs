@@ -1,4 +1,4 @@
-use hop_lib::command::{CommandType, Request};
+use hop_lib::command::{CommandId, Request};
 use std::{
     error::Error,
     fmt::{Display, Formatter, Result as FmtResult},
@@ -49,7 +49,7 @@ pub fn process_command(lock: &mut StdinLock, input: &mut String) -> Result<Reque
         }
     };
 
-    let cmd_type = CommandType::from_str(cmd_name).map_err(|_| InputError::InvalidCommandType {
+    let cmd_type = CommandId::from_str(cmd_name).map_err(|_| InputError::InvalidCommandType {
         provided_name: cmd_name.to_owned(),
     })?;
 

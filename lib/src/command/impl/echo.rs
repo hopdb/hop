@@ -23,7 +23,7 @@ impl Dispatch for Echo {
 mod tests {
     use super::Echo;
     use crate::{
-        command::{CommandType, Dispatch, Request, Response},
+        command::{CommandId, Dispatch, Request, Response},
         Hop,
     };
     use alloc::vec::Vec;
@@ -34,7 +34,7 @@ mod tests {
         let mut args = Vec::new();
         args.push(b"hopdb".to_vec());
 
-        let req = Request::new(CommandType::Echo, Some(args.clone()));
+        let req = Request::new(CommandId::Echo, Some(args.clone()));
 
         assert_eq!(
             Echo::dispatch(&hop, &req).unwrap().into_bytes(),
@@ -43,7 +43,7 @@ mod tests {
 
         args.push(b"hop".to_vec());
 
-        let req = Request::new(CommandType::Echo, Some(args.clone()));
+        let req = Request::new(CommandId::Echo, Some(args.clone()));
         assert_eq!(
             Echo::dispatch(&hop, &req).unwrap().into_bytes(),
             Response::from(args.as_slice()).into_bytes()
@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn test_empty() {
         let hop = Hop::new();
-        let req = Request::new(CommandType::Echo, None);
+        let req = Request::new(CommandId::Echo, None);
 
         let args: &[Vec<_>] = &[];
         assert_eq!(

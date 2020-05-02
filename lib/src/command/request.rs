@@ -1,4 +1,4 @@
-use super::CommandType;
+use super::CommandId;
 use crate::{pool::Pool, state::KeyType};
 use alloc::vec::Vec;
 use core::{
@@ -11,11 +11,11 @@ use log::warn;
 pub struct Request {
     args: Option<Vec<Vec<u8>>>,
     key_type: Option<KeyType>,
-    kind: CommandType,
+    kind: CommandId,
 }
 
 impl Request {
-    pub fn new(kind: CommandType, args: Option<Vec<Vec<u8>>>) -> Self {
+    pub fn new(kind: CommandId, args: Option<Vec<Vec<u8>>>) -> Self {
         Self {
             args,
             key_type: None,
@@ -23,7 +23,7 @@ impl Request {
         }
     }
 
-    pub fn new_with_type(kind: CommandType, args: Option<Vec<Vec<u8>>>, key_type: KeyType) -> Self {
+    pub fn new_with_type(kind: CommandId, args: Option<Vec<Vec<u8>>>, key_type: KeyType) -> Self {
         Self {
             args,
             key_type: Some(key_type),
@@ -84,7 +84,7 @@ impl Request {
         self.key_type
     }
 
-    pub fn kind(&self) -> CommandType {
+    pub fn kind(&self) -> CommandId {
         self.kind
     }
 
@@ -95,7 +95,7 @@ impl Request {
 
 #[derive(Debug)]
 pub enum ParseError {
-    CommandTypeInvalid,
+    CommandIdInvalid,
     KeyTypeInvalid,
 }
 
@@ -103,12 +103,12 @@ pub enum ParseError {
 enum Stage {
     Init,
     Kind {
-        cmd_type: CommandType,
+        cmd_type: CommandId,
         key_type: Option<KeyType>,
     },
     ArgumentParsing {
         argument_count: u8,
-        cmd_type: CommandType,
+        cmd_type: CommandId,
         key_type: Option<KeyType>,
     },
 }
@@ -199,7 +199,7 @@ impl Context {
             None
         };
 
-        let cmd_type = CommandType::try_from(byte).map_err(|_| ParseError::CommandTypeInvalid)?;
+        let cmd_type = CommandId::try_from(byte).map_err(|_| ParseError::CommandIdInvalid)?;
 
         // If the command type is simple and has no arguments or keys, then
         // we can just return a successful command here.
@@ -223,7 +223,7 @@ impl Context {
         &mut self,
         buf: &[u8],
         key_type: Option<KeyType>,
-        cmd_type: CommandType,
+        cmd_type: CommandId,
     ) -> Result<StageConclusion, ParseError> {
         let argument_count = match buf.get(self.idx) {
             Some(argument_count) => *argument_count,
@@ -243,7 +243,7 @@ impl Context {
     fn stage_argument_parsing(
         &mut self,
         buf: &[u8],
-        cmd_type: CommandType,
+        cmd_type: CommandId,
         key_type: Option<KeyType>,
         argument_count: u8,
     ) -> Result<StageConclusion, ParseError> {
@@ -323,7 +323,7 @@ impl Default for Context {
 #[cfg(test)]
 mod tests {
     use super::{
-        super::{error::Result, CommandType},
+        super::{error::Result, CommandId},
         Context,
     };
 
@@ -357,7 +357,7 @@ mod tests {
             .expect("parses correctly")
             .expect("returns a command");
 
-        assert_eq!(cmd.kind, CommandType::Increment);
+        assert_eq!(cmd.kind, CommandId::Increment);
 
         Ok(())
     }

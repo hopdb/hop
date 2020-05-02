@@ -1,7 +1,7 @@
 use super::Backend;
 use async_trait::async_trait;
 use hop_lib::{
-    command::{CommandError, CommandType, Request},
+    command::{CommandError, CommandId, Request},
     Hop,
 };
 use std::{
@@ -53,7 +53,7 @@ impl Backend for MemoryBackend {
     type Error = Error;
 
     async fn decrement(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
-        let req = Request::new(CommandType::Decrement, Some(vec![key.to_vec()]));
+        let req = Request::new(CommandId::Decrement, Some(vec![key.to_vec()]));
 
         let resp = self.hop.dispatch(&req)?.into_bytes();
 
@@ -64,7 +64,7 @@ impl Backend for MemoryBackend {
     }
 
     async fn echo(&mut self, content: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let req = Request::new(CommandType::Echo, Some(vec![content.to_vec()]));
+        let req = Request::new(CommandId::Echo, Some(vec![content.to_vec()]));
 
         let mut resp = self.hop.dispatch(&req)?.into_bytes();
 
@@ -76,7 +76,7 @@ impl Backend for MemoryBackend {
     }
 
     async fn increment(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
-        let req = Request::new(CommandType::Increment, Some(vec![key.to_vec()]));
+        let req = Request::new(CommandId::Increment, Some(vec![key.to_vec()]));
         let resp = self.hop.dispatch(&req)?.into_bytes();
 
         let arr = resp.get(..8).unwrap().try_into().unwrap();

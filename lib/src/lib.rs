@@ -10,7 +10,7 @@ pub mod state;
 mod pool;
 
 use self::{
-    command::{r#impl::*, CommandResult, CommandType, Dispatch, Request, Response},
+    command::{r#impl::*, CommandId, CommandResult, Dispatch, Request, Response},
     pubsub::PubSubManager,
     session::SessionManager,
     state::State,
@@ -34,14 +34,14 @@ impl Hop {
 
     pub fn dispatch(&self, req: &Request) -> CommandResult<Response> {
         match req.kind() {
-            CommandType::Append => Append::dispatch(self, req),
-            CommandType::DecrementBy => DecrementBy::dispatch(self, req),
-            CommandType::Decrement => Decrement::dispatch(self, req),
-            CommandType::Echo => Echo::dispatch(self, req),
-            CommandType::Increment => Increment::dispatch(self, req),
-            CommandType::IncrementBy => IncrementBy::dispatch(self, req),
-            CommandType::Stats => Stats::dispatch(self, req),
-            CommandType::Length => Length::dispatch(self, req),
+            CommandId::Append => Append::dispatch(self, req),
+            CommandId::DecrementBy => DecrementBy::dispatch(self, req),
+            CommandId::Decrement => Decrement::dispatch(self, req),
+            CommandId::Echo => Echo::dispatch(self, req),
+            CommandId::Increment => Increment::dispatch(self, req),
+            CommandId::IncrementBy => IncrementBy::dispatch(self, req),
+            CommandId::Stats => Stats::dispatch(self, req),
+            CommandId::Length => Length::dispatch(self, req),
         }
     }
 
