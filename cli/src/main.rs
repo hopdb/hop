@@ -17,14 +17,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     task::block_on(run(stdin, stdout))
 }
 
-async fn run(mut stdin: impl BufRead, mut stdout: impl Write) -> Result<(), Box<dyn Error>> {
+async fn run(mut reader: impl BufRead, mut writer: impl Write) -> Result<(), Box<dyn Error>> {
     let mut client = Client::memory();
     let mut input = String::new();
 
     loop {
-        write!(stdout, "> ")?;
-        stdout.flush()?;
-        let req = input::process_command(&mut stdin, &mut input)?;
+        write!(writer, "> ")?;
+        writer.flush()?;
+        let req = input::process_command(&mut reader, &mut input)?;
         input.clear();
 
         match req.kind() {
@@ -32,7 +32,7 @@ async fn run(mut stdin: impl BufRead, mut stdout: impl Write) -> Result<(), Box<
                 let key = match req.key() {
                     Some(key) => key,
                     None => {
-                        writeln!(stdout, "Key required.")?;
+                        writeln!(writer, "Key required.")?;
 
                         continue;
                     }
@@ -40,22 +40,22 @@ async fn run(mut stdin: impl BufRead, mut stdout: impl Write) -> Result<(), Box<
 
                 let v = client.decrement(key).await?;
 
-                writeln!(stdout, "{}", v)?;
+                writeln!(writer, "{}", v)?;
             }
             CommandId::Echo => {
                 if let Some(args) = req.flatten_args() {
                     let v = client.echo(args).await?;
 
-                    writeln!(stdout, "{}", String::from_utf8_lossy(&v))?;
+                    writeln!(writer, "{}", String::from_utf8_lossy(&v))?;
                 } else {
-                    writeln!(stdout)?;
+                    writeln!(writer)?;
                 }
             }
             CommandId::Increment => {
                 let key = match req.key() {
                     Some(key) => key,
                     None => {
-                        writeln!(stdout, "Key required.")?;
+                        writeln!(writer, "Key required.")?;
 
                         continue;
                     }
@@ -63,7 +63,7 @@ async fn run(mut stdin: impl BufRead, mut stdout: impl Write) -> Result<(), Box<
 
                 let v = client.increment(key).await?;
 
-                writeln!(stdout, "{}", v)?;
+                writeln!(writer, "{}", v)?;
             }
             _ => {}
         }

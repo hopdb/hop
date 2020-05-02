@@ -35,12 +35,13 @@ impl Error for InputError {
     }
 }
 
-pub fn process_command(lock: &mut impl BufRead, input: &mut String) -> Result<Request, InputError> {
-    lock.read_line(input)
+pub fn process_command(reader: &mut impl BufRead, buf: &mut String) -> Result<Request, InputError> {
+    reader
+        .read_line(buf)
         .map_err(|source| InputError::Retrieval { source })?;
-    let input = input.trim();
+    let buf = buf.trim();
 
-    let mut split = input.split(' ');
+    let mut split = buf.split(' ');
 
     let cmd_name = match split.next() {
         Some(cmd_name) if !cmd_name.is_empty() => cmd_name,
@@ -61,4 +62,55 @@ pub fn process_command(lock: &mut impl BufRead, input: &mut String) -> Result<Re
     };
 
     Ok(Request::new(cmd_type, args))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::InputError;
+    use hop_lib::command::CommandId;
+    use std::{error::Error, io::Cursor};
+
+    #[test]
+    fn test_process_command_echo() -> Result<(), Box<dyn Error>> {
+        let mut reader = Cursor::new("echo abc");
+        let mut buf = String::new();
+
+        let req = super::process_command(&mut reader, &mut buf)?;
+
+        assert_eq!(req.kind(), CommandId::Echo);
+        assert_eq!(req.arg(0), Some(&b"abc".to_vec()));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_command_echo_no_args() -> Result<(), Box<dyn Error>> {
+        let mut reader = Cursor::new("echo");
+        let mut buf = String::new();
+
+        let req = super::process_command(&mut reader, &mut buf)?;
+
+        assert_eq!(req.kind(), CommandId::Echo);
+        assert!(req.args().is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_invalid_command() -> Result<(), Box<dyn Error>> {
+        let name = "invalidcommand".to_owned();
+
+        let mut reader = Cursor::new(format!("{} foo", name));
+        let mut buf = String::new();
+
+        let res = super::process_command(&mut reader, &mut buf).unwrap_err();
+
+        if let InputError::InvalidCommandType { provided_name } = res {
+            assert_eq!(provided_name, name);
+        } else {
+            assert!(false);
+        }
+
+        Ok(())
+    }
 }
