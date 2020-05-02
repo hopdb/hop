@@ -52,7 +52,7 @@ impl MemoryBackend {
 impl Backend for MemoryBackend {
     type Error = Error;
 
-    async fn decrement(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
+    async fn decrement(&self, key: &[u8]) -> Result<i64, Self::Error> {
         let req = Request::new(CommandId::Decrement, Some(vec![key.to_vec()]));
 
         let resp = self.hop.dispatch(&req)?.into_bytes();
@@ -63,7 +63,7 @@ impl Backend for MemoryBackend {
         Ok(num)
     }
 
-    async fn echo(&mut self, content: &[u8]) -> Result<Vec<u8>, Self::Error> {
+    async fn echo(&self, content: &[u8]) -> Result<Vec<u8>, Self::Error> {
         let req = Request::new(CommandId::Echo, Some(vec![content.to_vec()]));
 
         let mut resp = self.hop.dispatch(&req)?.into_bytes();
@@ -75,7 +75,7 @@ impl Backend for MemoryBackend {
         Ok(resp)
     }
 
-    async fn increment(&mut self, key: &[u8]) -> Result<i64, Self::Error> {
+    async fn increment(&self, key: &[u8]) -> Result<i64, Self::Error> {
         let req = Request::new(CommandId::Increment, Some(vec![key.to_vec()]));
         let resp = self.hop.dispatch(&req)?.into_bytes();
 

@@ -2,6 +2,7 @@ use super::Backend;
 use async_std::{
     io::BufReader,
     net::{TcpStream, ToSocketAddrs},
+    sync::Mutex,
     prelude::*,
 };
 use async_trait::async_trait;
@@ -38,7 +39,7 @@ impl StdError for Error {
 }
 
 pub struct ServerBackend {
-    stream: TcpStream,
+    stream: Mutex<TcpStream>,
 }
 
 impl ServerBackend {
@@ -47,7 +48,23 @@ impl ServerBackend {
             .await
             .map_err(|source| Error::Connecting { source })?;
 
-        Ok(Self { stream })
+        Ok(Self {
+            stream: Mutex::new(stream),
+        })
+    }
+
+    async fn send_and_wait(&self, send: Vec<u8>) -> Result<Vec<u8>> {
+        let mut reader = {
+            let mut stream = self.stream.lock().await;
+            stream.write_all(&send).await.unwrap();
+
+            BufReader::new(stream.clone())
+        };
+
+        let mut s = Vec::new();
+        reader.read_until(b'\n', &mut s).await.unwrap();
+
+        Ok(s)
     }
 }
 
@@ -55,16 +72,12 @@ impl ServerBackend {
 impl Backend for ServerBackend {
     type Error = Error;
 
-    async fn decrement(&mut self, key: &[u8]) -> Result<i64> {
+    async fn decrement(&self, key: &[u8]) -> Result<i64> {
         let mut cmd = vec![1, 1, 0, 0, 0, key.len() as u8];
         cmd.extend_from_slice(key);
         cmd.push(b'\n');
 
-        self.stream.write_all(&cmd).await.unwrap();
-
-        let mut s = Vec::new();
-        let mut reader = BufReader::new(&self.stream);
-        reader.read_until(b'\n', &mut s).await.unwrap();
+        let s = self.send_and_wait(cmd).await?;
 
         let arr = s.get(..8).unwrap().try_into().unwrap();
         let num = i64::from_be_bytes(arr);
@@ -72,30 +85,20 @@ impl Backend for ServerBackend {
         Ok(num)
     }
 
-    async fn echo(&mut self, content: &[u8]) -> Result<Vec<u8>> {
+    async fn echo(&self, content: &[u8]) -> Result<Vec<u8>> {
         let mut cmd = vec![CommandId::Echo as u8, 1, 0, 0, 0, content.len() as u8];
         cmd.extend_from_slice(content);
         cmd.push(b'\n');
 
-        self.stream.write_all(&cmd).await.unwrap();
-
-        let mut s = Vec::new();
-        let mut reader = BufReader::new(&self.stream);
-        reader.read_until(b'\n', &mut s).await.unwrap();
-
-        Ok(s)
+        self.send_and_wait(cmd).await
     }
 
-    async fn increment(&mut self, key: &[u8]) -> Result<i64> {
+    async fn increment(&self, key: &[u8]) -> Result<i64> {
         let mut cmd = vec![0, 1, 0, 0, 0, key.len() as u8];
         cmd.extend_from_slice(key);
         cmd.push(b'\n');
 
-        self.stream.write_all(&cmd).await.unwrap();
-
-        let mut s = Vec::new();
-        let mut reader = BufReader::new(&self.stream);
-        reader.read_until(b'\n', &mut s).await.unwrap();
+        let s = self.send_and_wait(cmd).await?;
 
         let arr = s.get(..8).unwrap().try_into().unwrap();
         let num = i64::from_be_bytes(arr);

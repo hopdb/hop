@@ -63,14 +63,14 @@ impl<B: Backend> Client<B> {
     /// and then decremented by 1, resulting in the value being -1.
     ///
     /// This is an `O(1)` time complexity operation.
-    pub async fn decrement(&mut self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
+    pub async fn decrement(&self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
         self.backend.decrement(key.as_ref()).await
     }
 
     /// Echos the provided content back at you.
     ///
     /// Returns the input content.
-    pub async fn echo(&mut self, content: impl AsRef<[u8]>) -> Result<Vec<u8>, B::Error> {
+    pub async fn echo(&self, content: impl AsRef<[u8]>) -> Result<Vec<u8>, B::Error> {
         self.backend.echo(content.as_ref()).await
     }
 
@@ -82,7 +82,7 @@ impl<B: Backend> Client<B> {
     /// and then incremented by 1, resulting in the value being 1.
     ///
     /// This is an `O(1)` time complexity operation.
-    pub async fn increment(&mut self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
+    pub async fn increment(&self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
         self.backend.increment(key.as_ref()).await
     }
 }
