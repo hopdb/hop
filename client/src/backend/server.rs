@@ -2,8 +2,8 @@ use super::Backend;
 use async_std::{
     io::BufReader,
     net::{TcpStream, ToSocketAddrs},
-    sync::Mutex,
     prelude::*,
+    sync::Mutex,
 };
 use async_trait::async_trait;
 use hop_lib::command::CommandId;

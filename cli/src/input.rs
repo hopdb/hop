@@ -36,7 +36,10 @@ impl Error for InputError {
     }
 }
 
-pub async fn process_command(reader: &mut (impl BufRead + Unpin), buf: &mut String) -> Result<Request, InputError> {
+pub async fn process_command(
+    reader: &mut (impl BufRead + Unpin),
+    buf: &mut String,
+) -> Result<Request, InputError> {
     reader
         .read_line(buf)
         .await

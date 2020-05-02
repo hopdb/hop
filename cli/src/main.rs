@@ -1,6 +1,9 @@
 mod input;
 
-use async_std::{io::{self, prelude::*, BufReader, }, task};
+use async_std::{
+    io::{self, prelude::*, BufReader},
+    task,
+};
 use hop::Client;
 use hop_lib::command::CommandId;
 use std::error::Error;
@@ -14,8 +17,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     task::block_on(run(stdin, stdout))
 }
 
-async fn run(mut reader: impl BufRead + Unpin, mut writer: impl Write + Unpin) -> Result<(), Box<dyn Error>> {
-    let mut client = Client::memory();
+async fn run(
+    mut reader: impl BufRead + Unpin,
+    mut writer: impl Write + Unpin,
+) -> Result<(), Box<dyn Error>> {
+    let client = Client::memory();
     let mut input = String::new();
 
     loop {
