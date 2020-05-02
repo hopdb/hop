@@ -60,37 +60,3 @@ impl Value {
         Self::String(String::new())
     }
 }
-
-// impl Eq for Object { }
-
-// impl PartialEq for Object {
-//     fn eq(&self, other: &Self) -> bool {
-//         use Object::*;
-
-//         // This can be a macro but macros aren't great.
-//         //
-//         // Match on the case of where `self` and `other` are the same variant,
-//         // and then check that their values are equivalent.
-//         //
-//         // If one is of one type and the other, well, another, then they're
-//         // obviously not equivalent.
-//         match (self, other) {
-//             (Boolean(a), Boolean(b)) => a == b,
-//             (Boolean(_), _) | (_, Boolean(_)) => false,
-//             (Bytes(a), Bytes(b)) => a == b,
-//             (Bytes(_), _) | (_, Bytes(_)) => false,
-//             // FIXME: Don't strictly check like this.
-//             (Float(a), Float(b)) => a == b,
-//             (Float(_), _) | (_, Float(_)) => false,
-//             (Integer(a), Integer(b)) => a == b,
-//             (Integer(_), _) | (_, Integer(_)) => false,
-//             (List(a), List(b)) => a == b,
-//             (List(_), _) | (_, List(_)) => false,
-//             (Map(a), Map(b)) => a == b,
-//             (Map(_), _) | (_, Map(_)) => false,
-//             (Set(a), Set(b)) => a == b,
-//             (Set(_), _) | (_, Set(_)) => false,
-//             (String(a), String(b)) => a == b,
-//         }
-//     }
-// }
