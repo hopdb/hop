@@ -2,7 +2,7 @@ use hop_lib::command::{CommandId, Request};
 use std::{
     error::Error,
     fmt::{Display, Formatter, Result as FmtResult},
-    io::{BufRead, Error as IoError, StdinLock},
+    io::{BufRead, Error as IoError},
     str::FromStr,
 };
 
@@ -35,7 +35,7 @@ impl Error for InputError {
     }
 }
 
-pub fn process_command(lock: &mut StdinLock, input: &mut String) -> Result<Request, InputError> {
+pub fn process_command(lock: &mut impl BufRead, input: &mut String) -> Result<Request, InputError> {
     lock.read_line(input)
         .map_err(|source| InputError::Retrieval { source })?;
     let input = input.trim();

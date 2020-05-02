@@ -5,15 +5,20 @@ use hop::Client;
 use hop_lib::command::CommandId;
 use std::{
     error::Error,
-    io::{self, Write},
+    io::{self, BufRead, Write},
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut client = Client::memory();
     let stdin = io::stdin();
-    let mut stdin = stdin.lock();
+    let stdin = stdin.lock();
     let stdout = io::stdout();
-    let mut stdout = stdout.lock();
+    let stdout = stdout.lock();
+
+    task::block_on(run(stdin, stdout))
+}
+
+async fn run(mut stdin: impl BufRead, mut stdout: impl Write) -> Result<(), Box<dyn Error>> {
+    let mut client = Client::memory();
     let mut input = String::new();
 
     loop {
@@ -33,17 +38,17 @@ fn main() -> Result<(), Box<dyn Error>> {
                     }
                 };
 
-                let v = task::block_on(client.decrement(key)).unwrap();
+                let v = client.decrement(key).await?;
 
                 writeln!(stdout, "{}", v)?;
             }
             CommandId::Echo => {
                 if let Some(args) = req.flatten_args() {
-                    let v = task::block_on(client.echo(args)).unwrap();
+                    let v = client.echo(args).await?;
 
                     writeln!(stdout, "{}", String::from_utf8_lossy(&v))?;
                 } else {
-                    writeln!(stdout,)?;
+                    writeln!(stdout)?;
                 }
             }
             CommandId::Increment => {
@@ -56,7 +61,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     }
                 };
 
-                let v = task::block_on(client.increment(key)).unwrap();
+                let v = client.increment(key).await?;
 
                 writeln!(stdout, "{}", v)?;
             }
