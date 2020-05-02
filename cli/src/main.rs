@@ -1,30 +1,27 @@
 mod input;
 
-use async_std::task;
+use async_std::{io::{self, prelude::*, BufReader, }, task};
 use hop::Client;
 use hop_lib::command::CommandId;
-use std::{
-    error::Error,
-    io::{self, BufRead, Write},
-};
+use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let stdin = io::stdin();
-    let stdin = stdin.lock();
+    let stdin = BufReader::new(task::block_on(stdin.lock()));
     let stdout = io::stdout();
-    let stdout = stdout.lock();
+    let stdout = task::block_on(stdout.lock());
 
     task::block_on(run(stdin, stdout))
 }
 
-async fn run(mut reader: impl BufRead, mut writer: impl Write) -> Result<(), Box<dyn Error>> {
+async fn run(mut reader: impl BufRead + Unpin, mut writer: impl Write + Unpin) -> Result<(), Box<dyn Error>> {
     let mut client = Client::memory();
     let mut input = String::new();
 
     loop {
-        write!(writer, "> ")?;
-        writer.flush()?;
-        let req = input::process_command(&mut reader, &mut input)?;
+        write!(writer, "> ").await?;
+        writer.flush().await?;
+        let req = input::process_command(&mut reader, &mut input).await?;
         input.clear();
 
         match req.kind() {
@@ -32,7 +29,7 @@ async fn run(mut reader: impl BufRead, mut writer: impl Write) -> Result<(), Box
                 let key = match req.key() {
                     Some(key) => key,
                     None => {
-                        writeln!(writer, "Key required.")?;
+                        writeln!(writer, "Key required.").await?;
 
                         continue;
                     }
@@ -40,22 +37,22 @@ async fn run(mut reader: impl BufRead, mut writer: impl Write) -> Result<(), Box
 
                 let v = client.decrement(key).await?;
 
-                writeln!(writer, "{}", v)?;
+                writeln!(writer, "{}", v).await?;
             }
             CommandId::Echo => {
                 if let Some(args) = req.flatten_args() {
                     let v = client.echo(args).await?;
 
-                    writeln!(writer, "{}", String::from_utf8_lossy(&v))?;
+                    writeln!(writer, "{}", String::from_utf8_lossy(&v)).await?;
                 } else {
-                    writeln!(writer)?;
+                    writeln!(writer).await?;
                 }
             }
             CommandId::Increment => {
                 let key = match req.key() {
                     Some(key) => key,
                     None => {
-                        writeln!(writer, "Key required.")?;
+                        writeln!(writer, "Key required.").await?;
 
                         continue;
                     }
@@ -63,7 +60,7 @@ async fn run(mut reader: impl BufRead, mut writer: impl Write) -> Result<(), Box
 
                 let v = client.increment(key).await?;
 
-                writeln!(writer, "{}", v)?;
+                writeln!(writer, "{}", v).await?;
             }
             _ => {}
         }

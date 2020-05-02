@@ -1,8 +1,9 @@
+use async_std::io::prelude::*;
 use hop_lib::command::{CommandId, Request};
 use std::{
     error::Error,
     fmt::{Display, Formatter, Result as FmtResult},
-    io::{BufRead, Error as IoError},
+    io::Error as IoError,
     str::FromStr,
 };
 
@@ -35,9 +36,10 @@ impl Error for InputError {
     }
 }
 
-pub fn process_command(reader: &mut impl BufRead, buf: &mut String) -> Result<Request, InputError> {
+pub async fn process_command(reader: &mut (impl BufRead + Unpin), buf: &mut String) -> Result<Request, InputError> {
     reader
         .read_line(buf)
+        .await
         .map_err(|source| InputError::Retrieval { source })?;
     let buf = buf.trim();
 
@@ -67,15 +69,16 @@ pub fn process_command(reader: &mut impl BufRead, buf: &mut String) -> Result<Re
 #[cfg(test)]
 mod tests {
     use super::InputError;
+    use async_std::{io::Cursor, task};
     use hop_lib::command::CommandId;
-    use std::{error::Error, io::Cursor};
+    use std::error::Error;
 
     #[test]
     fn test_process_command_echo() -> Result<(), Box<dyn Error>> {
         let mut reader = Cursor::new("echo abc");
         let mut buf = String::new();
 
-        let req = super::process_command(&mut reader, &mut buf)?;
+        let req = task::block_on(super::process_command(&mut reader, &mut buf))?;
 
         assert_eq!(req.kind(), CommandId::Echo);
         assert_eq!(req.arg(0), Some(&b"abc".to_vec()));
@@ -88,7 +91,7 @@ mod tests {
         let mut reader = Cursor::new("echo");
         let mut buf = String::new();
 
-        let req = super::process_command(&mut reader, &mut buf)?;
+        let req = task::block_on(super::process_command(&mut reader, &mut buf))?;
 
         assert_eq!(req.kind(), CommandId::Echo);
         assert!(req.args().is_none());
@@ -103,7 +106,7 @@ mod tests {
         let mut reader = Cursor::new(format!("{} foo", name));
         let mut buf = String::new();
 
-        let res = super::process_command(&mut reader, &mut buf).unwrap_err();
+        let res = task::block_on(super::process_command(&mut reader, &mut buf)).unwrap_err();
 
         if let InputError::InvalidCommandType { provided_name } = res {
             assert_eq!(provided_name, name);
