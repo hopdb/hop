@@ -14,5 +14,5 @@ version = "0.1.0"
 [dependencies]
 env_logger = { default-features = false, version = "^0.7.0" }
 log = { default-features = false, version = "^0.4.8" }
-hop = { package = "hop-lib", path = "../lib" }
+hop-engine = { path = "../engine" }
 tokio = { default-features = false, features = ["blocking", "io-util", "net", "rt-threaded", "stream"], version = "^0.2.20" }

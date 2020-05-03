@@ -58,7 +58,7 @@ impl State {
     /// # Examples
     ///
     /// ```rust
-    /// use hop_lib::state::{State, Value};
+    /// use hop_engine::state::{State, Value};
     ///
     /// let state = State::new();
     /// let key = state.key(b"some:key", Value::boolean);
@@ -100,7 +100,7 @@ impl State {
     ///
     /// ```rust
     /// # fn try_main() -> Option<()> {
-    /// use hop_lib::state::{object::{Integer, Object}, State};
+    /// use hop_engine::state::{object::{Integer, Object}, State};
     ///
     /// let state = State::new();
     /// // Get the key "some:key" as an integer if it's not already a different

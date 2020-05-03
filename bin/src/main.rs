@@ -2,7 +2,7 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]
 
-use hop::{command::request::Context, Hop};
+use hop_engine::{command::request::Context, Hop};
 use log::{debug, warn};
 use std::{error::Error, net::SocketAddr, str::FromStr as _};
 use tokio::{

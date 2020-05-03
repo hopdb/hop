@@ -5,7 +5,7 @@
 mod input;
 
 use hop::Client;
-use hop_lib::command::CommandId;
+use hop_engine::command::CommandId;
 use std::error::Error;
 use tokio::{
     io::{self, AsyncBufRead, AsyncWrite, AsyncWriteExt, BufReader},

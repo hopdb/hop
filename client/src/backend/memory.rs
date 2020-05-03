@@ -1,6 +1,6 @@
 use super::Backend;
 use async_trait::async_trait;
-use hop_lib::{
+use hop_engine::{
     command::{CommandError, CommandId, Request},
     Hop,
 };

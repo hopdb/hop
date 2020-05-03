@@ -1,4 +1,4 @@
-use hop_lib::command::{CommandId, Request};
+use hop_engine::command::{CommandId, Request};
 use std::{
     error::Error,
     fmt::{Display, Formatter, Result as FmtResult},
@@ -72,7 +72,7 @@ pub async fn process_command(
 #[cfg(test)]
 mod tests {
     use super::InputError;
-    use hop_lib::command::CommandId;
+    use hop_engine::command::CommandId;
     use std::{error::Error, io::Cursor};
 
     #[tokio::test]

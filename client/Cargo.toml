@@ -14,7 +14,7 @@ version = "0.1.0"
 [dependencies]
 tokio = { default-features = false, features = ["io-util", "net", "sync"], version = "^0.2.20" }
 async-trait = "^0.1.30"
-hop-lib = { path = "../lib" }
+hop-engine = { path = "../engine" }
 
 [dev-dependencies]
 tokio = { default-features = false, features = ["io-util", "macros", "net", "sync"], version = "^0.2.20" }

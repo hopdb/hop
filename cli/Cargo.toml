@@ -13,5 +13,5 @@ version = "0.1.0"
 
 [dependencies]
 hop = { path = "../client" }
-hop-lib = { path = "../lib" }
+hop-engine = { path = "../engine" }
 tokio = { default-features = false, features = ["io-std", "io-util", "macros", "rt-threaded"], version = "^0.2.20" }

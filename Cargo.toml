@@ -3,7 +3,7 @@ members = [
     "bin",
     "client",
     "cli",
-    "lib",
+    "engine",
 ]
 
 [profile.dev]
