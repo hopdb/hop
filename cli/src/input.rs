@@ -1,4 +1,3 @@
-use async_std::io::prelude::*;
 use hop_lib::command::{CommandId, Request};
 use std::{
     error::Error,
@@ -6,6 +5,7 @@ use std::{
     io::Error as IoError,
     str::FromStr,
 };
+use tokio::io::{AsyncBufRead, AsyncBufReadExt};
 
 #[derive(Debug)]
 pub enum InputError {
@@ -37,7 +37,7 @@ impl Error for InputError {
 }
 
 pub async fn process_command(
-    reader: &mut (impl BufRead + Unpin),
+    reader: &mut (impl AsyncBufRead + Unpin),
     buf: &mut String,
 ) -> Result<Request, InputError> {
     reader
@@ -72,16 +72,15 @@ pub async fn process_command(
 #[cfg(test)]
 mod tests {
     use super::InputError;
-    use async_std::{io::Cursor, task};
     use hop_lib::command::CommandId;
-    use std::error::Error;
+    use std::{error::Error, io::Cursor};
 
-    #[test]
-    fn test_process_command_echo() -> Result<(), Box<dyn Error>> {
+    #[tokio::test]
+    async fn test_process_command_echo() -> Result<(), Box<dyn Error>> {
         let mut reader = Cursor::new("echo abc");
         let mut buf = String::new();
 
-        let req = task::block_on(super::process_command(&mut reader, &mut buf))?;
+        let req = super::process_command(&mut reader, &mut buf).await?;
 
         assert_eq!(req.kind(), CommandId::Echo);
         assert_eq!(req.arg(0), Some(&b"abc".to_vec()));
@@ -89,12 +88,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_process_command_echo_no_args() -> Result<(), Box<dyn Error>> {
+    #[tokio::test]
+    async fn test_process_command_echo_no_args() -> Result<(), Box<dyn Error>> {
         let mut reader = Cursor::new("echo");
         let mut buf = String::new();
 
-        let req = task::block_on(super::process_command(&mut reader, &mut buf))?;
+        let req = super::process_command(&mut reader, &mut buf).await?;
 
         assert_eq!(req.kind(), CommandId::Echo);
         assert!(req.args().is_none());
@@ -102,14 +101,14 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_invalid_command() -> Result<(), Box<dyn Error>> {
+    #[tokio::test]
+    async fn test_invalid_command() -> Result<(), Box<dyn Error>> {
         let name = "invalidcommand".to_owned();
 
         let mut reader = Cursor::new(format!("{} foo", name));
         let mut buf = String::new();
 
-        let res = task::block_on(super::process_command(&mut reader, &mut buf)).unwrap_err();
+        let res = super::process_command(&mut reader, &mut buf).await.unwrap_err();
 
         if let InputError::InvalidCommandType { provided_name } = res {
             assert_eq!(provided_name, name);

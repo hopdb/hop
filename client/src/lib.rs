@@ -4,8 +4,8 @@
 
 pub mod backend;
 
-use async_std::net::ToSocketAddrs;
 use backend::{Backend, MemoryBackend, ServerBackend};
+use tokio::net::ToSocketAddrs;
 
 /// A client for interfacing over Hop instances.
 pub struct Client<B: Backend> {

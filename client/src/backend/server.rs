@@ -1,10 +1,4 @@
 use super::Backend;
-use async_std::{
-    io::BufReader,
-    net::{TcpStream, ToSocketAddrs},
-    prelude::*,
-    sync::Mutex,
-};
 use async_trait::async_trait;
 use hop_lib::command::CommandId;
 use std::{
@@ -13,6 +7,11 @@ use std::{
     fmt::{Display, Formatter, Result as FmtResult},
     io::Error as IoError,
     result::Result as StdResult,
+};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::{tcp::{OwnedReadHalf, OwnedWriteHalf}, TcpStream, ToSocketAddrs},
+    sync::Mutex,
 };
 
 pub type Result<T> = StdResult<T, Error>;
@@ -39,7 +38,8 @@ impl StdError for Error {
 }
 
 pub struct ServerBackend {
-    stream: Mutex<TcpStream>,
+    reader: Mutex<BufReader<OwnedReadHalf>>,
+    writer: Mutex<OwnedWriteHalf>,
 }
 
 impl ServerBackend {
@@ -48,21 +48,19 @@ impl ServerBackend {
             .await
             .map_err(|source| Error::Connecting { source })?;
 
+        let (reader, writer) = stream.into_split();
+
         Ok(Self {
-            stream: Mutex::new(stream),
+            reader: Mutex::new(BufReader::new(reader)),
+            writer: Mutex::new(writer),
         })
     }
 
     async fn send_and_wait(&self, send: Vec<u8>) -> Result<Vec<u8>> {
-        let mut reader = {
-            let mut stream = self.stream.lock().await;
-            stream.write_all(&send).await.unwrap();
-
-            BufReader::new(stream.clone())
-        };
+        self.writer.lock().await.write_all(&send).await.unwrap();
 
         let mut s = Vec::new();
-        reader.read_until(b'\n', &mut s).await.unwrap();
+        self.reader.lock().await.read_until(b'\n', &mut s).await.unwrap();
 
         Ok(s)
     }

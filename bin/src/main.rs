@@ -2,20 +2,23 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]
 
-use async_std::{
-    io::BufReader,
-    net::{TcpListener, TcpStream},
-    prelude::*,
-    task,
-};
 use hop::{command::request::Context, Hop};
 use log::{debug, warn};
 use std::{error::Error, net::SocketAddr, str::FromStr as _};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::{TcpListener, TcpStream},
+    runtime::Builder as RuntimeBuilder,
+    stream::StreamExt,
+    task,
+};
 
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
-    task::block_on(run())
+    let mut runtime = RuntimeBuilder::new().threaded_scheduler().build()?;
+
+    runtime.block_on(run())
 }
 
 async fn run() -> Result<(), Box<dyn Error>> {
@@ -23,7 +26,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     let addr = SocketAddr::from_str("127.0.0.1:14000")?;
 
     debug!("Making TCP listener");
-    let listener = TcpListener::bind(&addr).await?;
+    let mut listener = TcpListener::bind(&addr).await?;
 
     let hop = Hop::new();
 
@@ -53,8 +56,8 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
     let mut input = Vec::new();
     let mut ctx = Context::new();
 
-    let mut writer = socket.clone();
-    let mut reader = BufReader::new(socket);
+    let (reader, mut writer) = socket.into_split();
+    let mut reader = BufReader::new(reader);
 
     while let Ok(size) = reader.read_until(b'\n', &mut input).await {
         // If we get no bytes then we're EOF.

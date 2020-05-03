@@ -12,9 +12,9 @@ repository = "https://github.com/hopdb/hop.git"
 version = "0.1.0"
 
 [dependencies]
-async-std = "^1.5.0"
+tokio = { default-features = false, features = ["io-util", "net", "sync"], version = "^0.2.20" }
 async-trait = "^0.1.30"
 hop-lib = { path = "../lib" }
 
 [dev-dependencies]
-async-std = { default-features = true, features = ["attributes"], version = "^1.5.0" }
+tokio = { default-features = false, features = ["io-util", "net", "sync"], version = "^0.2.20" }
