@@ -20,7 +20,7 @@ impl Client<ServerBackend> {
     /// Connect to an instance of Hop on port 14000 of localhost:
     ///
     /// ```no_run
-    /// # #[async_std::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use hop::Client;
     ///
     /// let mut client = Client::connect("localhost:14000").await?;
@@ -43,7 +43,7 @@ impl Client<MemoryBackend> {
     /// # Examples
     ///
     /// ```rust
-    /// # #[async_std::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use hop::Client;
     ///
     /// let mut client = Client::memory();
