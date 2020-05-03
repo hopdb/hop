@@ -1,7 +1,14 @@
 [package]
 authors = ["Vivian Hellyer <vivian@hellyer.dev>"]
+categories = ["command-line-utilities"]
+description = "Application to run a server instance of the Hop database."
 edition = "2018"
+homepage = "https://github.com/hopdb/hop"
+keywords = ["cache", "database", "db", "hop", "hopdb"]
+license = "ISC"
 name = "hop-bin"
+readme = "README.md"
+repository = "https://github.com/hopdb/hop.git"
 version = "0.1.0"
 
 [dependencies]

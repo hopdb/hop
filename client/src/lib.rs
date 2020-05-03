@@ -1,3 +1,7 @@
+#![deny(clippy::all, clippy::cargo)]
+#![forbid(unsafe_code)]
+#![allow(clippy::multiple_crate_versions)]
+
 pub mod backend;
 
 use async_std::net::ToSocketAddrs;

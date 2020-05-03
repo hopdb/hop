@@ -1,7 +1,14 @@
 [package]
 authors = ["Vivian Hellyer <vivian@hellyer.dev>"]
+categories = ["asynchronous", "database-implementations", "no-std"]
+description = "Feature implementations for the Hop database. Not meant to be used directly."
 edition = "2018"
+homepage = "https://github.com/hopdb/hop"
+keywords = ["cache", "database", "db", "hop", "hopdb"]
+license = "ISC"
 name = "hop-lib"
+readme = "README.md"
+repository = "https://github.com/hopdb/hop.git"
 version = "0.1.0"
 
 [dependencies]
