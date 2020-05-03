@@ -10,7 +10,10 @@ use std::{
 };
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    net::{tcp::{OwnedReadHalf, OwnedWriteHalf}, TcpStream, ToSocketAddrs},
+    net::{
+        tcp::{OwnedReadHalf, OwnedWriteHalf},
+        TcpStream, ToSocketAddrs,
+    },
     sync::Mutex,
 };
 
@@ -60,7 +63,12 @@ impl ServerBackend {
         self.writer.lock().await.write_all(&send).await.unwrap();
 
         let mut s = Vec::new();
-        self.reader.lock().await.read_until(b'\n', &mut s).await.unwrap();
+        self.reader
+            .lock()
+            .await
+            .read_until(b'\n', &mut s)
+            .await
+            .unwrap();
 
         Ok(s)
     }

@@ -108,7 +108,9 @@ mod tests {
         let mut reader = Cursor::new(format!("{} foo", name));
         let mut buf = String::new();
 
-        let res = super::process_command(&mut reader, &mut buf).await.unwrap_err();
+        let res = super::process_command(&mut reader, &mut buf)
+            .await
+            .unwrap_err();
 
         if let InputError::InvalidCommandType { provided_name } = res {
             assert_eq!(provided_name, name);
