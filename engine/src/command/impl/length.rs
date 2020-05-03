@@ -62,7 +62,7 @@ impl Dispatch for Length {
 mod tests {
     use super::Length;
     use crate::{
-        command::{CommandError, CommandId, Dispatch, Request, Response},
+        command::{CommandId, DispatchError, Dispatch, Request, Response},
         state::{KeyType, Value},
         Hop,
     };
@@ -75,7 +75,7 @@ mod tests {
 
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap_err(),
-            CommandError::KeyRetrieval
+            DispatchError::KeyRetrieval
         );
     }
 
@@ -99,7 +99,7 @@ mod tests {
 
             assert_eq!(
                 Length::dispatch(&hop, &req).unwrap_err(),
-                CommandError::WrongType
+                DispatchError::WrongType
             );
         }
     }

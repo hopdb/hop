@@ -13,7 +13,7 @@ pub mod state;
 mod pool;
 
 use self::{
-    command::{r#impl::*, CommandId, CommandResult, Dispatch, Request, Response},
+    command::{r#impl::*, CommandId, DispatchResult, Dispatch, Request, Response},
     pubsub::PubSubManager,
     session::SessionManager,
     state::State,
@@ -35,7 +35,7 @@ impl Hop {
         Default::default()
     }
 
-    pub fn dispatch(&self, req: &Request) -> CommandResult<Response> {
+    pub fn dispatch(&self, req: &Request) -> DispatchResult<Response> {
         match req.kind() {
             CommandId::Append => Append::dispatch(self, req),
             CommandId::DecrementBy => DecrementBy::dispatch(self, req),

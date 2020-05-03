@@ -1,7 +1,7 @@
 use super::Backend;
 use async_trait::async_trait;
 use hop_engine::{
-    command::{CommandError, CommandId, Request},
+    command::{CommandId, DispatchError, Request},
     Hop,
 };
 use std::{
@@ -12,11 +12,11 @@ use std::{
 
 #[derive(Debug)]
 pub enum Error {
-    RunningCommand { source: CommandError },
+    RunningCommand { source: DispatchError },
 }
 
-impl From<CommandError> for Error {
-    fn from(source: CommandError) -> Self {
+impl From<DispatchError> for Error {
+    fn from(source: DispatchError) -> Self {
         Self::RunningCommand { source }
     }
 }

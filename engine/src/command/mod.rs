@@ -7,7 +7,7 @@ mod error;
 
 pub use self::{
     command_id::{CommandId, InvalidCommandId},
-    error::{Error as CommandError, Result as CommandResult},
+    error::{Error as DispatchError, Result as DispatchResult},
     request::Request,
     response::Response,
 };
@@ -15,5 +15,5 @@ pub use self::{
 use crate::Hop;
 
 pub trait Dispatch {
-    fn dispatch(hop: &Hop, req: &Request) -> CommandResult<Response>;
+    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Response>;
 }
