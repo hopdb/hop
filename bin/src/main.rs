@@ -2,9 +2,14 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]
 
-use hop_engine::{command::request::Context, Hop};
+use hop_engine::{
+    command::{
+        request::Context,
+    },
+    Hop,
+};
 use log::{debug, warn};
-use std::{error::Error, net::SocketAddr, str::FromStr as _};
+use std::{env, error::Error, net::{IpAddr, Ipv4Addr, SocketAddr}, str::FromStr as _};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::{TcpListener, TcpStream},
@@ -12,6 +17,32 @@ use tokio::{
     stream::StreamExt,
     task,
 };
+
+struct Config {
+    host: IpAddr,
+    port: u16,
+}
+
+impl Config {
+    const HOST_DEFAULT: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+    const PORT_DEFAULT: u16 = 46733;
+
+    fn new() -> Self {
+        let host = match env::var("HOST") {
+            Ok(host) => IpAddr::from_str(&host).unwrap_or(Self::HOST_DEFAULT),
+            Err(_) => Self::HOST_DEFAULT,
+        };
+        let port = match env::var("PORT") {
+            Ok(port) => port.parse().unwrap_or(Self::PORT_DEFAULT),
+            Err(_) => Self::PORT_DEFAULT,
+        };
+
+        Self {
+            host,
+            port,
+        }
+    }
+}
 
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
@@ -22,17 +53,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn run() -> Result<(), Box<dyn Error>> {
-    debug!("Binding socket");
-    let addr = SocketAddr::from_str("127.0.0.1:14000")?;
+    let config = Config::new();
 
-    debug!("Making TCP listener");
+    debug!("Binding socket");
+    let addr = SocketAddr::new(config.host, config.port);
+
+    debug!("Binding to {}", addr);
     let mut listener = TcpListener::bind(&addr).await?;
 
     let hop = Hop::new();
 
     let mut incoming = listener.incoming();
 
-    debug!("Listening");
+    debug!("Listening for new connections on {}", addr);
 
     while let Some(Ok(socket)) = incoming.next().await {
         task::spawn(handle_socket(socket, hop.clone()));
@@ -62,19 +95,15 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
     while let Ok(size) = reader.read_until(b'\n', &mut input).await {
         // If we get no bytes then we're EOF.
         if size == 0 {
-            debug!("Peer no longer sending data");
-
             break;
         }
 
         let req = match ctx.feed(&input) {
             Ok(Some(cmd)) => cmd,
             Ok(None) => continue,
-            Err(why) => {
-                warn!("Failed to feed to context: {:?}", why);
-
-                break;
-            }
+            Err(_) => {
+                todo!("sending error response not implemented");
+            },
         };
 
         let resp = hop.dispatch(&req).unwrap();
