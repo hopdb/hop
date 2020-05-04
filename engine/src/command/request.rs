@@ -96,8 +96,20 @@ impl Request {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[repr(u8)]
 pub enum ParseError {
-    CommandIdInvalid,
-    KeyTypeInvalid,
+    CommandIdInvalid = 0,
+    KeyTypeInvalid = 1,
+}
+
+impl TryFrom<u8> for ParseError {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => Self::CommandIdInvalid,
+            1 => Self::KeyTypeInvalid,
+            _ => return Err(()),
+        })
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -326,7 +338,9 @@ mod tests {
     use super::{
         super::{error::Result, CommandId},
         Context,
+        ParseError,
     };
+    use core::convert::TryFrom;
 
     #[test]
     fn test_increment_foo() -> Result<()> {
@@ -361,5 +375,11 @@ mod tests {
         assert_eq!(cmd.kind, CommandId::Increment);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_parse_error_try_from_u8() {
+        assert_eq!(ParseError::try_from(0).unwrap(), ParseError::CommandIdInvalid);
+        assert_eq!(ParseError::try_from(1).unwrap(), ParseError::KeyTypeInvalid);
     }
 }
