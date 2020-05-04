@@ -27,7 +27,7 @@ pub enum Response {
 }
 
 impl Response {
-    pub fn into_bytes(&self) -> Vec<u8> {
+    pub fn as_bytes(&self) -> Vec<u8> {
         match self {
             Self::DispatchError(err) => write_dispatch_error(*err),
             Self::ParseError(err) => write_parse_error(*err),
@@ -229,11 +229,11 @@ mod tests {
     #[test]
     fn test_bool() {
         assert_eq!(
-            Response::from(false).into_bytes(),
+            Response::from(false).as_bytes(),
             [ResponseType::Boolean as u8, 0]
         );
         assert_eq!(
-            Response::from(true).into_bytes(),
+            Response::from(true).as_bytes(),
             [ResponseType::Boolean as u8, 1]
         );
     }
@@ -241,7 +241,7 @@ mod tests {
     #[test]
     fn test_bytes() {
         assert_eq!(
-            Response::from(b"hopdb".to_vec()).into_bytes(),
+            Response::from(b"hopdb".to_vec()).as_bytes(),
             [
                 ResponseType::Bytes as u8,
                 // length, max u32
@@ -261,7 +261,7 @@ mod tests {
     #[test]
     fn test_bytes_empty() {
         assert_eq!(
-            Response::from(b"".to_vec()).into_bytes(),
+            Response::from(b"".to_vec()).as_bytes(),
             [
                 ResponseType::Bytes as u8,
                 // length, max u32
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn test_float() {
         assert_eq!(
-            Response::from(7.4).into_bytes(),
+            Response::from(7.4).as_bytes(),
             [
                 ResponseType::Float as u8,
                 64,
@@ -294,11 +294,11 @@ mod tests {
     #[test]
     fn test_int() {
         assert_eq!(
-            Response::from(7).into_bytes(),
+            Response::from(7).as_bytes(),
             [ResponseType::Integer as u8, 0, 0, 0, 0, 0, 0, 0, 7],
         );
         assert_eq!(
-            Response::from(-7).into_bytes(),
+            Response::from(-7).as_bytes(),
             [
                 ResponseType::Integer as u8,
                 255,
@@ -312,7 +312,7 @@ mod tests {
             ],
         );
         assert_eq!(
-            Response::from(68125).into_bytes(),
+            Response::from(68125).as_bytes(),
             [ResponseType::Integer as u8, 0, 0, 0, 0, 0, 1, 10, 29],
         );
     }
@@ -324,7 +324,7 @@ mod tests {
         list.push(b"db".to_vec());
 
         assert_eq!(
-            Response::from(list).into_bytes(),
+            Response::from(list).as_bytes(),
             [
                 ResponseType::List as u8,
                 // length of the list
@@ -356,7 +356,7 @@ mod tests {
         let v: Vec<Vec<_>> = Vec::new();
 
         assert_eq!(
-            Response::from(v).into_bytes(),
+            Response::from(v).as_bytes(),
             [
                 ResponseType::List as u8,
                 // length of the list
@@ -439,7 +439,7 @@ mod tests {
             ],
         ];
 
-        let resp = Response::from(map).into_bytes();
+        let resp = Response::from(map).as_bytes();
 
         assert!(possible_values.iter().any(|v| v == resp.as_slice()));
     }
@@ -447,7 +447,7 @@ mod tests {
     #[test]
     fn test_map_empty() {
         assert_eq!(
-            Response::from(DashMap::new()).into_bytes(),
+            Response::from(DashMap::new()).as_bytes(),
             [ResponseType::Map as u8, 0, 0]
         );
     }
@@ -501,7 +501,7 @@ mod tests {
             ],
         ];
 
-        let resp = Response::from(map).into_bytes();
+        let resp = Response::from(map).as_bytes();
 
         assert!(possible_values.iter().any(|v| v == resp.as_slice()));
     }
@@ -509,7 +509,7 @@ mod tests {
     #[test]
     fn test_set_empty() {
         assert_eq!(
-            Response::from(DashSet::new()).into_bytes(),
+            Response::from(DashSet::new()).as_bytes(),
             [ResponseType::Set as u8, 0, 0]
         );
     }
@@ -517,7 +517,7 @@ mod tests {
     #[test]
     fn test_str() {
         assert_eq!(
-            Response::from("foo bar baz".to_owned()).into_bytes(),
+            Response::from("foo bar baz".to_owned()).as_bytes(),
             [
                 ResponseType::String as u8,
                 // 4 bytes string length
@@ -544,7 +544,7 @@ mod tests {
     #[test]
     fn test_str_empty() {
         assert_eq!(
-            Response::from(String::new()).into_bytes(),
+            Response::from(String::new()).as_bytes(),
             [ResponseType::String as u8, 0, 0, 0, 0]
         );
     }

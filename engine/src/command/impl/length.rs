@@ -117,7 +117,7 @@ mod tests {
 
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap(),
-            Response::from(0).into_bytes()
+            Response::from(0).as_bytes()
         );
         assert_eq!(hop.state().0.len(), 1);
     }
@@ -134,7 +134,7 @@ mod tests {
 
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap(),
-            Response::from(3).into_bytes()
+            Response::from(3).as_bytes()
         );
     }
 
@@ -151,7 +151,7 @@ mod tests {
 
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap(),
-            Response::from(1).into_bytes()
+            Response::from(1).as_bytes()
         );
     }
 
@@ -175,7 +175,7 @@ mod tests {
         // length of a simple string, 4 bytes and 4 chars
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap(),
-            Response::from(4).into_bytes()
+            Response::from(4).as_bytes()
         );
 
         // length of a simple string, 4 bytes but 1 char
@@ -184,7 +184,7 @@ mod tests {
         let req = Request::new(CommandId::Length, Some(args.clone()));
         assert_eq!(
             Length::dispatch(&hop, &req).unwrap(),
-            Response::from(1).into_bytes()
+            Response::from(1).as_bytes()
         );
     }
 }
