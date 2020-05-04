@@ -337,8 +337,7 @@ impl Default for Context {
 mod tests {
     use super::{
         super::{error::Result, CommandId},
-        Context,
-        ParseError,
+        Context, ParseError,
     };
     use core::convert::TryFrom;
 
@@ -379,7 +378,10 @@ mod tests {
 
     #[test]
     fn test_parse_error_try_from_u8() {
-        assert_eq!(ParseError::try_from(0).unwrap(), ParseError::CommandIdInvalid);
+        assert_eq!(
+            ParseError::try_from(0).unwrap(),
+            ParseError::CommandIdInvalid
+        );
         assert_eq!(ParseError::try_from(1).unwrap(), ParseError::KeyTypeInvalid);
     }
 }
