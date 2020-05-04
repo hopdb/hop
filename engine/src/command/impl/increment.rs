@@ -1,6 +1,9 @@
-use super::{super::{DispatchError, DispatchResult, Dispatch, Request}, increment_by::IncrementBy};
-use alloc::vec::Vec;
+use super::{
+    super::{Dispatch, DispatchError, DispatchResult, Request},
+    increment_by::IncrementBy,
+};
 use crate::Hop;
+use alloc::vec::Vec;
 
 pub struct Increment;
 

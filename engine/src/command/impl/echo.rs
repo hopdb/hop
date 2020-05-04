@@ -1,6 +1,6 @@
-use super::super::{DispatchResult, Dispatch, Request, response};
-use alloc::vec::Vec;
+use super::super::{response, Dispatch, DispatchResult, Request};
 use crate::Hop;
+use alloc::vec::Vec;
 
 pub struct Echo;
 
@@ -17,7 +17,7 @@ impl Dispatch for Echo {
 mod tests {
     use super::Echo;
     use crate::{
-        command::{CommandId, Dispatch, Request, response},
+        command::{response, CommandId, Dispatch, Request},
         Hop,
     };
     use alloc::vec::Vec;

@@ -1,6 +1,9 @@
-use super::{super::{DispatchError, DispatchResult, Dispatch, Request}, decrement_by::DecrementBy};
-use alloc::vec::Vec;
+use super::{
+    super::{Dispatch, DispatchError, DispatchResult, Request},
+    decrement_by::DecrementBy,
+};
 use crate::Hop;
+use alloc::vec::Vec;
 
 pub struct Decrement;
 

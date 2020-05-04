@@ -1,5 +1,4 @@
-use super::super::{DispatchError, DispatchResult, Dispatch, Request, response};
-use alloc::vec::Vec;
+use super::super::{response, Dispatch, DispatchError, DispatchResult, Request};
 use crate::{
     state::{
         object::{Bytes, List, Str},
@@ -8,6 +7,7 @@ use crate::{
     Hop,
 };
 use alloc::borrow::ToOwned;
+use alloc::vec::Vec;
 use core::str;
 
 pub struct Append;
@@ -31,14 +31,20 @@ impl Dispatch for Append {
                 Ok(response::write_bytes(&bytes))
             }
             Some(KeyType::List) => {
-                let mut list = hop.state().typed_key::<List>(key).ok_or(DispatchError::WrongType)?;
+                let mut list = hop
+                    .state()
+                    .typed_key::<List>(key)
+                    .ok_or(DispatchError::WrongType)?;
 
                 list.append(&mut args.to_owned());
 
                 Ok(response::write_list(&list))
             }
             Some(KeyType::String) => {
-                let mut string = hop.state().typed_key::<Str>(key).ok_or(DispatchError::WrongType)?;
+                let mut string = hop
+                    .state()
+                    .typed_key::<Str>(key)
+                    .ok_or(DispatchError::WrongType)?;
 
                 for arg in args {
                     if let Ok(arg) = str::from_utf8(arg) {

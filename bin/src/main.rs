@@ -2,14 +2,14 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]
 
-use hop_engine::{
-    command::{
-        request::Context,
-    },
-    Hop,
-};
+use hop_engine::{command::request::Context, Hop};
 use log::{debug, warn};
-use std::{env, error::Error, net::{IpAddr, Ipv4Addr, SocketAddr}, str::FromStr as _};
+use std::{
+    env,
+    error::Error,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    str::FromStr as _,
+};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::{TcpListener, TcpStream},
@@ -37,10 +37,7 @@ impl Config {
             Err(_) => Self::PORT_DEFAULT,
         };
 
-        Self {
-            host,
-            port,
-        }
+        Self { host, port }
     }
 }
 
@@ -103,7 +100,7 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
             Ok(None) => continue,
             Err(_) => {
                 todo!("sending error response not implemented");
-            },
+            }
         };
 
         let resp = hop.dispatch(&req).unwrap();

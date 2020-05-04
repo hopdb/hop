@@ -1,6 +1,6 @@
-use super::{DispatchError, request::ParseError};
-use alloc::{string::String, vec::Vec};
+use super::{request::ParseError, DispatchError};
 use crate::state::Value;
+use alloc::{string::String, vec::Vec};
 use dashmap::{DashMap, DashSet};
 
 /// The type of response value.
@@ -228,8 +228,14 @@ mod tests {
 
     #[test]
     fn test_bool() {
-        assert_eq!(Response::from(false).into_bytes(), [ResponseType::Boolean as u8, 0]);
-        assert_eq!(Response::from(true).into_bytes(), [ResponseType::Boolean as u8, 1]);
+        assert_eq!(
+            Response::from(false).into_bytes(),
+            [ResponseType::Boolean as u8, 0]
+        );
+        assert_eq!(
+            Response::from(true).into_bytes(),
+            [ResponseType::Boolean as u8, 1]
+        );
     }
 
     #[test]

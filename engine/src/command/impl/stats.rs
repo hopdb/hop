@@ -1,6 +1,6 @@
-use super::super::{DispatchResult, Dispatch, Request, response};
-use alloc::vec::Vec;
+use super::super::{response, Dispatch, DispatchResult, Request};
 use crate::Hop;
+use alloc::vec::Vec;
 
 pub struct Stats;
 
