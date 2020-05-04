@@ -13,7 +13,7 @@ pub mod state;
 mod pool;
 
 use self::{
-    command::{r#impl::*, CommandId, DispatchResult, Dispatch, Request, Response},
+    command::{r#impl::*, CommandId, Dispatch, DispatchResult, Request, Response},
     pubsub::PubSubManager,
     session::SessionManager,
     state::State,

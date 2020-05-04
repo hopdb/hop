@@ -62,7 +62,7 @@ impl Dispatch for Length {
 mod tests {
     use super::Length;
     use crate::{
-        command::{CommandId, DispatchError, Dispatch, Request, Response},
+        command::{CommandId, Dispatch, DispatchError, Request, Response},
         state::{KeyType, Value},
         Hop,
     };
