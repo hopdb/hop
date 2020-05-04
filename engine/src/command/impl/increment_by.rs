@@ -1,7 +1,10 @@
-use super::prelude::*;
-use crate::state::{
-    object::{Float, Integer},
-    KeyType,
+use super::super::{DispatchError, DispatchResult, Dispatch, Request, Response};
+use crate::{
+    state::{
+        object::{Float, Integer},
+        KeyType,
+    },
+    Hop,
 };
 
 pub struct IncrementBy;
@@ -12,13 +15,13 @@ impl IncrementBy {
         key: &[u8],
         key_type: Option<KeyType>,
         amount: i64,
-    ) -> Result<Response> {
+    ) -> DispatchResult<Response> {
         match key_type {
             Some(KeyType::Integer) | None => {
                 let mut int = hop
                     .state()
                     .typed_key::<Integer>(key)
-                    .ok_or(Error::KeyRetrieval)?;
+                    .ok_or(DispatchError::KeyRetrieval)?;
 
                 *int += amount;
 
@@ -28,20 +31,20 @@ impl IncrementBy {
                 let mut float = hop
                     .state()
                     .typed_key::<Float>(key)
-                    .ok_or(Error::KeyRetrieval)?;
+                    .ok_or(DispatchError::KeyRetrieval)?;
 
                 *float += amount as f64;
 
                 Ok(Response::from(*float))
             }
-            Some(_) => Err(Error::WrongType),
+            Some(_) => Err(DispatchError::WrongType),
         }
     }
 }
 
 impl Dispatch for IncrementBy {
-    fn dispatch(hop: &Hop, req: &Request) -> Result<Response> {
-        let key = req.key().ok_or(Error::KeyRetrieval)?;
+    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Response> {
+        let key = req.key().ok_or(DispatchError::KeyRetrieval)?;
 
         Self::increment(hop, key, req.key_type(), 1)
     }

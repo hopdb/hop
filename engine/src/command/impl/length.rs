@@ -1,34 +1,37 @@
-use super::prelude::*;
-use crate::state::{
-    object::{Bytes, List, Str},
-    KeyType, Value,
+use super::super::{DispatchError, DispatchResult, Dispatch, Request, Response};
+use crate::{
+    state::{
+        object::{Bytes, List, Str},
+        KeyType, Value,
+    },
+    Hop,
 };
 
 pub struct Length;
 
 impl Length {
-    fn bytes(hop: &Hop, key: &[u8]) -> Result<Response> {
+    fn bytes(hop: &Hop, key: &[u8]) -> DispatchResult<Response> {
         let bytes = match hop.state().typed_key::<Bytes>(key) {
             Some(bytes) => bytes,
-            None => return Err(Error::WrongType),
+            None => return Err(DispatchError::WrongType),
         };
 
         Ok(Response::from(bytes.len() as i64))
     }
 
-    fn list(hop: &Hop, key: &[u8]) -> Result<Response> {
+    fn list(hop: &Hop, key: &[u8]) -> DispatchResult<Response> {
         let list = match hop.state().typed_key::<List>(key) {
             Some(list) => list,
-            None => return Err(Error::WrongType),
+            None => return Err(DispatchError::WrongType),
         };
 
         Ok(Response::from(list.len() as i64))
     }
 
-    fn string(hop: &Hop, key: &[u8]) -> Result<Response> {
+    fn string(hop: &Hop, key: &[u8]) -> DispatchResult<Response> {
         let string = match hop.state().typed_key::<Str>(key) {
             Some(string) => string,
-            None => return Err(Error::WrongType),
+            None => return Err(DispatchError::WrongType),
         };
 
         Ok(Response::from(string.chars().count() as i64))
@@ -36,14 +39,14 @@ impl Length {
 }
 
 impl Dispatch for Length {
-    fn dispatch(hop: &Hop, req: &Request) -> Result<Response> {
-        let key = req.key().ok_or(Error::KeyRetrieval)?;
+    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Response> {
+        let key = req.key().ok_or(DispatchError::KeyRetrieval)?;
 
         match req.key_type() {
             Some(KeyType::Bytes) => Self::bytes(hop, key),
             Some(KeyType::List) => Self::list(hop, key),
             Some(KeyType::String) => Self::string(hop, key),
-            Some(_) => Err(Error::WrongType),
+            Some(_) => Err(DispatchError::WrongType),
             None => {
                 let kind = hop.state().key(key, Value::bytes).value().kind();
 
@@ -51,7 +54,7 @@ impl Dispatch for Length {
                     KeyType::Bytes => Self::bytes(hop, key),
                     KeyType::List => Self::list(hop, key),
                     KeyType::String => Self::string(hop, key),
-                    _ => Err(Error::WrongType),
+                    _ => Err(DispatchError::WrongType),
                 }
             }
         }

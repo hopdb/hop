@@ -5,7 +5,6 @@ mod echo;
 mod increment;
 mod increment_by;
 mod length;
-mod prelude;
 mod stats;
 
 pub use self::{

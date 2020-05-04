@@ -1,10 +1,11 @@
-use super::prelude::*;
+use super::super::{DispatchResult, Dispatch, Request, Response};
 use alloc::vec::Vec;
+use crate::Hop;
 
 pub struct Echo;
 
 impl Dispatch for Echo {
-    fn dispatch(_: &Hop, req: &Request) -> Result<Response> {
+    fn dispatch(_: &Hop, req: &Request) -> DispatchResult<Response> {
         match req.args() {
             Some(args) => Ok(Response::from(args)),
             None => {
