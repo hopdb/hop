@@ -1,21 +1,14 @@
-use super::super::{DispatchResult, Dispatch, Request, Response};
+use super::super::{DispatchResult, Dispatch, Request, response};
 use alloc::vec::Vec;
 use crate::Hop;
 
 pub struct Echo;
 
 impl Dispatch for Echo {
-    fn dispatch(_: &Hop, req: &Request) -> DispatchResult<Response> {
+    fn dispatch(_: &Hop, req: &Request) -> DispatchResult<Vec<u8>> {
         match req.args() {
-            Some(args) => Ok(Response::from(args)),
-            None => {
-                // The type system isn't able to reason about the type of the
-                // slice when doing something like
-                // `Response::from([].as_ref())`.
-                let empty_slice: &[Vec<_>] = &[];
-
-                Ok(Response::from(empty_slice))
-            }
+            Some(args) => Ok(response::write_list(args)),
+            None => Ok(response::write_list(&[])),
         }
     }
 }
@@ -24,7 +17,7 @@ impl Dispatch for Echo {
 mod tests {
     use super::Echo;
     use crate::{
-        command::{CommandId, Dispatch, Request, Response},
+        command::{CommandId, Dispatch, Request, response},
         Hop,
     };
     use alloc::vec::Vec;
@@ -38,16 +31,16 @@ mod tests {
         let req = Request::new(CommandId::Echo, Some(args.clone()));
 
         assert_eq!(
-            Echo::dispatch(&hop, &req).unwrap().into_bytes(),
-            Response::from(args.as_slice()).into_bytes()
+            Echo::dispatch(&hop, &req).unwrap(),
+            response::write_list(args.as_slice()),
         );
 
         args.push(b"hop".to_vec());
 
         let req = Request::new(CommandId::Echo, Some(args.clone()));
         assert_eq!(
-            Echo::dispatch(&hop, &req).unwrap().into_bytes(),
-            Response::from(args.as_slice()).into_bytes()
+            Echo::dispatch(&hop, &req).unwrap(),
+            response::write_list(args.as_slice()),
         );
     }
 
@@ -58,8 +51,8 @@ mod tests {
 
         let args: &[Vec<_>] = &[];
         assert_eq!(
-            Echo::dispatch(&hop, &req).unwrap().into_bytes(),
-            Response::from(args).into_bytes()
+            Echo::dispatch(&hop, &req).unwrap(),
+            response::write_list(args),
         );
     }
 }

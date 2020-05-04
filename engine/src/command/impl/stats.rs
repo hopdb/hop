@@ -1,10 +1,11 @@
-use super::super::{DispatchResult, Dispatch, Request, Response};
+use super::super::{DispatchResult, Dispatch, Request, response};
+use alloc::vec::Vec;
 use crate::Hop;
 
 pub struct Stats;
 
 impl Dispatch for Stats {
-    fn dispatch(_: &Hop, _: &Request) -> DispatchResult<Response> {
-        Ok("Pong!".into())
+    fn dispatch(_: &Hop, _: &Request) -> DispatchResult<Vec<u8>> {
+        Ok(response::write_str("Pong!"))
     }
 }

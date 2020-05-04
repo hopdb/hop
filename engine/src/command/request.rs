@@ -93,7 +93,7 @@ impl Request {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ParseError {
     CommandIdInvalid,
     KeyTypeInvalid,

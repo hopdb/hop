@@ -1,4 +1,5 @@
-use super::super::{DispatchError, DispatchResult, Dispatch, Request, Response};
+use super::super::{DispatchError, DispatchResult, Dispatch, Request, response};
+use alloc::vec::Vec;
 use crate::{
     state::{
         object::{Float, Integer},
@@ -15,7 +16,7 @@ impl IncrementBy {
         key: &[u8],
         key_type: Option<KeyType>,
         amount: i64,
-    ) -> DispatchResult<Response> {
+    ) -> DispatchResult<Vec<u8>> {
         match key_type {
             Some(KeyType::Integer) | None => {
                 let mut int = hop
@@ -25,7 +26,7 @@ impl IncrementBy {
 
                 *int += amount;
 
-                Ok(Response::from(*int))
+                Ok(response::write_int(*int))
             }
             Some(KeyType::Float) => {
                 let mut float = hop
@@ -35,7 +36,7 @@ impl IncrementBy {
 
                 *float += amount as f64;
 
-                Ok(Response::from(*float))
+                Ok(response::write_float(*float))
             }
             Some(_) => Err(DispatchError::WrongType),
         }
@@ -43,7 +44,7 @@ impl IncrementBy {
 }
 
 impl Dispatch for IncrementBy {
-    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Response> {
+    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Vec<u8>> {
         let key = req.key().ok_or(DispatchError::KeyRetrieval)?;
 
         Self::increment(hop, key, req.key_type(), 1)

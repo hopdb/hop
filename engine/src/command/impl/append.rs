@@ -1,4 +1,5 @@
-use super::super::{DispatchError, DispatchResult, Dispatch, Request, Response};
+use super::super::{DispatchError, DispatchResult, Dispatch, Request, response};
+use alloc::vec::Vec;
 use crate::{
     state::{
         object::{Bytes, List, Str},
@@ -12,7 +13,7 @@ use core::str;
 pub struct Append;
 
 impl Dispatch for Append {
-    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Response> {
+    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Vec<u8>> {
         let key = req.arg(0).ok_or(DispatchError::KeyRetrieval)?;
         let args = req.arg(1..).ok_or(DispatchError::ArgumentRetrieval)?;
 
@@ -27,14 +28,14 @@ impl Dispatch for Append {
                     bytes.extend_from_slice(arg);
                 }
 
-                Ok(Response::from(bytes.as_slice()))
+                Ok(response::write_bytes(&bytes))
             }
             Some(KeyType::List) => {
                 let mut list = hop.state().typed_key::<List>(key).ok_or(DispatchError::WrongType)?;
 
                 list.append(&mut args.to_owned());
 
-                Ok(Response::from(list.as_slice()))
+                Ok(response::write_list(&list))
             }
             Some(KeyType::String) => {
                 let mut string = hop.state().typed_key::<Str>(key).ok_or(DispatchError::WrongType)?;
@@ -45,7 +46,7 @@ impl Dispatch for Append {
                     }
                 }
 
-                Ok(Response::from(string.as_str()))
+                Ok(response::write_str(&string))
             }
             Some(_) => Err(DispatchError::WrongType),
         }

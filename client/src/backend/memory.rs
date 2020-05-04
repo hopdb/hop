@@ -55,7 +55,7 @@ impl Backend for MemoryBackend {
     async fn decrement(&self, key: &[u8]) -> Result<i64, Self::Error> {
         let req = Request::new(CommandId::Decrement, Some(vec![key.to_vec()]));
 
-        let resp = self.hop.dispatch(&req)?.into_bytes();
+        let resp = self.hop.dispatch(&req)?;
 
         let arr = resp.get(..8).unwrap().try_into().unwrap();
         let num = i64::from_be_bytes(arr);
@@ -66,7 +66,7 @@ impl Backend for MemoryBackend {
     async fn echo(&self, content: &[u8]) -> Result<Vec<u8>, Self::Error> {
         let req = Request::new(CommandId::Echo, Some(vec![content.to_vec()]));
 
-        let mut resp = self.hop.dispatch(&req)?.into_bytes();
+        let mut resp = self.hop.dispatch(&req)?;
 
         if !resp.is_empty() {
             resp.remove(resp.len() - 1);
@@ -77,7 +77,7 @@ impl Backend for MemoryBackend {
 
     async fn increment(&self, key: &[u8]) -> Result<i64, Self::Error> {
         let req = Request::new(CommandId::Increment, Some(vec![key.to_vec()]));
-        let resp = self.hop.dispatch(&req)?.into_bytes();
+        let resp = self.hop.dispatch(&req)?;
 
         let arr = resp.get(..8).unwrap().try_into().unwrap();
         let num = i64::from_be_bytes(arr);

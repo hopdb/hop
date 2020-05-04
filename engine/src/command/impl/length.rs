@@ -1,4 +1,5 @@
-use super::super::{DispatchError, DispatchResult, Dispatch, Request, Response};
+use super::super::{DispatchError, DispatchResult, Dispatch, Request, response};
+use alloc::vec::Vec;
 use crate::{
     state::{
         object::{Bytes, List, Str},
@@ -10,36 +11,36 @@ use crate::{
 pub struct Length;
 
 impl Length {
-    fn bytes(hop: &Hop, key: &[u8]) -> DispatchResult<Response> {
+    fn bytes(hop: &Hop, key: &[u8]) -> DispatchResult<Vec<u8>> {
         let bytes = match hop.state().typed_key::<Bytes>(key) {
             Some(bytes) => bytes,
             None => return Err(DispatchError::WrongType),
         };
 
-        Ok(Response::from(bytes.len() as i64))
+        Ok(response::write_int(bytes.len() as i64))
     }
 
-    fn list(hop: &Hop, key: &[u8]) -> DispatchResult<Response> {
+    fn list(hop: &Hop, key: &[u8]) -> DispatchResult<Vec<u8>> {
         let list = match hop.state().typed_key::<List>(key) {
             Some(list) => list,
             None => return Err(DispatchError::WrongType),
         };
 
-        Ok(Response::from(list.len() as i64))
+        Ok(response::write_int(list.len() as i64))
     }
 
-    fn string(hop: &Hop, key: &[u8]) -> DispatchResult<Response> {
+    fn string(hop: &Hop, key: &[u8]) -> DispatchResult<Vec<u8>> {
         let string = match hop.state().typed_key::<Str>(key) {
             Some(string) => string,
             None => return Err(DispatchError::WrongType),
         };
 
-        Ok(Response::from(string.chars().count() as i64))
+        Ok(response::write_int(string.chars().count() as i64))
     }
 }
 
 impl Dispatch for Length {
-    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Response> {
+    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Vec<u8>> {
         let key = req.key().ok_or(DispatchError::KeyRetrieval)?;
 
         match req.key_type() {
@@ -115,7 +116,7 @@ mod tests {
         let req = Request::new(CommandId::Length, Some(args));
 
         assert_eq!(
-            Length::dispatch(&hop, &req).unwrap().into_bytes(),
+            Length::dispatch(&hop, &req).unwrap(),
             Response::from(0).into_bytes()
         );
         assert_eq!(hop.state().0.len(), 1);
@@ -132,7 +133,7 @@ mod tests {
         let req = Request::new(CommandId::Length, Some(args));
 
         assert_eq!(
-            Length::dispatch(&hop, &req).unwrap().into_bytes(),
+            Length::dispatch(&hop, &req).unwrap(),
             Response::from(3).into_bytes()
         );
     }
@@ -149,7 +150,7 @@ mod tests {
         let req = Request::new(CommandId::Length, Some(args));
 
         assert_eq!(
-            Length::dispatch(&hop, &req).unwrap().into_bytes(),
+            Length::dispatch(&hop, &req).unwrap(),
             Response::from(1).into_bytes()
         );
     }
@@ -173,7 +174,7 @@ mod tests {
 
         // length of a simple string, 4 bytes and 4 chars
         assert_eq!(
-            Length::dispatch(&hop, &req).unwrap().into_bytes(),
+            Length::dispatch(&hop, &req).unwrap(),
             Response::from(4).into_bytes()
         );
 
@@ -182,7 +183,7 @@ mod tests {
         args.push(b"cowboy".to_vec());
         let req = Request::new(CommandId::Length, Some(args.clone()));
         assert_eq!(
-            Length::dispatch(&hop, &req).unwrap().into_bytes(),
+            Length::dispatch(&hop, &req).unwrap(),
             Response::from(1).into_bytes()
         );
     }

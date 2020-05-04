@@ -13,12 +13,12 @@ pub mod state;
 mod pool;
 
 use self::{
-    command::{r#impl::*, CommandId, Dispatch, DispatchResult, Request, Response},
+    command::{r#impl::*, CommandId, Dispatch, DispatchResult, Request},
     pubsub::PubSubManager,
     session::SessionManager,
     state::State,
 };
-use alloc::sync::Arc;
+use alloc::{sync::Arc, vec::Vec};
 
 #[derive(Debug, Default)]
 struct HopRef {
@@ -35,7 +35,7 @@ impl Hop {
         Default::default()
     }
 
-    pub fn dispatch(&self, req: &Request) -> DispatchResult<Response> {
+    pub fn dispatch(&self, req: &Request) -> DispatchResult<Vec<u8>> {
         match req.kind() {
             CommandId::Append => Append::dispatch(self, req),
             CommandId::DecrementBy => DecrementBy::dispatch(self, req),

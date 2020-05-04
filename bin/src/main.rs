@@ -79,7 +79,7 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
 
         let resp = hop.dispatch(&req).unwrap();
 
-        writer.write_all(resp.bytes()).await?;
+        writer.write_all(&resp).await?;
 
         if let Some(args) = req.into_args() {
             ctx.reset(args);

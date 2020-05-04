@@ -1,4 +1,6 @@
-use alloc::vec::Vec;
+use super::{DispatchError, request::ParseError};
+use alloc::{string::String, vec::Vec};
+use crate::state::Value;
 use dashmap::{DashMap, DashSet};
 
 /// The type of response value.
@@ -18,152 +20,222 @@ pub enum ResponseType {
 }
 
 #[derive(Debug)]
-pub struct Response(Vec<u8>);
+pub enum Response {
+    DispatchError(DispatchError),
+    ParseError(ParseError),
+    Value(Value),
+}
 
 impl Response {
-    pub fn bytes(&self) -> &[u8] {
-        self.0.as_slice()
-    }
-
-    pub fn into_bytes(self) -> Vec<u8> {
-        self.0
+    pub fn into_bytes(&self) -> Vec<u8> {
+        match self {
+            Self::DispatchError(err) => write_dispatch_error(*err),
+            Self::ParseError(err) => write_parse_error(*err),
+            Self::Value(Value::Boolean(boolean)) => write_bool(*boolean),
+            Self::Value(Value::Bytes(bytes)) => write_bytes(bytes),
+            Self::Value(Value::Float(float)) => write_float(*float),
+            Self::Value(Value::Integer(int)) => write_int(*int),
+            Self::Value(Value::List(list)) => write_list(list),
+            Self::Value(Value::Map(map)) => write_map(map),
+            Self::Value(Value::Set(set)) => write_set(set),
+            Self::Value(Value::String(string)) => write_str(string),
+        }
     }
 }
 
 impl From<bool> for Response {
     fn from(value: bool) -> Self {
-        let mut bytes = Vec::with_capacity(2);
-        bytes.push(ResponseType::Boolean as u8);
-        bytes.push(if value { 1 } else { 0 });
-
-        Self(bytes)
+        Self::Value(Value::Boolean(value))
     }
 }
 
-impl From<&[u8]> for Response {
-    fn from(value: &[u8]) -> Self {
-        let mut bytes = Vec::new();
-        bytes.push(ResponseType::Bytes as u8);
-        let len = value.len() as u32;
-        bytes.extend_from_slice(&len.to_be_bytes());
-        bytes.extend_from_slice(value);
-
-        Self(bytes)
+impl From<Vec<u8>> for Response {
+    fn from(value: Vec<u8>) -> Self {
+        Self::Value(Value::Bytes(value))
     }
 }
 
 impl From<f64> for Response {
     fn from(value: f64) -> Self {
-        let mut bytes = Vec::with_capacity(9);
-        bytes.push(ResponseType::Float as u8);
-        bytes.extend_from_slice(&value.to_be_bytes());
-
-        Self(bytes)
+        Self::Value(Value::Float(value))
     }
 }
 
 impl From<i64> for Response {
     fn from(value: i64) -> Self {
-        let mut bytes = Vec::new();
-        bytes.push(ResponseType::Integer as u8);
-        bytes.extend_from_slice(&value.to_be_bytes());
-
-        Self(bytes)
+        Self::Value(Value::Integer(value))
     }
 }
 
-impl From<&[Vec<u8>]> for Response {
-    fn from(value: &[Vec<u8>]) -> Self {
-        let mut bytes = Vec::new();
-        bytes.push(ResponseType::List as u8);
-
-        // The length of the list.
-        bytes.extend_from_slice(&(value.len() as u16).to_be_bytes());
-
-        // Now for each list item, push its length and then the item itself.
-        for item in value {
-            let len = item.len() as u32;
-
-            bytes.extend_from_slice(&len.to_be_bytes());
-            bytes.extend_from_slice(item);
-        }
-
-        Self(bytes)
+impl From<Vec<Vec<u8>>> for Response {
+    fn from(value: Vec<Vec<u8>>) -> Self {
+        Self::Value(Value::List(value))
     }
 }
 
-impl From<&DashMap<Vec<u8>, Vec<u8>>> for Response {
-    fn from(value: &DashMap<Vec<u8>, Vec<u8>>) -> Self {
-        let mut bytes = Vec::new();
-        bytes.push(ResponseType::Map as u8);
-
-        // Maps can only contain up to u16 items.
-        bytes.extend_from_slice(&(value.len() as u16).to_be_bytes());
-
-        for item in value.iter() {
-            let (key, value) = item.pair();
-
-            let key_len = key.len() as u8;
-            let value_len = value.len() as u32;
-
-            bytes.push(key_len);
-            bytes.extend_from_slice(key);
-            bytes.extend_from_slice(&value_len.to_be_bytes());
-            bytes.extend_from_slice(value);
-        }
-
-        Self(bytes)
+impl From<DashMap<Vec<u8>, Vec<u8>>> for Response {
+    fn from(value: DashMap<Vec<u8>, Vec<u8>>) -> Self {
+        Self::Value(Value::Map(value))
     }
 }
 
-impl From<&DashSet<Vec<u8>>> for Response {
-    fn from(value: &DashSet<Vec<u8>>) -> Self {
-        let mut bytes = Vec::new();
-        bytes.push(ResponseType::Set as u8);
-
-        // Sets can only contain up to u16 items.
-        bytes.extend_from_slice(&(value.len() as u16).to_be_bytes());
-
-        for item in value.iter() {
-            let len = item.len() as u16;
-
-            bytes.extend_from_slice(&len.to_be_bytes());
-            bytes.extend_from_slice(item.key());
-        }
-
-        Self(bytes)
+impl From<DashSet<Vec<u8>>> for Response {
+    fn from(value: DashSet<Vec<u8>>) -> Self {
+        Self::Value(Value::Set(value))
     }
 }
 
-impl From<&str> for Response {
-    fn from(value: &str) -> Self {
-        let mut bytes = Vec::new();
-        bytes.push(ResponseType::String as u8);
-        let len = value.len() as u32;
-
-        bytes.extend_from_slice(&len.to_be_bytes());
-        bytes.extend_from_slice(value.as_bytes());
-
-        Self(bytes)
+impl From<String> for Response {
+    fn from(value: String) -> Self {
+        Self::Value(Value::String(value))
     }
+}
+
+pub fn write_bool(value: bool) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(2);
+
+    buf.push(ResponseType::Boolean as u8);
+    buf.push(if value { 1 } else { 0 });
+
+    buf
+}
+
+pub fn write_bytes(value: &[u8]) -> Vec<u8> {
+    let len = value.len() as u32;
+
+    let mut buf = Vec::with_capacity(5 + len as usize);
+
+    buf.push(ResponseType::Bytes as u8);
+    buf.extend_from_slice(&len.to_be_bytes());
+    buf.extend_from_slice(value);
+
+    buf
+}
+
+pub fn write_dispatch_error(value: DispatchError) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(2);
+
+    buf.push(ResponseType::DispatchError as u8);
+    buf.push(value as u8);
+
+    buf
+}
+
+pub fn write_parse_error(value: ParseError) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(2);
+
+    buf.push(ResponseType::ParseError as u8);
+    buf.push(value as u8);
+
+    buf
+}
+
+pub fn write_float(value: f64) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(9);
+
+    buf.push(ResponseType::Float as u8);
+    buf.extend_from_slice(&value.to_be_bytes());
+
+    buf
+}
+
+pub fn write_int(value: i64) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(9);
+
+    buf.push(ResponseType::Integer as u8);
+    buf.extend_from_slice(&value.to_be_bytes());
+
+    buf
+}
+
+pub fn write_list(value: &[Vec<u8>]) -> Vec<u8> {
+    let mut buf = Vec::new();
+
+    buf.push(ResponseType::List as u8);
+
+    // The length of the list.
+    buf.extend_from_slice(&(value.len() as u16).to_be_bytes());
+
+    // Now for each list item, push its length and then the item itself.
+    for item in value {
+        let len = item.len() as u32;
+
+        buf.extend_from_slice(&len.to_be_bytes());
+        buf.extend_from_slice(item);
+    }
+
+    buf
+}
+
+pub fn write_map(value: &DashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
+    let mut buf = Vec::new();
+
+    buf.push(ResponseType::Map as u8);
+
+    // Maps can only contain up to u16 items.
+    buf.extend_from_slice(&(value.len() as u16).to_be_bytes());
+
+    for item in value.iter() {
+        let (key, value) = item.pair();
+
+        let key_len = key.len() as u8;
+        let value_len = value.len() as u32;
+
+        buf.push(key_len);
+        buf.extend_from_slice(key);
+        buf.extend_from_slice(&value_len.to_be_bytes());
+        buf.extend_from_slice(value);
+    }
+
+    buf
+}
+
+pub fn write_set(value: &DashSet<Vec<u8>>) -> Vec<u8> {
+    let mut buf = Vec::new();
+
+    buf.push(ResponseType::Set as u8);
+
+    // Sets can only contain up to u16 items.
+    buf.extend_from_slice(&(value.len() as u16).to_be_bytes());
+
+    for item in value.iter() {
+        let len = item.len() as u16;
+
+        buf.extend_from_slice(&len.to_be_bytes());
+        buf.extend_from_slice(item.key());
+    }
+
+    buf
+}
+
+pub fn write_str(value: &str) -> Vec<u8> {
+    let len = value.len() as u32;
+
+    let mut buf = Vec::with_capacity(5 + len as usize);
+    buf.push(ResponseType::String as u8);
+
+    buf.extend_from_slice(&len.to_be_bytes());
+    buf.extend_from_slice(value.as_bytes());
+
+    buf
 }
 
 #[cfg(test)]
 mod tests {
     use super::{Response, ResponseType};
-    use alloc::vec::Vec;
+    use alloc::{borrow::ToOwned, string::String, vec::Vec};
     use dashmap::{DashMap, DashSet};
 
     #[test]
     fn test_bool() {
-        assert_eq!(Response::from(false).0, [ResponseType::Boolean as u8, 0]);
-        assert_eq!(Response::from(true).0, [ResponseType::Boolean as u8, 1]);
+        assert_eq!(Response::from(false).into_bytes(), [ResponseType::Boolean as u8, 0]);
+        assert_eq!(Response::from(true).into_bytes(), [ResponseType::Boolean as u8, 1]);
     }
 
     #[test]
     fn test_bytes() {
         assert_eq!(
-            Response::from(b"hopdb".as_ref()).0,
+            Response::from(b"hopdb".to_vec()).into_bytes(),
             [
                 ResponseType::Bytes as u8,
                 // length, max u32
@@ -183,7 +255,7 @@ mod tests {
     #[test]
     fn test_bytes_empty() {
         assert_eq!(
-            Response::from(b"".as_ref()).0,
+            Response::from(b"".to_vec()).into_bytes(),
             [
                 ResponseType::Bytes as u8,
                 // length, max u32
@@ -198,7 +270,7 @@ mod tests {
     #[test]
     fn test_float() {
         assert_eq!(
-            Response::from(7.4).0,
+            Response::from(7.4).into_bytes(),
             [
                 ResponseType::Float as u8,
                 64,
@@ -216,11 +288,11 @@ mod tests {
     #[test]
     fn test_int() {
         assert_eq!(
-            Response::from(7).0,
+            Response::from(7).into_bytes(),
             [ResponseType::Integer as u8, 0, 0, 0, 0, 0, 0, 0, 7],
         );
         assert_eq!(
-            Response::from(-7).0,
+            Response::from(-7).into_bytes(),
             [
                 ResponseType::Integer as u8,
                 255,
@@ -234,7 +306,7 @@ mod tests {
             ],
         );
         assert_eq!(
-            Response::from(68125).0,
+            Response::from(68125).into_bytes(),
             [ResponseType::Integer as u8, 0, 0, 0, 0, 0, 1, 10, 29],
         );
     }
@@ -246,7 +318,7 @@ mod tests {
         list.push(b"db".to_vec());
 
         assert_eq!(
-            Response::from(list.as_slice()).0,
+            Response::from(list).into_bytes(),
             [
                 ResponseType::List as u8,
                 // length of the list
@@ -278,7 +350,7 @@ mod tests {
         let v: Vec<Vec<_>> = Vec::new();
 
         assert_eq!(
-            Response::from(v.as_slice()).0,
+            Response::from(v).into_bytes(),
             [
                 ResponseType::List as u8,
                 // length of the list
@@ -361,7 +433,7 @@ mod tests {
             ],
         ];
 
-        let resp = Response::from(&map).0;
+        let resp = Response::from(map).into_bytes();
 
         assert!(possible_values.iter().any(|v| v == resp.as_slice()));
     }
@@ -369,7 +441,7 @@ mod tests {
     #[test]
     fn test_map_empty() {
         assert_eq!(
-            Response::from(&DashMap::new()).0,
+            Response::from(DashMap::new()).into_bytes(),
             [ResponseType::Map as u8, 0, 0]
         );
     }
@@ -423,7 +495,7 @@ mod tests {
             ],
         ];
 
-        let resp = Response::from(&map).0;
+        let resp = Response::from(map).into_bytes();
 
         assert!(possible_values.iter().any(|v| v == resp.as_slice()));
     }
@@ -431,7 +503,7 @@ mod tests {
     #[test]
     fn test_set_empty() {
         assert_eq!(
-            Response::from(&DashSet::new()).0,
+            Response::from(DashSet::new()).into_bytes(),
             [ResponseType::Set as u8, 0, 0]
         );
     }
@@ -439,7 +511,7 @@ mod tests {
     #[test]
     fn test_str() {
         assert_eq!(
-            Response::from("foo bar baz").0,
+            Response::from("foo bar baz".to_owned()).into_bytes(),
             [
                 ResponseType::String as u8,
                 // 4 bytes string length
@@ -466,7 +538,7 @@ mod tests {
     #[test]
     fn test_str_empty() {
         assert_eq!(
-            Response::from("").0,
+            Response::from(String::new()).into_bytes(),
             [ResponseType::String as u8, 0, 0, 0, 0]
         );
     }

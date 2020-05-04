@@ -12,8 +12,9 @@ pub use self::{
     response::Response,
 };
 
+use alloc::vec::Vec;
 use crate::Hop;
 
 pub trait Dispatch {
-    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Response>;
+    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Vec<u8>>;
 }
