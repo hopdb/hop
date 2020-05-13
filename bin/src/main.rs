@@ -98,8 +98,8 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
         let req = match ctx.feed(&input) {
             Ok(Some(cmd)) => cmd,
             Ok(None) => continue,
-            Err(_) => {
-                todo!("sending error response not implemented");
+            Err(why) => {
+                todo!("sending error response not implemented: {:?}", why);
             }
         };
 
