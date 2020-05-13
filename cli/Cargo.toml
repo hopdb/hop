@@ -12,6 +12,6 @@ repository = "https://github.com/hopdb/hop.git"
 version = "0.1.0"
 
 [dependencies]
-hop = { path = "../client" }
-hop-engine = { path = "../engine" }
+hop = { default-features = false, path = "../client" }
+hop-engine = { default-features = false, path = "../engine" }
 tokio = { default-features = false, features = ["io-std", "io-util", "macros", "rt-threaded"], version = "^0.2.20" }
