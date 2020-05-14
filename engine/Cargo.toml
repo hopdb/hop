@@ -20,4 +20,4 @@ log = { default-features = false, optional = true, version = "0.4" }
 default = ["log"]
 
 [dev-dependencies]
-tokio = { default-features = false, features = ["macros"], version = "^0.2.21" }
+tokio = { default-features = false, features = ["macros", "rt-threaded"], version = "^0.2.21" }
