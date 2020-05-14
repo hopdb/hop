@@ -83,7 +83,7 @@ impl PubSubManager {
             .remove(&session_id)
             .map(|(_, subscriptions)| {
                 for (_, sub) in subscriptions.into_iter() {
-                    sub.channel.close();
+                    sub.close();
                 }
             })
             .is_some()

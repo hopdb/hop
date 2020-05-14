@@ -3,12 +3,12 @@ mod manager;
 
 pub use self::{key_update::KeyUpdate, manager::PubSubManager};
 
-use futures_core::stream::Stream;
-use futures_intrusive::channel::UnbufferedChannel;
+use futures_intrusive::channel::shared::{self, Receiver, Sender};
 
 #[derive(Debug)]
 pub struct Subscription {
-    channel: UnbufferedChannel<KeyUpdate>,
+    rx: Receiver<KeyUpdate>,
+    tx: Sender<KeyUpdate>,
 }
 
 impl Subscription {
@@ -16,15 +16,36 @@ impl Subscription {
         Default::default()
     }
 
-    pub fn stream(&self) -> impl Stream<Item = KeyUpdate> + '_ {
-        self.channel.stream()
+    pub fn close(&self) {
+        self.tx.close();
+    }
+
+    pub fn receiver(&self) -> Receiver<KeyUpdate> {
+        self.rx.clone()
+    }
+
+    pub fn sender(&self) -> Sender<KeyUpdate> {
+        self.tx.clone()
     }
 }
 
 impl Default for Subscription {
     fn default() -> Self {
-        Self {
-            channel: UnbufferedChannel::new(),
-        }
+        let (tx, rx) = shared::unbuffered_channel();
+
+        Self { rx, tx }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{KeyUpdate, Subscription};
+
+    #[tokio::test]
+    async fn test_sub_close() {
+        let sub = Subscription::new();
+        let update = KeyUpdate::Renamed { to: b"b".to_vec() };
+        sub.close();
+        assert!(sub.sender().send(update).await.is_err());
     }
 }

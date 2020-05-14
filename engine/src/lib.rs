@@ -1,7 +1,7 @@
 #![deny(clippy::all, clippy::cargo)]
 #![forbid(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
