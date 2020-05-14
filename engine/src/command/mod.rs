@@ -18,3 +18,9 @@ use alloc::vec::Vec;
 pub trait Dispatch {
     fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Vec<u8>>;
 }
+
+enum ContextConclusion<T> {
+    Finished(T),
+    Incomplete,
+    Next,
+}

@@ -1,6 +1,11 @@
-use super::{request::ParseError, DispatchError};
+mod context;
+
+pub use context::{Context, ParseError};
+
+use super::{request::ParseError as RequestParseError, DispatchError};
 use crate::state::Value;
 use alloc::{string::String, vec::Vec};
+use core::convert::TryFrom;
 use dashmap::{DashMap, DashSet};
 
 /// The type of response value.
@@ -19,10 +24,30 @@ pub enum ResponseType {
     DispatchError = 9,
 }
 
+impl TryFrom<u8> for ResponseType {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => Self::Boolean,
+            1 => Self::Bytes,
+            2 => Self::Float,
+            3 => Self::Integer,
+            4 => Self::List,
+            5 => Self::Map,
+            6 => Self::Set,
+            7 => Self::String,
+            8 => Self::ParseError,
+            9 => Self::DispatchError,
+            _ => return Err(()),
+        })
+    }
+}
+
 #[derive(Debug)]
 pub enum Response {
     DispatchError(DispatchError),
-    ParseError(ParseError),
+    ParseError(RequestParseError),
     Value(Value),
 }
 
@@ -91,6 +116,18 @@ impl From<String> for Response {
     }
 }
 
+impl From<DispatchError> for Response {
+    fn from(value: DispatchError) -> Self {
+        Self::DispatchError(value)
+    }
+}
+
+impl From<RequestParseError> for Response {
+    fn from(value: RequestParseError) -> Self {
+        Self::ParseError(value)
+    }
+}
+
 pub fn write_bool(value: bool) -> Vec<u8> {
     let mut buf = Vec::with_capacity(2);
 
@@ -121,7 +158,7 @@ pub fn write_dispatch_error(value: DispatchError) -> Vec<u8> {
     buf
 }
 
-pub fn write_parse_error(value: ParseError) -> Vec<u8> {
+pub fn write_parse_error(value: RequestParseError) -> Vec<u8> {
     let mut buf = Vec::with_capacity(2);
 
     buf.push(ResponseType::ParseError as u8);

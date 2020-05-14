@@ -1,97 +1,10 @@
-use super::CommandId;
-use crate::{pool::Pool, state::KeyType};
+use super::{super::ContextConclusion, Request};
+use crate::{command::CommandId, pool::Pool, state::KeyType};
 use alloc::vec::Vec;
-use core::{
-    convert::{TryFrom, TryInto},
-    slice::SliceIndex,
-};
+use core::convert::{TryFrom, TryInto};
 use log::warn;
 
-#[derive(Debug)]
-pub struct Request {
-    args: Option<Vec<Vec<u8>>>,
-    key_type: Option<KeyType>,
-    kind: CommandId,
-}
-
-impl Request {
-    pub fn new(kind: CommandId, args: Option<Vec<Vec<u8>>>) -> Self {
-        Self {
-            args,
-            key_type: None,
-            kind,
-        }
-    }
-
-    pub fn new_with_type(kind: CommandId, args: Option<Vec<Vec<u8>>>, key_type: KeyType) -> Self {
-        Self {
-            args,
-            key_type: Some(key_type),
-            kind,
-        }
-    }
-
-    pub fn args(&self) -> Option<&[Vec<u8>]> {
-        self.args.as_deref()
-    }
-
-    pub fn arg<I: SliceIndex<[Vec<u8>]>>(
-        &self,
-        index: I,
-    ) -> Option<&<I as SliceIndex<[Vec<u8>]>>::Output> {
-        let args = self.args.as_ref()?;
-
-        let refs = args.get(index)?;
-
-        Some(refs)
-    }
-
-    pub fn flatten_args(&self) -> Option<Vec<u8>> {
-        let start = if self.kind.has_key() { 1 } else { 0 };
-
-        Some(
-            self.args
-                .as_ref()?
-                .get(start..)?
-                .iter()
-                .fold(Vec::new(), |mut acc, arg| {
-                    acc.extend_from_slice(arg);
-
-                    acc
-                }),
-        )
-    }
-
-    pub fn key(&self) -> Option<&[u8]> {
-        if !self.kind.has_key() {
-            return None;
-        }
-
-        self.args
-            .as_ref()
-            .and_then(|args| args.get(0).map(|x| x.as_slice()))
-    }
-
-    /// Returns the requested type of key to work with, if any.
-    ///
-    /// Some commands only work with one type of key, such as a boolean, where
-    /// this isn't taken into account. Other commands, such as [`Append`], can
-    /// work with bytes, lists, and strings in unique ways. Commands like
-    /// `Append` check the key type to know what type of key to work with.
-    ///
-    /// [`Append`]: impl/struct.Append.html
-    pub fn key_type(&self) -> Option<KeyType> {
-        self.key_type
-    }
-
-    pub fn kind(&self) -> CommandId {
-        self.kind
-    }
-
-    pub fn into_args(mut self) -> Option<Vec<Vec<u8>>> {
-        self.args.take()
-    }
-}
+type Conclusion = ContextConclusion<Request>;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[repr(u8)]
@@ -132,12 +45,6 @@ impl Default for Stage {
     }
 }
 
-enum StageConclusion {
-    Finished(Request),
-    Incomplete,
-    Next,
-}
-
 #[derive(Debug)]
 pub struct Context {
     argument_pool: Pool<Vec<u8>>,
@@ -173,9 +80,9 @@ impl Context {
             };
 
             match conclusion {
-                StageConclusion::Finished(command_info) => return Ok(Some(command_info)),
-                StageConclusion::Incomplete => return Ok(None),
-                StageConclusion::Next => continue,
+                Conclusion::Finished(command_info) => return Ok(Some(command_info)),
+                Conclusion::Incomplete => return Ok(None),
+                Conclusion::Next => continue,
             }
         }
     }
@@ -193,10 +100,10 @@ impl Context {
         self.buf_args.replace(args);
     }
 
-    fn stage_init(&mut self, buf: &[u8]) -> Result<StageConclusion, ParseError> {
+    fn stage_init(&mut self, buf: &[u8]) -> Result<Conclusion, ParseError> {
         let byte = match buf.first() {
             Some(byte) => *byte,
-            None => return Ok(StageConclusion::Incomplete),
+            None => return Ok(Conclusion::Incomplete),
         };
 
         // If the first bit is flipped, then this byte is denoting the type of
@@ -219,7 +126,7 @@ impl Context {
         if cmd_type.is_simple() {
             self.reset_light();
 
-            return Ok(StageConclusion::Finished(Request {
+            return Ok(Conclusion::Finished(Request {
                 args: None,
                 key_type: None,
                 kind: cmd_type,
@@ -229,7 +136,7 @@ impl Context {
         self.stage = Stage::Kind { cmd_type, key_type };
         self.idx = self.idx.wrapping_add(1);
 
-        Ok(StageConclusion::Next)
+        Ok(Conclusion::Next)
     }
 
     fn stage_kind(
@@ -237,10 +144,10 @@ impl Context {
         buf: &[u8],
         key_type: Option<KeyType>,
         cmd_type: CommandId,
-    ) -> Result<StageConclusion, ParseError> {
+    ) -> Result<Conclusion, ParseError> {
         let argument_count = match buf.get(self.idx) {
             Some(argument_count) => *argument_count,
-            None => return Ok(StageConclusion::Incomplete),
+            None => return Ok(Conclusion::Incomplete),
         };
 
         self.stage = Stage::ArgumentParsing {
@@ -250,7 +157,7 @@ impl Context {
         };
         self.idx = self.idx.saturating_add(1);
 
-        Ok(StageConclusion::Next)
+        Ok(Conclusion::Next)
     }
 
     fn stage_argument_parsing(
@@ -259,10 +166,10 @@ impl Context {
         cmd_type: CommandId,
         key_type: Option<KeyType>,
         argument_count: u8,
-    ) -> Result<StageConclusion, ParseError> {
+    ) -> Result<Conclusion, ParseError> {
         let len_bytes = match buf.get(self.idx..self.idx + Self::ARG_LEN_BYTES) {
             Some(bytes) => bytes.try_into().unwrap(),
-            None => return Ok(StageConclusion::Incomplete),
+            None => return Ok(Conclusion::Incomplete),
         };
 
         let arg_len = u32::from_be_bytes(len_bytes) as usize;
@@ -273,7 +180,7 @@ impl Context {
                 pooled_arg.extend_from_slice(arg);
                 self.push_arg(pooled_arg);
             }
-            None => return Ok(StageConclusion::Incomplete),
+            None => return Ok(Conclusion::Incomplete),
         };
 
         self.idx += 4 + arg_len;
@@ -281,13 +188,13 @@ impl Context {
         if self.arg_count() == argument_count as usize {
             let args = self.buf_args.take();
 
-            Ok(StageConclusion::Finished(Request {
+            Ok(Conclusion::Finished(Request {
                 args,
                 key_type,
                 kind: cmd_type,
             }))
         } else {
-            Ok(StageConclusion::Next)
+            Ok(Conclusion::Next)
         }
     }
 
@@ -336,7 +243,7 @@ impl Default for Context {
 #[cfg(test)]
 mod tests {
     use super::{
-        super::{error::Result, CommandId},
+        super::{super::error::Result, CommandId},
         Context, ParseError,
     };
     use core::convert::TryFrom;
