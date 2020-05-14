@@ -2,7 +2,6 @@ use super::{super::ContextConclusion, Request};
 use crate::{command::CommandId, pool::Pool, state::KeyType};
 use alloc::vec::Vec;
 use core::convert::{TryFrom, TryInto};
-use log::warn;
 
 type Conclusion = ContextConclusion<Request>;
 
@@ -202,7 +201,8 @@ impl Context {
         if let Some(args) = self.buf_args.as_ref() {
             args.len()
         } else {
-            warn!("Got into a weird state! Args don't exist to count, fixing");
+            #[cfg(feature = "log")]
+            log::warn!("Got into a weird state! Args don't exist to count, fixing");
 
             self.buf_args.replace(Vec::new());
 
@@ -214,7 +214,8 @@ impl Context {
         match self.buf_args.as_mut() {
             Some(args) => args.push(arg),
             None => {
-                warn!("Got into a weird state! Args don't exist to push to, fixing");
+                #[cfg(feature = "log")]
+                log::warn!("Got into a weird state! Args don't exist to push to, fixing");
 
                 let mut args = Vec::new();
                 args.push(arg);

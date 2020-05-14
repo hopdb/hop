@@ -14,7 +14,10 @@ version = "0.1.0"
 [dependencies]
 dashmap = { default-features = false, version = "^3.11.1" }
 futures-intrusive = { default-features = false, features = ["alloc"], version = "^0.3.1" }
-log = { default-features = false, version = "0.4" }
+log = { default-features = false, optional = true, version = "0.4" }
+
+[features]
+default = ["log"]
 
 [dev-dependencies]
 tokio = { default-features = false, features = ["macros"], version = "^0.2.21" }
