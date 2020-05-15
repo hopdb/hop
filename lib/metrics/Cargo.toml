@@ -1,0 +1,15 @@
+[package]
+authors = ["Vivian Hellyer <vivian@hellyer.dev>"]
+categories = ["no-std"]
+description = "Simple metric collecting for Hop."
+edition = "2018"
+keywords = ["hop", "metrics"]
+license = "ISC"
+name = "hop-internal-metrics"
+publish = false
+readme = "README.md"
+repository = "https://github.com/hopdb/hop.git"
+version = "0.1.0"
+
+[dependencies]
+dashmap = { default-features = false, version = "^3.11.1" }
