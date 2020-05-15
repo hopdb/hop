@@ -163,8 +163,16 @@ version = "0.1.0"
 dependencies = [
  "dashmap 3.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-intrusive 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hop-internal-metrics 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "hop-internal-metrics"
+version = "0.1.0"
+dependencies = [
+ "dashmap 3.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

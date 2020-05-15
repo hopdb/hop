@@ -1,4 +1,5 @@
 use super::Session;
+use crate::metrics::{Metric, Writer};
 use alloc::sync::Arc;
 use core::sync::atomic::{AtomicU32, Ordering};
 use dashmap::{
@@ -6,18 +7,23 @@ use dashmap::{
     DashMap,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct SessionManagerRef {
+    metrics_writer: Writer,
     next_id: AtomicU32,
     sessions: DashMap<u32, Session>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct SessionManager(Arc<SessionManagerRef>);
 
 impl SessionManager {
-    pub fn new() -> Self {
-        Default::default()
+    pub fn new(metrics_writer: Writer) -> Self {
+        Self(Arc::new(SessionManagerRef {
+            metrics_writer,
+            next_id: AtomicU32::new(0),
+            sessions: DashMap::new(),
+        }))
     }
 
     pub fn add(&mut self, client_token: [u8; 32]) -> RefMut<'_, u32, Session> {
@@ -29,6 +35,8 @@ impl SessionManager {
             }
             Entry::Vacant(v) => v.insert(session),
         };
+
+        self.0.metrics_writer.increment(Metric::SessionsStarted);
 
         self.0
             .next_id

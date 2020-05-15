@@ -12,6 +12,7 @@ pub enum Error {
     ArgumentRetrieval = 0,
     KeyRetrieval = 1,
     WrongType = 2,
+    KeyTypeUnexpected = 3,
 }
 
 impl Display for Error {
@@ -19,6 +20,7 @@ impl Display for Error {
         match self {
             Self::ArgumentRetrieval => f.write_str("couldn't retrieve required argument"),
             Self::KeyRetrieval => f.write_str("couldn't retrieve key"),
+            Self::KeyTypeUnexpected => f.write_str("didn't expect a specified request key type"),
             Self::WrongType => f.write_str("the key has the wrong type"),
         }
     }

@@ -14,6 +14,7 @@ version = "0.1.0"
 [dependencies]
 dashmap = { default-features = false, version = "^3.11.1" }
 futures-intrusive = { default-features = false, features = ["alloc"], version = "^0.3.1" }
+hop-internal-metrics = { default-features = false, path = "../lib/metrics" }
 log = { default-features = false, optional = true, version = "0.4" }
 
 [features]

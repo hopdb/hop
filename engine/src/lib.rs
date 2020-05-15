@@ -6,6 +6,7 @@
 extern crate alloc;
 
 pub mod command;
+pub mod metrics;
 pub mod pubsub;
 pub mod session;
 pub mod state;
@@ -14,20 +15,23 @@ mod pool;
 
 use self::{
     command::{r#impl::*, CommandId, Dispatch, DispatchResult, Request},
+    metrics::{Metric, Metrics, Reader, Writer},
     pubsub::PubSubManager,
     session::SessionManager,
     state::State,
 };
 use alloc::{sync::Arc, vec::Vec};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct HopRef {
+    metrics: Metrics,
+    metrics_writer: Writer,
     pubsub: PubSubManager,
     sessions: SessionManager,
     state: State,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Hop(Arc<HopRef>);
 
 impl Hop {
@@ -36,7 +40,7 @@ impl Hop {
     }
 
     pub fn dispatch(&self, req: &Request) -> DispatchResult<Vec<u8>> {
-        match req.kind() {
+        let res = match req.kind() {
             CommandId::Append => Append::dispatch(self, req),
             CommandId::DecrementBy => DecrementBy::dispatch(self, req),
             CommandId::Decrement => Decrement::dispatch(self, req),
@@ -45,7 +49,19 @@ impl Hop {
             CommandId::IncrementBy => IncrementBy::dispatch(self, req),
             CommandId::Stats => Stats::dispatch(self, req),
             CommandId::Length => Length::dispatch(self, req),
-        }
+        };
+
+        self.0.metrics_writer.increment(if res.is_ok() {
+            Metric::CommandsSuccessful
+        } else {
+            Metric::CommandsErrored
+        });
+
+        res
+    }
+
+    pub fn metrics(&self) -> Reader {
+        self.0.metrics.reader()
     }
 
     pub fn pubsub(&self) -> &PubSubManager {
@@ -58,5 +74,20 @@ impl Hop {
 
     pub fn state(&self) -> &State {
         &self.0.state
+    }
+}
+
+impl Default for Hop {
+    fn default() -> Self {
+        let metrics = Metrics::default();
+        let writer = metrics.writer();
+
+        Self(Arc::new(HopRef {
+            metrics,
+            metrics_writer: writer.clone(),
+            pubsub: PubSubManager::default(),
+            sessions: SessionManager::new(writer),
+            state: State::default(),
+        }))
     }
 }
