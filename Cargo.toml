@@ -1,11 +1,11 @@
 [workspace]
 members = [
-    "bin",
     "client",
     "cli",
     "engine",
     "lib/metrics",
     "lib/timer",
+    "server",
 ]
 
 [profile.dev]
