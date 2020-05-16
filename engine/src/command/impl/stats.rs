@@ -16,7 +16,7 @@ impl Stats {
 }
 
 impl Dispatch for Stats {
-    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Vec<u8>> {
+    fn dispatch(hop: &Hop, req: &Request, res: &mut Vec<u8>) -> DispatchResult<()> {
         if req.key_type().is_some() {
             return Err(DispatchError::KeyTypeUnexpected);
         }
@@ -35,7 +35,9 @@ impl Dispatch for Stats {
             map.insert(key, value);
         }
 
-        Ok(response::write_map(&map))
+        response::write_map(res, &map);
+
+        Ok(())
     }
 }
 
@@ -43,27 +45,21 @@ impl Dispatch for Stats {
 mod tests {
     use super::Stats;
     use crate::{
-        command::{response::ResponseType, CommandId, Dispatch, DispatchError, Request},
+        command::{CommandId, Dispatch, DispatchError, Request, Response},
         metrics::Metric,
         state::KeyType,
         Hop,
     };
+    use dashmap::DashMap;
 
     #[test]
     fn test_stats_empty() {
         let hop = Hop::new();
         let req = Request::new(CommandId::Stats, None);
+        let mut resp = Vec::new();
 
-        assert_eq!(
-            Stats::dispatch(&hop, &req),
-            Ok([
-                ResponseType::Map as u8,
-                // item len
-                0,
-                0,
-            ]
-            .to_vec()),
-        );
+        assert!(Stats::dispatch(&hop, &req, &mut resp).is_ok());
+        assert_eq!(resp, Response::from(DashMap::new()).as_bytes());
     }
 
     #[test]
@@ -73,62 +69,23 @@ mod tests {
 
         hop.0.metrics_writer.increment(Metric::CommandsSuccessful);
 
-        assert_eq!(
-            Stats::dispatch(&hop, &req),
-            Ok([
-                ResponseType::Map as u8,
-                // item count
-                0,
-                1,
-                // item 1 key len
-                19,
-                // item 1 key
-                b'c',
-                b'o',
-                b'm',
-                b'm',
-                b'a',
-                b'n',
-                b'd',
-                b's',
-                b'_',
-                b's',
-                b'u',
-                b'c',
-                b'c',
-                b'e',
-                b's',
-                b's',
-                b'f',
-                b'u',
-                b'l',
-                // item 1 value len
-                0,
-                0,
-                0,
-                8,
-                // item 1 value
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                1,
-            ]
-            .to_vec())
-        )
+        let mut resp = Vec::new();
+        let expected = DashMap::new();
+        expected.insert(b"commands_successful".to_vec(), 1i64.to_be_bytes().to_vec());
+
+        assert!(Stats::dispatch(&hop, &req, &mut resp).is_ok());
+        assert_eq!(resp, Response::from(expected).as_bytes());
     }
 
     #[test]
     fn test_stats_errors_with_key_type() {
         let hop = Hop::new();
         let req = Request::new_with_type(CommandId::Stats, None, KeyType::Map);
+        let mut resp = Vec::new();
 
-        assert!(matches!(
-            Stats::dispatch(&hop, &req),
-            Err(DispatchError::KeyTypeUnexpected)
-        ));
+        assert_eq!(
+            Stats::dispatch(&hop, &req, &mut resp).unwrap_err(),
+            DispatchError::KeyTypeUnexpected
+        );
     }
 }

@@ -11,50 +11,56 @@ use alloc::vec::Vec;
 pub struct Length;
 
 impl Length {
-    fn bytes(hop: &Hop, key: &[u8]) -> DispatchResult<Vec<u8>> {
+    fn bytes(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
         let bytes = match hop.state().typed_key::<Bytes>(key) {
             Some(bytes) => bytes,
             None => return Err(DispatchError::WrongType),
         };
 
-        Ok(response::write_int(bytes.len() as i64))
+        response::write_int(resp, bytes.len() as i64);
+
+        Ok(())
     }
 
-    fn list(hop: &Hop, key: &[u8]) -> DispatchResult<Vec<u8>> {
+    fn list(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
         let list = match hop.state().typed_key::<List>(key) {
             Some(list) => list,
             None => return Err(DispatchError::WrongType),
         };
 
-        Ok(response::write_int(list.len() as i64))
+        response::write_int(resp, list.len() as i64);
+
+        Ok(())
     }
 
-    fn string(hop: &Hop, key: &[u8]) -> DispatchResult<Vec<u8>> {
+    fn string(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
         let string = match hop.state().typed_key::<Str>(key) {
             Some(string) => string,
             None => return Err(DispatchError::WrongType),
         };
 
-        Ok(response::write_int(string.chars().count() as i64))
+        response::write_int(resp, string.chars().count() as i64);
+
+        Ok(())
     }
 }
 
 impl Dispatch for Length {
-    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Vec<u8>> {
+    fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = req.key().ok_or(DispatchError::KeyRetrieval)?;
 
         match req.key_type() {
-            Some(KeyType::Bytes) => Self::bytes(hop, key),
-            Some(KeyType::List) => Self::list(hop, key),
-            Some(KeyType::String) => Self::string(hop, key),
+            Some(KeyType::Bytes) => Self::bytes(hop, key, resp),
+            Some(KeyType::List) => Self::list(hop, key, resp),
+            Some(KeyType::String) => Self::string(hop, key, resp),
             Some(_) => Err(DispatchError::WrongType),
             None => {
                 let kind = hop.state().key(key, Value::bytes).value().kind();
 
                 match kind {
-                    KeyType::Bytes => Self::bytes(hop, key),
-                    KeyType::List => Self::list(hop, key),
-                    KeyType::String => Self::string(hop, key),
+                    KeyType::Bytes => Self::bytes(hop, key, resp),
+                    KeyType::List => Self::list(hop, key, resp),
+                    KeyType::String => Self::string(hop, key, resp),
                     _ => Err(DispatchError::WrongType),
                 }
             }
@@ -77,8 +83,10 @@ mod tests {
         let hop = Hop::new();
         let req = Request::new(CommandId::Length, None);
 
+        let mut resp = Vec::new();
+
         assert_eq!(
-            Length::dispatch(&hop, &req).unwrap_err(),
+            Length::dispatch(&hop, &req, &mut resp).unwrap_err(),
             DispatchError::KeyRetrieval
         );
     }
@@ -98,13 +106,17 @@ mod tests {
             KeyType::Set,
         ];
 
+        let mut resp = Vec::new();
+
         for kind in types.iter() {
             let req = Request::new_with_type(CommandId::Length, Some(args.clone()), *kind);
 
             assert_eq!(
-                Length::dispatch(&hop, &req).unwrap_err(),
+                Length::dispatch(&hop, &req, &mut resp).unwrap_err(),
                 DispatchError::WrongType
             );
+
+            resp.clear();
         }
     }
 
@@ -115,10 +127,10 @@ mod tests {
         args.push(b"foo".to_vec());
         let req = Request::new(CommandId::Length, Some(args));
 
-        assert_eq!(
-            Length::dispatch(&hop, &req).unwrap(),
-            Response::from(0).as_bytes()
-        );
+        let mut resp = Vec::new();
+
+        assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
+        assert_eq!(resp, Response::from(0).as_bytes());
         assert_eq!(hop.state().0.len(), 1);
     }
 
@@ -132,10 +144,10 @@ mod tests {
         args.push(b"foo".to_vec());
         let req = Request::new(CommandId::Length, Some(args));
 
-        assert_eq!(
-            Length::dispatch(&hop, &req).unwrap(),
-            Response::from(3).as_bytes()
-        );
+        let mut resp = Vec::new();
+
+        assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
+        assert_eq!(resp, Response::from(3).as_bytes());
     }
 
     #[test]
@@ -149,10 +161,10 @@ mod tests {
         args.push(b"hop".to_vec());
         let req = Request::new(CommandId::Length, Some(args));
 
-        assert_eq!(
-            Length::dispatch(&hop, &req).unwrap(),
-            Response::from(1).as_bytes()
-        );
+        let mut resp = Vec::new();
+
+        assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
+        assert_eq!(resp, Response::from(1).as_bytes());
     }
 
     #[test]
@@ -172,19 +184,19 @@ mod tests {
         args.push(b"foo".to_vec());
         let req = Request::new(CommandId::Length, Some(args.clone()));
 
+        let mut resp = Vec::new();
+
         // length of a simple string, 4 bytes and 4 chars
-        assert_eq!(
-            Length::dispatch(&hop, &req).unwrap(),
-            Response::from(4).as_bytes()
-        );
+        assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
+        assert_eq!(resp, Response::from(4).as_bytes());
+
+        resp.clear();
 
         // length of a simple string, 4 bytes but 1 char
         args.pop();
         args.push(b"cowboy".to_vec());
         let req = Request::new(CommandId::Length, Some(args.clone()));
-        assert_eq!(
-            Length::dispatch(&hop, &req).unwrap(),
-            Response::from(1).as_bytes()
-        );
+        assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
+        assert_eq!(resp, Response::from(1).as_bytes());
     }
 }

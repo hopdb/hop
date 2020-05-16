@@ -13,7 +13,7 @@ use core::str;
 pub struct Append;
 
 impl Dispatch for Append {
-    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Vec<u8>> {
+    fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = req.arg(0).ok_or(DispatchError::KeyRetrieval)?;
         let args = req.arg(1..).ok_or(DispatchError::ArgumentRetrieval)?;
 
@@ -28,7 +28,7 @@ impl Dispatch for Append {
                     bytes.extend_from_slice(arg);
                 }
 
-                Ok(response::write_bytes(&bytes))
+                response::write_bytes(resp, bytes.as_ref());
             }
             Some(KeyType::List) => {
                 let mut list = hop
@@ -38,7 +38,7 @@ impl Dispatch for Append {
 
                 list.append(&mut args.to_owned());
 
-                Ok(response::write_list(&list))
+                response::write_list(resp, &list);
             }
             Some(KeyType::String) => {
                 let mut string = hop
@@ -52,9 +52,11 @@ impl Dispatch for Append {
                     }
                 }
 
-                Ok(response::write_str(&string))
+                response::write_str(resp, &string);
             }
-            Some(_) => Err(DispatchError::WrongType),
+            Some(_) => return Err(DispatchError::WrongType),
         }
+
+        Ok(())
     }
 }

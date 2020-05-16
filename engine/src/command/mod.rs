@@ -16,7 +16,7 @@ use crate::Hop;
 use alloc::vec::Vec;
 
 pub trait Dispatch {
-    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Vec<u8>>;
+    fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()>;
 }
 
 enum ContextConclusion<T> {

@@ -88,6 +88,7 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
 
     let (reader, mut writer) = socket.into_split();
     let mut reader = BufReader::new(reader);
+    let mut resp = Vec::new();
 
     while let Ok(size) = reader.read_until(b'\n', &mut input).await {
         // If we get no bytes then we're EOF.
@@ -103,8 +104,8 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
             }
         };
 
-        let resp = hop.dispatch(&req).unwrap();
-
+        resp.clear();
+        hop.dispatch(&req, &mut resp).unwrap();
         writer.write_all(&resp).await?;
 
         if let Some(args) = req.into_args() {

@@ -5,11 +5,13 @@ use alloc::vec::Vec;
 pub struct Echo;
 
 impl Dispatch for Echo {
-    fn dispatch(_: &Hop, req: &Request) -> DispatchResult<Vec<u8>> {
+    fn dispatch(_: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         match req.args() {
-            Some(args) => Ok(response::write_list(args)),
-            None => Ok(response::write_list(&[])),
+            Some(args) => response::write_list(resp, args),
+            None => response::write_list(resp, &[]),
         }
+
+        Ok(())
     }
 }
 
@@ -30,18 +32,22 @@ mod tests {
 
         let req = Request::new(CommandId::Echo, Some(args.clone()));
 
-        assert_eq!(
-            Echo::dispatch(&hop, &req).unwrap(),
-            response::write_list(args.as_slice()),
-        );
+        let mut expected = Vec::new();
+        let mut resp = Vec::new();
+
+        assert!(Echo::dispatch(&hop, &req, &mut resp).is_ok());
+        response::write_list(&mut expected, args.as_slice());
+        assert_eq!(resp, expected);
+
+        expected.clear();
+        resp.clear();
 
         args.push(b"hop".to_vec());
-
         let req = Request::new(CommandId::Echo, Some(args.clone()));
-        assert_eq!(
-            Echo::dispatch(&hop, &req).unwrap(),
-            response::write_list(args.as_slice()),
-        );
+
+        assert!(Echo::dispatch(&hop, &req, &mut resp).is_ok());
+        response::write_list(&mut expected, args.as_slice());
+        assert_eq!(resp, expected);
     }
 
     #[test]
@@ -50,9 +56,12 @@ mod tests {
         let req = Request::new(CommandId::Echo, None);
 
         let args: &[Vec<_>] = &[];
-        assert_eq!(
-            Echo::dispatch(&hop, &req).unwrap(),
-            response::write_list(args),
-        );
+
+        let mut expected = Vec::new();
+        let mut resp = Vec::new();
+
+        assert!(Echo::dispatch(&hop, &req, &mut resp).is_ok());
+        response::write_list(&mut expected, args);
+        assert_eq!(resp, expected);
     }
 }

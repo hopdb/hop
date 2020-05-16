@@ -39,16 +39,16 @@ impl Hop {
         Default::default()
     }
 
-    pub fn dispatch(&self, req: &Request) -> DispatchResult<Vec<u8>> {
+    pub fn dispatch(&self, req: &Request, res: &mut Vec<u8>) -> DispatchResult<()> {
         let res = match req.kind() {
-            CommandId::Append => Append::dispatch(self, req),
-            CommandId::DecrementBy => DecrementBy::dispatch(self, req),
-            CommandId::Decrement => Decrement::dispatch(self, req),
-            CommandId::Echo => Echo::dispatch(self, req),
-            CommandId::Increment => Increment::dispatch(self, req),
-            CommandId::IncrementBy => IncrementBy::dispatch(self, req),
-            CommandId::Stats => Stats::dispatch(self, req),
-            CommandId::Length => Length::dispatch(self, req),
+            CommandId::Append => Append::dispatch(self, req, res),
+            CommandId::DecrementBy => DecrementBy::dispatch(self, req, res),
+            CommandId::Decrement => Decrement::dispatch(self, req, res),
+            CommandId::Echo => Echo::dispatch(self, req, res),
+            CommandId::Increment => Increment::dispatch(self, req, res),
+            CommandId::IncrementBy => IncrementBy::dispatch(self, req, res),
+            CommandId::Stats => Stats::dispatch(self, req, res),
+            CommandId::Length => Length::dispatch(self, req, res),
         };
 
         self.0.metrics_writer.increment(if res.is_ok() {

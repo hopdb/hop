@@ -16,7 +16,8 @@ impl IncrementBy {
         key: &[u8],
         key_type: Option<KeyType>,
         amount: i64,
-    ) -> DispatchResult<Vec<u8>> {
+        resp: &mut Vec<u8>,
+    ) -> DispatchResult<()> {
         match key_type {
             Some(KeyType::Integer) | None => {
                 let mut int = hop
@@ -26,7 +27,7 @@ impl IncrementBy {
 
                 *int += amount;
 
-                Ok(response::write_int(*int))
+                response::write_int(resp, *int)
             }
             Some(KeyType::Float) => {
                 let mut float = hop
@@ -36,17 +37,19 @@ impl IncrementBy {
 
                 *float += amount as f64;
 
-                Ok(response::write_float(*float))
+                response::write_float(resp, *float)
             }
-            Some(_) => Err(DispatchError::WrongType),
+            Some(_) => return Err(DispatchError::WrongType),
         }
+
+        Ok(())
     }
 }
 
 impl Dispatch for IncrementBy {
-    fn dispatch(hop: &Hop, req: &Request) -> DispatchResult<Vec<u8>> {
+    fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = req.key().ok_or(DispatchError::KeyRetrieval)?;
 
-        Self::increment(hop, key, req.key_type(), 1)
+        Self::increment(hop, key, req.key_type(), 1, resp)
     }
 }

@@ -53,18 +53,22 @@ pub enum Response {
 
 impl Response {
     pub fn as_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+
         match self {
-            Self::DispatchError(err) => write_dispatch_error(*err),
-            Self::ParseError(err) => write_parse_error(*err),
-            Self::Value(Value::Boolean(boolean)) => write_bool(*boolean),
-            Self::Value(Value::Bytes(bytes)) => write_bytes(bytes),
-            Self::Value(Value::Float(float)) => write_float(*float),
-            Self::Value(Value::Integer(int)) => write_int(*int),
-            Self::Value(Value::List(list)) => write_list(list),
-            Self::Value(Value::Map(map)) => write_map(map),
-            Self::Value(Value::Set(set)) => write_set(set),
-            Self::Value(Value::String(string)) => write_str(string),
+            Self::DispatchError(err) => write_dispatch_error(&mut buf, *err),
+            Self::ParseError(err) => write_parse_error(&mut buf, *err),
+            Self::Value(Value::Boolean(boolean)) => write_bool(&mut buf, *boolean),
+            Self::Value(Value::Bytes(bytes)) => write_bytes(&mut buf, bytes),
+            Self::Value(Value::Float(float)) => write_float(&mut buf, *float),
+            Self::Value(Value::Integer(int)) => write_int(&mut buf, *int),
+            Self::Value(Value::List(list)) => write_list(&mut buf, list),
+            Self::Value(Value::Map(map)) => write_map(&mut buf, map),
+            Self::Value(Value::Set(set)) => write_set(&mut buf, set),
+            Self::Value(Value::String(string)) => write_str(&mut buf, string),
         }
+
+        buf
     }
 }
 
@@ -128,89 +132,59 @@ impl From<RequestParseError> for Response {
     }
 }
 
-pub fn write_bool(value: bool) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(2);
-
-    buf.push(ResponseType::Boolean as u8);
-    buf.push(if value { 1 } else { 0 });
-
-    buf
+pub fn write_bool(to: &mut Vec<u8>, value: bool) {
+    to.push(ResponseType::Boolean as u8);
+    to.push(if value { 1 } else { 0 });
 }
 
-pub fn write_bytes(value: &[u8]) -> Vec<u8> {
+pub fn write_bytes(to: &mut Vec<u8>, value: &[u8]) {
     let len = value.len() as u32;
 
-    let mut buf = Vec::with_capacity(5 + len as usize);
-
-    buf.push(ResponseType::Bytes as u8);
-    buf.extend_from_slice(&len.to_be_bytes());
-    buf.extend_from_slice(value);
-
-    buf
+    to.push(ResponseType::Bytes as u8);
+    to.extend_from_slice(&len.to_be_bytes());
+    to.extend_from_slice(value);
 }
 
-pub fn write_dispatch_error(value: DispatchError) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(2);
-
-    buf.push(ResponseType::DispatchError as u8);
-    buf.push(value as u8);
-
-    buf
+pub fn write_dispatch_error(to: &mut Vec<u8>, value: DispatchError) {
+    to.push(ResponseType::DispatchError as u8);
+    to.push(value as u8);
 }
 
-pub fn write_parse_error(value: RequestParseError) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(2);
-
-    buf.push(ResponseType::ParseError as u8);
-    buf.push(value as u8);
-
-    buf
+pub fn write_parse_error(to: &mut Vec<u8>, value: RequestParseError) {
+    to.push(ResponseType::ParseError as u8);
+    to.push(value as u8);
 }
 
-pub fn write_float(value: f64) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(9);
-
-    buf.push(ResponseType::Float as u8);
-    buf.extend_from_slice(&value.to_be_bytes());
-
-    buf
+pub fn write_float(to: &mut Vec<u8>, value: f64) {
+    to.push(ResponseType::Float as u8);
+    to.extend_from_slice(&value.to_be_bytes());
 }
 
-pub fn write_int(value: i64) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(9);
-
-    buf.push(ResponseType::Integer as u8);
-    buf.extend_from_slice(&value.to_be_bytes());
-
-    buf
+pub fn write_int(to: &mut Vec<u8>, value: i64) {
+    to.push(ResponseType::Integer as u8);
+    to.extend_from_slice(&value.to_be_bytes());
 }
 
-pub fn write_list(value: &[Vec<u8>]) -> Vec<u8> {
-    let mut buf = Vec::new();
-
-    buf.push(ResponseType::List as u8);
+pub fn write_list(to: &mut Vec<u8>, value: &[Vec<u8>]) {
+    to.push(ResponseType::List as u8);
 
     // The length of the list.
-    buf.extend_from_slice(&(value.len() as u16).to_be_bytes());
+    to.extend_from_slice(&(value.len() as u16).to_be_bytes());
 
     // Now for each list item, push its length and then the item itself.
     for item in value {
         let len = item.len() as u32;
 
-        buf.extend_from_slice(&len.to_be_bytes());
-        buf.extend_from_slice(item);
+        to.extend_from_slice(&len.to_be_bytes());
+        to.extend_from_slice(item);
     }
-
-    buf
 }
 
-pub fn write_map(value: &DashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
-    let mut buf = Vec::new();
-
-    buf.push(ResponseType::Map as u8);
+pub fn write_map(to: &mut Vec<u8>, value: &DashMap<Vec<u8>, Vec<u8>>) {
+    to.push(ResponseType::Map as u8);
 
     // Maps can only contain up to u16 items.
-    buf.extend_from_slice(&(value.len() as u16).to_be_bytes());
+    to.extend_from_slice(&(value.len() as u16).to_be_bytes());
 
     for item in value.iter() {
         let (key, value) = item.pair();
@@ -218,43 +192,34 @@ pub fn write_map(value: &DashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
         let key_len = key.len() as u8;
         let value_len = value.len() as u32;
 
-        buf.push(key_len);
-        buf.extend_from_slice(key);
-        buf.extend_from_slice(&value_len.to_be_bytes());
-        buf.extend_from_slice(value);
+        to.push(key_len);
+        to.extend_from_slice(key);
+        to.extend_from_slice(&value_len.to_be_bytes());
+        to.extend_from_slice(value);
     }
-
-    buf
 }
 
-pub fn write_set(value: &DashSet<Vec<u8>>) -> Vec<u8> {
-    let mut buf = Vec::new();
-
-    buf.push(ResponseType::Set as u8);
+pub fn write_set(to: &mut Vec<u8>, value: &DashSet<Vec<u8>>) {
+    to.push(ResponseType::Set as u8);
 
     // Sets can only contain up to u16 items.
-    buf.extend_from_slice(&(value.len() as u16).to_be_bytes());
+    to.extend_from_slice(&(value.len() as u16).to_be_bytes());
 
     for item in value.iter() {
         let len = item.len() as u16;
 
-        buf.extend_from_slice(&len.to_be_bytes());
-        buf.extend_from_slice(item.key());
+        to.extend_from_slice(&len.to_be_bytes());
+        to.extend_from_slice(item.key());
     }
-
-    buf
 }
 
-pub fn write_str(value: &str) -> Vec<u8> {
+pub fn write_str(to: &mut Vec<u8>, value: &str) {
     let len = value.len() as u32;
 
-    let mut buf = Vec::with_capacity(5 + len as usize);
-    buf.push(ResponseType::String as u8);
+    to.push(ResponseType::String as u8);
 
-    buf.extend_from_slice(&len.to_be_bytes());
-    buf.extend_from_slice(value.as_bytes());
-
-    buf
+    to.extend_from_slice(&len.to_be_bytes());
+    to.extend_from_slice(value.as_bytes());
 }
 
 #[cfg(test)]
