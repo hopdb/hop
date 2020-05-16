@@ -11,7 +11,7 @@ use core::{
     convert::{TryFrom, TryInto},
     mem,
 };
-use dashmap::DashSet;
+use dashmap::{DashMap, DashSet};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[repr(u8)]
@@ -61,6 +61,7 @@ enum Stage {
         len: u16,
     },
     Map {
+        map: DashMap<Vec<u8>, Vec<u8>>,
         len: u16,
     },
     DispatchError,
@@ -99,6 +100,7 @@ impl Context {
                 Stage::Bytes { len } => self.stage_bytes(buf, len)?,
                 Stage::Float => self.stage_float(buf)?,
                 Stage::Integer => self.stage_integer(buf)?,
+                Stage::Map { .. } => self.stage_map(buf)?,
                 Stage::Set { .. } => self.stage_set(buf)?,
                 Stage::String { len } => self.stage_string(buf, len)?,
                 Stage::TypeInit { kind, read_len } => self.stage_type_init(buf, kind, read_len)?,
@@ -212,6 +214,73 @@ impl Context {
         Ok(Some(Instruction::Concluded(Response::from(int))))
     }
 
+    fn stage_map(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
+        debug_assert!(self.idx > 2);
+        debug_assert!(buf.len() > 2);
+
+        let key_size_end = self.idx + 1;
+
+        let key_len = match buf.get(self.idx..key_size_end) {
+            Some(key_len) => u8::from_be_bytes(key_len.try_into().unwrap()),
+            None => {
+                let remaining = remaining_bytes(self.idx, buf.len(), 1);
+
+                return Ok(Some(Instruction::ReadBytes(remaining)));
+            }
+        };
+
+        let key_value_end = key_size_end + key_len as usize;
+
+        let key = match buf.get(key_size_end..key_value_end) {
+            Some(key) => key,
+            None => {
+                let remaining = remaining_bytes(key_size_end, buf.len(), key_value_end);
+
+                return Ok(Some(Instruction::ReadBytes(remaining)));
+            }
+        };
+
+        let value_size_end = key_value_end + 4;
+
+        let value_len = match buf.get(key_value_end..value_size_end) {
+            Some(value_len) => u32::from_be_bytes(value_len.try_into().unwrap()),
+            None => {
+                let remaining = remaining_bytes(self.idx, buf.len(), value_size_end);
+
+                return Ok(Some(Instruction::ReadBytes(remaining)));
+            }
+        };
+
+        let value_end = value_size_end + value_len as usize;
+
+        let value = match buf.get(value_size_end..value_end) {
+            Some(value) => value,
+            None => {
+                let remaining = remaining_bytes(value_size_end, buf.len(), value_end);
+
+                return Ok(Some(Instruction::ReadBytes(remaining)));
+            }
+        };
+
+        match self.stage {
+            Stage::Map { ref map, len } => {
+                map.insert(key.to_vec(), value.to_vec());
+
+                if map.len() < len as usize {
+                    self.idx = value_end;
+
+                    return Ok(None);
+                }
+            }
+            _ => unreachable!(),
+        };
+
+        match mem::take(&mut self.stage) {
+            Stage::Map { map, .. } => Ok(Some(Instruction::Concluded(Response::from(map)))),
+            _ => unreachable!(),
+        }
+    }
+
     fn stage_parse_error(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
         debug_assert_eq!(self.idx, 1);
 
@@ -254,7 +323,14 @@ impl Context {
             ResponseType::Map => {
                 let len = u16::from_be_bytes(bytes.try_into().unwrap());
 
-                Stage::Map { len }
+                if len == 0 {
+                    return Ok(Some(Instruction::Concluded(Response::from(DashMap::new()))));
+                }
+
+                Stage::Map {
+                    len,
+                    map: DashMap::new(),
+                }
             }
             ResponseType::Set => {
                 let len = u16::from_be_bytes(bytes.try_into().unwrap());
@@ -487,6 +563,46 @@ mod tests {
     fn test_remaining_bytes() {
         assert_eq!(super::remaining_bytes(5, 5, 4), 4);
         assert_eq!(super::remaining_bytes(5, 7, 4), 2);
+    }
+
+    #[test]
+    fn test_map() {
+        let mut ctx = Context::new();
+        let buf = [
+            ResponseType::Map as u8,
+            // item count
+            0,
+            1,
+            // item 1 key len
+            3,
+            // item 1 key
+            b'f',
+            b'o',
+            b'o',
+            // item 1 value len
+            0,
+            0,
+            0,
+            4,
+            // item 1 value
+            b'b',
+            b'a',
+            b'r',
+            b'!',
+        ]
+        .to_vec();
+        assert!(
+            matches!(ctx.feed(&buf), Ok(Instruction::Concluded(Response::Value(Value::Map(map)))) if map.len() == 1)
+        );
+    }
+
+    #[test]
+    fn test_map_no_items() {
+        let mut ctx = Context::new();
+        let buf = [ResponseType::Map as u8, 0, 0];
+        assert!(
+            matches!(ctx.feed(&buf), Ok(Instruction::Concluded(Response::Value(Value::Map(map)))) if map.is_empty())
+        );
     }
 
     #[test]
