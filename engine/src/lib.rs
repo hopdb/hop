@@ -91,3 +91,13 @@ impl Default for Hop {
         }))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Hop, HopRef};
+    use core::fmt::Debug;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Hop: Clone, Debug, Default);
+    assert_impl_all!(HopRef: Debug);
+}

@@ -60,3 +60,12 @@ impl Value {
         Self::String(String::new())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Value;
+    use core::fmt::Debug;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Value: Debug);
+}

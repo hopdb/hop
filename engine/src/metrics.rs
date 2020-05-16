@@ -23,3 +23,12 @@ impl Metric {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Metric;
+    use core::{fmt::Debug, hash::Hash};
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Metric: Clone, Copy, Debug, Eq, Hash, PartialEq);
+}

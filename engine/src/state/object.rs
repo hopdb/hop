@@ -298,3 +298,19 @@ impl<'a> DerefMut for Str<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Boolean, Bytes, Float, Integer, List, Map, Object, Set, Str};
+    use core::ops::{Deref, DerefMut};
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Boolean: Deref, DerefMut, Object<'static>);
+    assert_impl_all!(Bytes: Deref, DerefMut, Object<'static>);
+    assert_impl_all!(Float: Deref, DerefMut, Object<'static>);
+    assert_impl_all!(List: Deref, DerefMut, Object<'static>);
+    assert_impl_all!(Integer: Deref, DerefMut, Object<'static>);
+    assert_impl_all!(Map: Deref, DerefMut, Object<'static>);
+    assert_impl_all!(Set: Deref, DerefMut, Object<'static>);
+    assert_impl_all!(Str: Deref, DerefMut, Object<'static>);
+}

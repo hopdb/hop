@@ -38,3 +38,25 @@ impl TryFrom<u8> for Error {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Error;
+    use core::{
+        convert::TryFrom,
+        fmt::{Debug, Display},
+        hash::Hash,
+    };
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(
+        Error: Clone,
+        Copy,
+        Debug,
+        Display,
+        Eq,
+        Hash,
+        PartialEq,
+        TryFrom<u8>
+    );
+}

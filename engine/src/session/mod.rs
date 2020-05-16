@@ -16,3 +16,22 @@ impl Session {
         Self { client_token, id }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Session, SessionId};
+    use core::{fmt::Debug, hash::Hash};
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(
+        SessionId: Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    );
+    assert_impl_all!(Session: Debug);
+}

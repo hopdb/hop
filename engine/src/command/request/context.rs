@@ -245,9 +245,22 @@ impl Default for Context {
 mod tests {
     use super::{
         super::{super::error::Result, CommandId},
-        Context, ParseError,
+        Context, ParseError, Stage,
     };
-    use core::convert::TryFrom;
+    use core::{convert::TryFrom, fmt::Debug, hash::Hash};
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Context: Debug, Default);
+    assert_impl_all!(
+        ParseError: Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        PartialEq,
+        TryFrom<u8>
+    );
+    assert_impl_all!(Stage: Clone, Debug, Default, Eq, PartialEq);
 
     #[test]
     fn test_increment_foo() -> Result<()> {

@@ -40,6 +40,10 @@ impl Default for Subscription {
 #[cfg(test)]
 mod tests {
     use super::{KeyUpdate, Subscription};
+    use core::fmt::Debug;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Subscription: Debug);
 
     #[tokio::test]
     async fn test_sub_close() {

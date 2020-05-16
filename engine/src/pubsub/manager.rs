@@ -89,3 +89,13 @@ impl PubSubManager {
             .is_some()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{PubSubManager, PubSubManagerRef};
+    use core::fmt::Debug;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(PubSubManagerRef: Debug, Default);
+    assert_impl_all!(PubSubManager: Clone, Debug, Default);
+}

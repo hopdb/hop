@@ -226,7 +226,22 @@ pub fn write_str(to: &mut Vec<u8>, value: &str) {
 mod tests {
     use super::{Response, ResponseType};
     use alloc::{borrow::ToOwned, string::String, vec::Vec};
+    use core::{fmt::Debug, hash::Hash};
     use dashmap::{DashMap, DashSet};
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(ResponseType: Clone, Copy, Debug, Eq, Hash, PartialEq);
+    assert_impl_all!(
+        Response: Debug,
+        From<bool>,
+        From<Vec<u8>>,
+        From<f64>,
+        From<i64>,
+        From<Vec<Vec<u8>>>,
+        From<DashMap<Vec<u8>, Vec<u8>>>,
+        From<DashSet<Vec<u8>>>,
+        From<String>,
+    );
 
     #[test]
     fn test_bool() {

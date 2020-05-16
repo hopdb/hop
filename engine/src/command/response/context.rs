@@ -381,9 +381,16 @@ fn remaining_bytes(start: usize, read: usize, to_read: usize) -> usize {
 mod tests {
     use super::{
         super::{Response, ResponseType},
-        Context, Instruction, Stage,
+        Context, Instruction, ParseError, Stage,
     };
     use crate::{command::DispatchError, state::Value};
+    use core::{fmt::Debug, hash::Hash};
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Context: Debug, Default);
+    assert_impl_all!(Instruction: Debug);
+    assert_impl_all!(ParseError: Clone, Copy, Debug, Eq, Hash, PartialEq);
+    assert_impl_all!(Stage: Clone, Debug, Default);
 
     #[test]
     fn test_resets_automatically() {

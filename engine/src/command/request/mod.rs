@@ -92,3 +92,12 @@ impl Request {
         self.args.take()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Request;
+    use core::fmt::Debug;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Request: Debug);
+}

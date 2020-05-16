@@ -123,8 +123,31 @@ impl<'a> TryFrom<&'a str> for CommandId {
 
 #[cfg(test)]
 mod tests {
-    use super::CommandId;
-    use core::{convert::TryFrom, str::FromStr};
+    use super::{ArgumentNotation, CommandId, InvalidCommandId};
+    use core::{
+        convert::TryFrom,
+        fmt::{Debug, Display},
+        hash::Hash,
+        str::FromStr,
+    };
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(ArgumentNotation: Clone, Debug, Eq, PartialEq);
+    assert_impl_all!(
+        CommandId: Clone,
+        Copy,
+        Debug,
+        Display,
+        FromStr,
+        Eq,
+        Hash,
+        PartialEq,
+        PartialOrd,
+        Ord,
+        TryFrom<u8>,
+        TryFrom<&'static str>,
+    );
+    assert_impl_all!(InvalidCommandId: Debug);
 
     #[test]
     fn test_from_str() {

@@ -53,3 +53,13 @@ impl SessionManager {
         self.0.next_id.load(Ordering::SeqCst)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{SessionManager, SessionManagerRef};
+    use core::fmt::Debug;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(SessionManagerRef: Debug);
+    assert_impl_all!(SessionManager: Clone, Debug);
+}

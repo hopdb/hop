@@ -21,4 +21,5 @@ log = { default-features = false, optional = true, version = "0.4" }
 default = ["log"]
 
 [dev-dependencies]
+static_assertions = { default-features = false, version = "^1.0.0" }
 tokio = { default-features = false, features = ["macros", "rt-threaded"], version = "^0.2.21" }
