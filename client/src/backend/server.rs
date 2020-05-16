@@ -1,6 +1,6 @@
 use super::Backend;
 use async_trait::async_trait;
-use hop_engine::command::CommandId;
+use hop_engine::{command::CommandId, state::KeyType};
 use std::{
     convert::TryInto,
     error::Error as StdError,
@@ -78,7 +78,7 @@ impl ServerBackend {
 impl Backend for ServerBackend {
     type Error = Error;
 
-    async fn decrement(&self, key: &[u8]) -> Result<i64> {
+    async fn decrement(&self, key: &[u8], _: Option<KeyType>) -> Result<i64> {
         let mut cmd = vec![1, 1, 0, 0, 0, key.len() as u8];
         cmd.extend_from_slice(key);
         cmd.push(b'\n');
@@ -99,7 +99,7 @@ impl Backend for ServerBackend {
         self.send_and_wait(cmd).await
     }
 
-    async fn increment(&self, key: &[u8]) -> Result<i64> {
+    async fn increment(&self, key: &[u8], _: Option<KeyType>) -> Result<i64> {
         let mut cmd = vec![0, 1, 0, 0, 0, key.len() as u8];
         cmd.extend_from_slice(key);
         cmd.push(b'\n');

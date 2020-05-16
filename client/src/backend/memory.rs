@@ -2,6 +2,7 @@ use super::Backend;
 use async_trait::async_trait;
 use hop_engine::{
     command::{CommandId, DispatchError, Request},
+    state::KeyType,
     Hop,
 };
 use std::{
@@ -9,6 +10,14 @@ use std::{
     error::Error as StdError,
     fmt::{Display, Formatter, Result as FmtResult},
 };
+
+fn request(id: CommandId, args: Option<Vec<Vec<u8>>>, kind: Option<KeyType>) -> Request {
+    if let Some(kind) = kind {
+        Request::new_with_type(id, args, kind)
+    } else {
+        Request::new(id, args)
+    }
+}
 
 #[derive(Debug)]
 pub enum Error {
@@ -52,12 +61,12 @@ impl MemoryBackend {
 impl Backend for MemoryBackend {
     type Error = Error;
 
-    async fn decrement(&self, key: &[u8]) -> Result<i64, Self::Error> {
-        let req = Request::new(CommandId::Decrement, Some(vec![key.to_vec()]));
+    async fn decrement(&self, key: &[u8], kind: Option<KeyType>) -> Result<i64, Self::Error> {
+        let req = request(CommandId::Decrement, Some(vec![key.to_vec()]), kind);
 
         let resp = self.hop.dispatch(&req)?;
 
-        let arr = resp.get(..8).unwrap().try_into().unwrap();
+        let arr = resp.get(1..9).unwrap().try_into().unwrap();
         let num = i64::from_be_bytes(arr);
 
         Ok(num)
@@ -75,11 +84,11 @@ impl Backend for MemoryBackend {
         Ok(resp)
     }
 
-    async fn increment(&self, key: &[u8]) -> Result<i64, Self::Error> {
-        let req = Request::new(CommandId::Increment, Some(vec![key.to_vec()]));
+    async fn increment(&self, key: &[u8], kind: Option<KeyType>) -> Result<i64, Self::Error> {
+        let req = request(CommandId::Increment, Some(vec![key.to_vec()]), kind);
         let resp = self.hop.dispatch(&req)?;
 
-        let arr = resp.get(..8).unwrap().try_into().unwrap();
+        let arr = resp.get(1..9).unwrap().try_into().unwrap();
         let num = i64::from_be_bytes(arr);
 
         Ok(num)

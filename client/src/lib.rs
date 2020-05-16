@@ -3,13 +3,22 @@
 #![allow(clippy::multiple_crate_versions)]
 
 pub mod backend;
+pub mod request;
 
 use backend::{Backend, MemoryBackend, ServerBackend};
+use request::*;
+use std::sync::Arc;
 use tokio::net::ToSocketAddrs;
 
 /// A client for interfacing over Hop instances.
 pub struct Client<B: Backend> {
-    backend: B,
+    backend: Arc<B>,
+}
+
+impl<B: Backend> Client<B> {
+    fn backend(&self) -> Arc<B> {
+        Arc::clone(&self.backend)
+    }
 }
 
 impl Client<ServerBackend> {
@@ -31,7 +40,9 @@ impl Client<ServerBackend> {
     ) -> Result<Self, <ServerBackend as Backend>::Error> {
         let backend = ServerBackend::connect(addrs).await.unwrap();
 
-        Ok(Self { backend })
+        Ok(Self {
+            backend: Arc::new(backend),
+        })
     }
 }
 
@@ -53,7 +64,7 @@ impl Client<MemoryBackend> {
     /// ```
     pub fn memory() -> Self {
         Self {
-            backend: MemoryBackend::new(),
+            backend: Arc::new(MemoryBackend::new()),
         }
     }
 }
@@ -67,15 +78,15 @@ impl<B: Backend> Client<B> {
     /// and then decremented by 1, resulting in the value being -1.
     ///
     /// This is an `O(1)` time complexity operation.
-    pub async fn decrement(&self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
-        self.backend.decrement(key.as_ref()).await
+    pub fn decrement<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Decrement<'_, B, K> {
+        Decrement::new(self.backend(), key)
     }
 
     /// Echos the provided content back at you.
     ///
     /// Returns the input content.
-    pub async fn echo(&self, content: impl AsRef<[u8]>) -> Result<Vec<u8>, B::Error> {
-        self.backend.echo(content.as_ref()).await
+    pub fn echo<K: AsRef<[u8]> + Unpin>(&self, content: K) -> Echo<'_, B, K> {
+        Echo::new(self.backend(), content)
     }
 
     /// Increments a float or integer key by one.
@@ -86,7 +97,18 @@ impl<B: Backend> Client<B> {
     /// and then incremented by 1, resulting in the value being 1.
     ///
     /// This is an `O(1)` time complexity operation.
-    pub async fn increment(&self, key: impl AsRef<[u8]>) -> Result<i64, B::Error> {
-        self.backend.increment(key.as_ref()).await
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// println!("New value: {}", client.increment("foo").await?);
+    /// # Ok(()) }
+    /// ```
+    pub fn increment<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Increment<'_, B, K> {
+        Increment::new(self.backend(), key)
     }
 }
