@@ -1,8 +1,9 @@
 mod decrement;
 mod echo;
 mod increment;
+mod stats;
 
-pub use self::{decrement::Decrement, echo::Echo, increment::Increment};
+pub use self::{decrement::Decrement, echo::Echo, increment::Increment, stats::Stats};
 
 use std::{future::Future, pin::Pin};
 

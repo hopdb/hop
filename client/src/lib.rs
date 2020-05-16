@@ -3,6 +3,7 @@
 #![allow(clippy::multiple_crate_versions)]
 
 pub mod backend;
+pub mod model;
 pub mod request;
 
 use backend::{Backend, MemoryBackend, ServerBackend};
@@ -110,5 +111,25 @@ impl<B: Backend> Client<B> {
     /// ```
     pub fn increment<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Increment<'_, B, K> {
         Increment::new(self.backend(), key)
+    }
+
+    /// Retrieve statistics about the current runtime of Hop.
+    ///
+    /// When Hop is restarted, many of the statistics - like commands run - are
+    /// reset.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// let stats = client.stats().await?;
+    /// println!("Successful commands: {}", stats.commands_successful());
+    /// # Ok(()) }
+    /// ```
+    pub fn stats(&self) -> Stats<'_, B> {
+        Stats::new(self.backend())
     }
 }

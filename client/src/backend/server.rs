@@ -1,4 +1,5 @@
 use super::Backend;
+use crate::model::StatsData;
 use async_trait::async_trait;
 use hop_engine::{
     command::{
@@ -168,5 +169,19 @@ impl Backend for ServerBackend {
             Value::Integer(int) => Ok(int),
             _ => Err(Error::BadResponse),
         }
+    }
+
+    async fn stats(&self) -> Result<StatsData> {
+        let mut cmd = vec![CommandId::Stats as u8];
+        cmd.push(b'\n');
+
+        let value = self.send_and_wait(&cmd).await?;
+
+        let map = match value {
+            Value::Map(map) => map,
+            _ => return Err(Error::BadResponse),
+        };
+
+        Ok(StatsData::new(map.into_iter().collect()))
     }
 }

@@ -74,6 +74,29 @@ async fn run(
                 writer.write_i64(v).await?;
                 writer.write_all(&[b'\n']).await?;
             }
+            CommandId::Stats => {
+                let stats = client.stats().await?;
+
+                writer
+                    .write_all(
+                        format!("Commands successful: {}\n", stats.commands_successful())
+                            .as_bytes(),
+                    )
+                    .await?;
+                writer
+                    .write_all(
+                        format!("Commands errored: {}\n", stats.commands_errored()).as_bytes(),
+                    )
+                    .await?;
+                writer
+                    .write_all(
+                        format!("Sessions started: {}\n", stats.sessions_started()).as_bytes(),
+                    )
+                    .await?;
+                writer
+                    .write_all(format!("Sessions ended: {}\n", stats.sessions_ended()).as_bytes())
+                    .await?;
+            }
             _ => {}
         }
     }

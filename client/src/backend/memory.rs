@@ -1,8 +1,12 @@
 use super::Backend;
+use crate::model::StatsData;
 use async_trait::async_trait;
 use hop_engine::{
-    command::{CommandId, DispatchError, Request},
-    state::KeyType,
+    command::{
+        response::{Context, Instruction, Response},
+        CommandId, DispatchError, Request,
+    },
+    state::{KeyType, Value},
     Hop,
 };
 use std::{
@@ -96,5 +100,26 @@ impl Backend for MemoryBackend {
         let num = i64::from_be_bytes(arr);
 
         Ok(num)
+    }
+
+    async fn stats(&self) -> Result<StatsData, Self::Error> {
+        let req = request(CommandId::Stats, None, None);
+        let mut resp = Vec::new();
+
+        self.hop.dispatch(&req, &mut resp)?;
+
+        let mut ctx = Context::new();
+
+        let resp = match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(value) => value,
+            Instruction::ReadBytes(_) => unreachable!(),
+        };
+
+        let stats = match resp {
+            Response::Value(Value::Map(stats)) => stats,
+            _ => panic!(),
+        };
+
+        Ok(StatsData::new(stats.into_iter().collect()))
     }
 }
