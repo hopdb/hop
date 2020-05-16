@@ -1,15 +1,21 @@
 use super::Backend;
 use async_trait::async_trait;
-use hop_engine::{command::CommandId, state::KeyType};
+use hop_engine::{
+    command::{
+        request::ParseError,
+        response::{Context, Instruction, Response},
+        CommandId, DispatchError,
+    },
+    state::{KeyType, Value},
+};
 use std::{
-    convert::TryInto,
     error::Error as StdError,
     fmt::{Display, Formatter, Result as FmtResult},
     io::Error as IoError,
     result::Result as StdResult,
 };
 use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncReadExt, AsyncWriteExt, BufReader},
     net::{
         tcp::{OwnedReadHalf, OwnedWriteHalf},
         TcpStream, ToSocketAddrs,
@@ -21,13 +27,30 @@ pub type Result<T> = StdResult<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
+    BadRequest { reason: ParseError },
+    BadResponse,
     Connecting { source: IoError },
+    ConnectionClosed,
+    Dispatching { reason: DispatchError },
+    ReadingMessage { source: IoError },
+    WritingMessage { source: IoError },
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
+            Self::BadRequest { reason } => {
+                f.write_fmt(format_args!("server couldn't parse request: {:?}", reason))
+            }
+            Self::BadResponse => f.write_str("the response wasn't an expected type"),
             Self::Connecting { .. } => f.write_str("failed to connect"),
+            Self::ConnectionClosed => f.write_str("connection closed"),
+            Self::Dispatching { reason } => f.write_fmt(format_args!(
+                "server couldn't process command: {:?}",
+                reason
+            )),
+            Self::ReadingMessage { .. } => f.write_str("failed to read a message"),
+            Self::WritingMessage { .. } => f.write_str("failed to write a message"),
         }
     }
 }
@@ -35,7 +58,13 @@ impl Display for Error {
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
+            Self::BadRequest { .. } => None,
+            Self::BadResponse => None,
             Self::Connecting { source } => Some(source),
+            Self::ConnectionClosed => None,
+            Self::Dispatching { .. } => None,
+            Self::ReadingMessage { source } => Some(source),
+            Self::WritingMessage { source } => Some(source),
         }
     }
 }
@@ -59,18 +88,42 @@ impl ServerBackend {
         })
     }
 
-    async fn send_and_wait(&self, send: Vec<u8>) -> Result<Vec<u8>> {
-        self.writer.lock().await.write_all(&send).await.unwrap();
-
-        let mut s = Vec::new();
-        self.reader
+    async fn send_and_wait(&self, send: &[u8]) -> Result<Value> {
+        self.writer
             .lock()
             .await
-            .read_until(b'\n', &mut s)
+            .write_all(send)
             .await
-            .unwrap();
+            .map_err(|source| Error::WritingMessage { source })?;
 
-        Ok(s)
+        let mut ctx = Context::new();
+        let mut resp = Vec::with_capacity(1);
+
+        let mut reader = self.reader.lock().await;
+
+        loop {
+            let read_amount = reader
+                .read_exact(&mut resp)
+                .await
+                .map_err(|source| Error::ReadingMessage { source })?;
+
+            if read_amount == 0 {
+                return Err(Error::ConnectionClosed);
+            }
+
+            match ctx.feed(&resp).unwrap() {
+                Instruction::Concluded(response) => {
+                    return match response {
+                        Response::Value(value) => Ok(value),
+                        Response::DispatchError(reason) => Err(Error::Dispatching { reason }),
+                        Response::ParseError(reason) => Err(Error::BadRequest { reason }),
+                    }
+                }
+                Instruction::ReadBytes(bytes) => {
+                    resp.reserve_exact(bytes);
+                }
+            }
+        }
     }
 }
 
@@ -83,12 +136,12 @@ impl Backend for ServerBackend {
         cmd.extend_from_slice(key);
         cmd.push(b'\n');
 
-        let s = self.send_and_wait(cmd).await?;
+        let value = self.send_and_wait(&cmd).await?;
 
-        let arr = s.get(..8).unwrap().try_into().unwrap();
-        let num = i64::from_be_bytes(arr);
-
-        Ok(num)
+        match value {
+            Value::Integer(int) => Ok(int),
+            _ => Err(Error::BadResponse),
+        }
     }
 
     async fn echo(&self, content: &[u8]) -> Result<Vec<u8>> {
@@ -96,7 +149,12 @@ impl Backend for ServerBackend {
         cmd.extend_from_slice(content);
         cmd.push(b'\n');
 
-        self.send_and_wait(cmd).await
+        let value = self.send_and_wait(&cmd).await?;
+
+        match value {
+            Value::Bytes(bytes) => Ok(bytes),
+            _ => Err(Error::BadResponse),
+        }
     }
 
     async fn increment(&self, key: &[u8], _: Option<KeyType>) -> Result<i64> {
@@ -104,11 +162,11 @@ impl Backend for ServerBackend {
         cmd.extend_from_slice(key);
         cmd.push(b'\n');
 
-        let s = self.send_and_wait(cmd).await?;
+        let value = self.send_and_wait(&cmd).await?;
 
-        let arr = s.get(..8).unwrap().try_into().unwrap();
-        let num = i64::from_be_bytes(arr);
-
-        Ok(num)
+        match value {
+            Value::Integer(int) => Ok(int),
+            _ => Err(Error::BadResponse),
+        }
     }
 }

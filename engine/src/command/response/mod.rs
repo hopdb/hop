@@ -1,6 +1,6 @@
 mod context;
 
-pub use context::{Context, ParseError};
+pub use context::{Context, Instruction, ParseError};
 
 use super::{request::ParseError as RequestParseError, DispatchError};
 use crate::state::Value;
