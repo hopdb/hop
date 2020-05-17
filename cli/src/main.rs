@@ -4,8 +4,8 @@
 
 mod input;
 
-use hop::Client;
-use hop_engine::command::CommandId;
+use hop::{backend::memory::Error as MemoryError, Client};
+use hop_engine::command::{CommandId, DispatchError};
 use std::error::Error;
 use tokio::{
     io::{self, AsyncBufRead, AsyncWrite, AsyncWriteExt, BufReader},
@@ -72,6 +72,68 @@ async fn run(
                 let v = client.increment(key).await?;
 
                 writer.write_all(v.to_string().as_bytes()).await?;
+                writer.write_all(&[b'\n']).await?;
+            }
+            CommandId::Rename => {
+                let from = match req.key() {
+                    Some(key) => key,
+                    None => {
+                        writer
+                            .write_all(b"The key to rename is required.\n")
+                            .await?;
+
+                        continue;
+                    }
+                };
+                let to = match req.arg(1) {
+                    Some(to) => to,
+                    None => {
+                        writer
+                            .write_all(b"The destination key name is required.\n")
+                            .await?;
+
+                        continue;
+                    }
+                };
+
+                let v = match client.rename(from, to).await {
+                    Ok(v) => v,
+                    Err(MemoryError::RunningCommand { source }) => {
+                        writer.write_all(b"Dispatch error: ").await?;
+
+                        match source {
+                            DispatchError::KeyRetrieval => {
+                                let from = String::from_utf8_lossy(from);
+
+                                writer
+                                    .write_all(
+                                        format!("key \"{}\" doesn't exist\n", from).as_bytes(),
+                                    )
+                                    .await?;
+                            }
+                            DispatchError::PreconditionFailed => {
+                                let to = String::from_utf8_lossy(to);
+
+                                writer
+                                    .write_all(
+                                        format!(
+                                            "the destination key, \"{}\", already exists.\n",
+                                            to
+                                        )
+                                        .as_bytes(),
+                                    )
+                                    .await?;
+                            }
+                            _ => unreachable!(),
+                        }
+
+                        continue;
+                    }
+                };
+
+                writer
+                    .write_all(String::from_utf8_lossy(&v).as_bytes())
+                    .await?;
                 writer.write_all(&[b'\n']).await?;
             }
             CommandId::Stats => {

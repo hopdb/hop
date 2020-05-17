@@ -113,6 +113,31 @@ impl<B: Backend> Client<B> {
         Increment::new(self.backend(), key)
     }
 
+    /// Rename a key to a new key name, if the new key name doesn't already
+    /// exist.
+    ///
+    /// Returns the new key value on success as a confirmation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// client.increment("foo").await?;
+    /// println!("New key name: {:?}", client.rename("foo", "bar").await?);
+    /// println!("New incremented value: {}", client.increment("foo").await?);
+    /// # Ok(()) }
+    /// ```
+    pub fn rename<F: AsRef<[u8]> + Unpin, T: AsRef<[u8]> + Unpin>(
+        &self,
+        from: F,
+        to: T,
+    ) -> Rename<'_, B, F, T> {
+        Rename::new(self.backend(), from, to)
+    }
+
     /// Retrieve statistics about the current runtime of Hop.
     ///
     /// When Hop is restarted, many of the statistics - like commands run - are

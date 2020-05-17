@@ -171,6 +171,21 @@ impl Backend for ServerBackend {
         }
     }
 
+    async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>> {
+        let mut args = Vec::with_capacity(2);
+        args.push(from.to_vec());
+        args.push(to.to_vec());
+
+        let req = Request::new(CommandId::Rename, Some(args));
+
+        let value = self.send_and_wait(&req.into_bytes()).await?;
+
+        match value {
+            Value::Bytes(bytes) => Ok(bytes),
+            _ => Err(Error::BadResponse),
+        }
+    }
+
     async fn stats(&self) -> Result<StatsData> {
         let req = Request::new(CommandId::Stats, None);
 
