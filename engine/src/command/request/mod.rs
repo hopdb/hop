@@ -91,13 +91,130 @@ impl Request {
     pub fn into_args(mut self) -> Option<Vec<Vec<u8>>> {
         self.args.take()
     }
+
+    pub fn into_bytes(self) -> Vec<u8> {
+        let mut vec = Vec::new();
+        let mut byte = self.kind as u8;
+
+        if self.key_type.is_some() {
+            byte |= 0b1000_0000;
+        }
+
+        vec.push(byte);
+
+        if let Some(key_type) = self.key_type {
+            vec.push(key_type as u8);
+        }
+
+        let args = match self.args {
+            Some(args) => args,
+            None => return vec,
+        };
+
+        vec.push(args.len() as u8);
+
+        for arg in args {
+            let arg_len = arg.len() as u32;
+
+            vec.extend_from_slice(&arg_len.to_be_bytes());
+            vec.extend_from_slice(&arg);
+        }
+
+        vec
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Request;
+    use super::{super::CommandId, Request};
+    use crate::state::KeyType;
+    use alloc::vec::Vec;
     use core::fmt::Debug;
     use static_assertions::assert_impl_all;
 
     assert_impl_all!(Request: Debug);
+
+    #[test]
+    fn test_request_into_bytes_simple() {
+        let req = Request::new(CommandId::Stats, None);
+        assert_eq!(
+            req.into_bytes(),
+            &[
+                // note bit 0 is not flipped
+                0b0110_0101,
+            ]
+        );
+
+        let req = Request::new_with_type(CommandId::Increment, None, KeyType::Float);
+        assert_eq!(
+            req.into_bytes(),
+            &[
+                // now that we specify a key type, bit 0 is flipped
+                0b1000_0000,
+                KeyType::Float as u8,
+            ]
+        );
+    }
+
+    #[test]
+    fn test_request_into_bytes_echo() {
+        let mut args = Vec::new();
+        args.push(b"foo".to_vec());
+        args.push(b"bar".to_vec());
+        let req = Request::new(CommandId::Echo, Some(args));
+        assert_eq!(
+            req.into_bytes(),
+            &[
+                // no key type
+                CommandId::Echo as u8,
+                // number of arguments
+                2,
+                // argument 1 length
+                0,
+                0,
+                0,
+                3,
+                // argument 1
+                b'f',
+                b'o',
+                b'o',
+                // argument 2 length
+                0,
+                0,
+                0,
+                3,
+                // argument 2
+                b'b',
+                b'a',
+                b'r',
+            ]
+        );
+    }
+
+    #[test]
+    fn test_request_into_bytes_increment() {
+        let mut args = Vec::new();
+        args.push(b"key".to_vec());
+        let req = Request::new_with_type(CommandId::Increment, Some(args), KeyType::Integer);
+        assert_eq!(
+            req.into_bytes(),
+            &[
+                // key type is specified
+                0b1000_0000 | CommandId::Increment as u8,
+                // key type
+                KeyType::Integer as u8,
+                // number of arguments
+                1,
+                // argument 1 length
+                0,
+                0,
+                0,
+                3,
+                // argument 1
+                b'k',
+                b'e',
+                b'y',
+            ]
+        );
+    }
 }
