@@ -34,6 +34,7 @@ impl TryFrom<u8> for Error {
             0 => Self::ArgumentRetrieval,
             1 => Self::KeyRetrieval,
             2 => Self::WrongType,
+            3 => Self::KeyTypeUnexpected,
             _ => return Err(()),
         })
     }
@@ -59,4 +60,18 @@ mod tests {
         PartialEq,
         TryFrom<u8>
     );
+
+    #[test]
+    fn test_error_try_from_u8() {
+        let variants = &[
+            Error::ArgumentRetrieval,
+            Error::KeyRetrieval,
+            Error::WrongType,
+            Error::KeyTypeUnexpected,
+        ];
+
+        for variant in variants {
+            assert!(matches!(Error::try_from(*variant as u8), Ok(v) if v == *variant));
+        }
+    }
 }
