@@ -47,7 +47,7 @@ async fn run(
 
                 let v = client.decrement(key).await?;
 
-                writer.write_i64(v).await?;
+                writer.write_all(v.to_string().as_bytes()).await?;
                 writer.write_all(&[b'\n']).await?;
             }
             CommandId::Echo => {
@@ -71,7 +71,7 @@ async fn run(
 
                 let v = client.increment(key).await?;
 
-                writer.write_i64(v).await?;
+                writer.write_all(v.to_string().as_bytes()).await?;
                 writer.write_all(&[b'\n']).await?;
             }
             CommandId::Stats => {
