@@ -83,6 +83,29 @@ impl<B: Backend> Client<B> {
         Decrement::new(self.backend(), key)
     }
 
+    /// Delete a key by its name if it exists.
+    ///
+    /// Returns the deleted key name on success as a confirmation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// assert_eq!(1, client.increment("foo").await?);
+    /// assert!(client.delete("foo").await.is_ok());
+    ///
+    /// // since the key doesn't exist anymore, incrementing it again will
+    /// // result in a value of 1 again
+    /// assert_eq!(1, client.increment("foo").await?);
+    /// # Ok(()) }
+    /// ```
+    pub fn delete<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Delete<'_, B, K> {
+        Delete::new(self.backend(), key)
+    }
+
     /// Echos the provided content back at you.
     ///
     /// Returns the input content.

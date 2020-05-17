@@ -145,6 +145,20 @@ impl Backend for ServerBackend {
         }
     }
 
+    async fn delete(&self, key: &[u8]) -> Result<Vec<u8>> {
+        let mut args = Vec::with_capacity(1);
+        args.push(key.to_vec());
+
+        let req = Request::new(CommandId::Delete, Some(args));
+
+        let value = self.send_and_wait(&req.into_bytes()).await?;
+
+        match value {
+            Value::Bytes(bytes) => Ok(bytes),
+            _ => Err(Error::BadResponse),
+        }
+    }
+
     async fn echo(&self, content: &[u8]) -> Result<Vec<u8>> {
         let mut args = Vec::with_capacity(1);
         args.push(content.to_vec());

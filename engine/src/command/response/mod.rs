@@ -54,21 +54,24 @@ pub enum Response {
 impl Response {
     pub fn as_bytes(&self) -> Vec<u8> {
         let mut buf = Vec::new();
-
-        match self {
-            Self::DispatchError(err) => write_dispatch_error(&mut buf, *err),
-            Self::ParseError(err) => write_parse_error(&mut buf, *err),
-            Self::Value(Value::Boolean(boolean)) => write_bool(&mut buf, *boolean),
-            Self::Value(Value::Bytes(bytes)) => write_bytes(&mut buf, bytes),
-            Self::Value(Value::Float(float)) => write_float(&mut buf, *float),
-            Self::Value(Value::Integer(int)) => write_int(&mut buf, *int),
-            Self::Value(Value::List(list)) => write_list(&mut buf, list),
-            Self::Value(Value::Map(map)) => write_map(&mut buf, map),
-            Self::Value(Value::Set(set)) => write_set(&mut buf, set),
-            Self::Value(Value::String(string)) => write_str(&mut buf, string),
-        }
+        self.copy_to(&mut buf);
 
         buf
+    }
+
+    pub fn copy_to(&self, buf: &mut Vec<u8>) {
+        match self {
+            Self::DispatchError(err) => write_dispatch_error(buf, *err),
+            Self::ParseError(err) => write_parse_error(buf, *err),
+            Self::Value(Value::Boolean(boolean)) => write_bool(buf, *boolean),
+            Self::Value(Value::Bytes(bytes)) => write_bytes(buf, bytes),
+            Self::Value(Value::Float(float)) => write_float(buf, *float),
+            Self::Value(Value::Integer(int)) => write_int(buf, *int),
+            Self::Value(Value::List(list)) => write_list(buf, list),
+            Self::Value(Value::Map(map)) => write_map(buf, map),
+            Self::Value(Value::Set(set)) => write_set(buf, set),
+            Self::Value(Value::String(string)) => write_str(buf, string),
+        }
     }
 }
 
@@ -225,6 +228,7 @@ pub fn write_str(to: &mut Vec<u8>, value: &str) {
 #[cfg(test)]
 mod tests {
     use super::{Response, ResponseType};
+    use crate::state::Value;
     use alloc::{borrow::ToOwned, string::String, vec::Vec};
     use core::{fmt::Debug, hash::Hash};
     use dashmap::{DashMap, DashSet};
@@ -564,5 +568,22 @@ mod tests {
             Response::from(String::new()).as_bytes(),
             [ResponseType::String as u8, 0, 0, 0, 0]
         );
+    }
+
+    #[test]
+    fn test_response_as_bytes() {
+        let resp = Response::Value(Value::Integer(3));
+        assert_eq!(
+            resp.as_bytes(),
+            [ResponseType::Integer as u8, 0, 0, 0, 0, 0, 0, 0, 3,]
+        );
+    }
+
+    #[test]
+    fn test_response_into_bytes() {
+        let resp = Response::Value(Value::Integer(3));
+        let mut buf = Vec::new();
+        resp.copy_to(&mut buf);
+        assert_eq!(buf, [ResponseType::Integer as u8, 0, 0, 0, 0, 0, 0, 0, 3,]);
     }
 }
