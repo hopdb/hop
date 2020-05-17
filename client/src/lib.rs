@@ -113,6 +113,33 @@ impl<B: Backend> Client<B> {
         Increment::new(self.backend(), key)
     }
 
+    /// Increments a float or integer key by one.
+    ///
+    /// Returns the new value on success.
+    ///
+    /// If the key does not exist, an integer key is created with a value of 0
+    /// and then incremented by 1, resulting in the value being 1.
+    ///
+    /// This is an `O(1)` time complexity operation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// println!("New value: {}", client.increment("foo").await?);
+    /// # Ok(()) }
+    /// ```
+    pub fn rename<F: AsRef<[u8]> + Unpin, T: AsRef<[u8]> + Unpin>(
+        &self,
+        from: F,
+        to: T,
+    ) -> Rename<'_, B, F, T> {
+        Rename::new(self.backend(), from, to)
+    }
+
     /// Retrieve statistics about the current runtime of Hop.
     ///
     /// When Hop is restarted, many of the statistics - like commands run - are

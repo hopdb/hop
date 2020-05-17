@@ -13,6 +13,7 @@ pub enum Error {
     KeyRetrieval = 1,
     WrongType = 2,
     KeyTypeUnexpected = 3,
+    PreconditionFailed = 4,
 }
 
 impl Display for Error {
@@ -21,6 +22,7 @@ impl Display for Error {
             Self::ArgumentRetrieval => f.write_str("couldn't retrieve required argument"),
             Self::KeyRetrieval => f.write_str("couldn't retrieve key"),
             Self::KeyTypeUnexpected => f.write_str("didn't expect a specified request key type"),
+            Self::PreconditionFailed => f.write_str("a precondition for the command failed"),
             Self::WrongType => f.write_str("the key has the wrong type"),
         }
     }
@@ -35,6 +37,7 @@ impl TryFrom<u8> for Error {
             1 => Self::KeyRetrieval,
             2 => Self::WrongType,
             3 => Self::KeyTypeUnexpected,
+            4 => Self::PreconditionFailed,
             _ => return Err(()),
         })
     }
@@ -68,6 +71,7 @@ mod tests {
             Error::KeyRetrieval,
             Error::WrongType,
             Error::KeyTypeUnexpected,
+            Error::PreconditionFailed,
         ];
 
         for variant in variants {

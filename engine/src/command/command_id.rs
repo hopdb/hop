@@ -21,6 +21,7 @@ pub enum CommandId {
     Decrement = 1,
     IncrementBy = 2,
     DecrementBy = 3,
+    Rename = 15,
     Append = 20,
     Length = 21,
     Echo = 100,
@@ -39,6 +40,7 @@ impl CommandId {
             IncrementBy => One,
             Decrement => None,
             DecrementBy => One,
+            Rename => One,
             Stats => None,
             Length => One,
         }
@@ -65,6 +67,7 @@ impl CommandId {
             Self::Echo => "echo",
             Self::IncrementBy => "increment:by",
             Self::Increment => "increment",
+            Self::Rename => "rename",
             Self::Stats => "stats",
             Self::Length => "length",
         }
@@ -88,6 +91,7 @@ impl FromStr for CommandId {
             "echo" => Self::Echo,
             "increment:by" => Self::IncrementBy,
             "increment" => Self::Increment,
+            "rename" => Self::Rename,
             "stats" => Self::Stats,
             "length" => Self::Length,
             _ => return Err(InvalidCommandId),
@@ -104,6 +108,7 @@ impl TryFrom<u8> for CommandId {
             1 => Self::Decrement,
             2 => Self::IncrementBy,
             3 => Self::DecrementBy,
+            15 => Self::Rename,
             20 => Self::Append,
             21 => Self::Length,
             100 => Self::Echo,
@@ -169,6 +174,7 @@ mod tests {
             CommandId::Increment,
             CommandId::from_str("increment").unwrap()
         );
+        assert_eq!(CommandId::Rename, CommandId::from_str("rename").unwrap());
         assert_eq!(CommandId::Stats, CommandId::from_str("stats").unwrap());
         assert_eq!(CommandId::Length, CommandId::from_str("length").unwrap());
     }
@@ -181,6 +187,7 @@ mod tests {
         assert_eq!(CommandId::Echo, CommandId::try_from(100).unwrap());
         assert_eq!(CommandId::IncrementBy, CommandId::try_from(2).unwrap());
         assert_eq!(CommandId::Increment, CommandId::try_from(0).unwrap());
+        assert_eq!(CommandId::Rename, CommandId::try_from(15).unwrap());
         assert_eq!(CommandId::Stats, CommandId::try_from(101).unwrap());
         assert_eq!(CommandId::Length, CommandId::try_from(21).unwrap());
     }
@@ -193,6 +200,7 @@ mod tests {
         assert_eq!("echo", CommandId::Echo.name());
         assert_eq!("increment:by", CommandId::IncrementBy.name());
         assert_eq!("increment", CommandId::Increment.name());
+        assert_eq!("rename", CommandId::Rename.name());
         assert_eq!("stats", CommandId::Stats.name());
         assert_eq!("length", CommandId::Length.name());
     }

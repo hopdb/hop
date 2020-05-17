@@ -52,6 +52,60 @@ impl State {
         Self::default()
     }
 
+    /// Check if a key exists.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop_engine::state::{State, Value};
+    ///
+    /// let state = State::new();
+    /// // set a default bytes value to "foo"
+    /// state.insert(b"foo".to_vec(), Value::bytes());
+    ///
+    /// assert!(state.contains_key(b"foo"));
+    /// assert!(!state.contains_key(b"bar"));
+    /// ```
+    pub fn contains_key(&self, key: &[u8]) -> bool {
+        self.0.contains_key(key)
+    }
+
+    /// Insert a value by key, replacing and returning the existing value if the
+    /// key was already taken.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop_engine::state::{State, Value};
+    ///
+    /// let state = State::new();
+    /// assert!(state.insert(b"foo".to_vec(), Value::bytes()).is_none());
+    /// assert!(state.insert(b"foo".to_vec(), Value::boolean()).is_some());
+    /// ```
+    pub fn insert(&self, key: Vec<u8>, value: Value) -> Option<Value> {
+        self.0.insert(key, value)
+    }
+
+    /// Remove a value by key, returning both the owned key and value if
+    /// present.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop_engine::state::{State, Value};
+    ///
+    /// let state = State::new();
+    /// // set a default string value to "foo"
+    /// state.key(b"foo", Value::string);
+    ///
+    /// assert!(state.contains_key(b"foo"));
+    /// assert!(state.remove(b"foo").is_some());
+    /// assert!(!state.contains_key(b"foo"));
+    /// ```
+    pub fn remove(&self, key: &[u8]) -> Option<(Vec<u8>, Value)> {
+        self.0.remove(key)
+    }
+
     /// Retrieve a key's value, providing the default value to insert if the key
     /// doesn't exist.
     ///
