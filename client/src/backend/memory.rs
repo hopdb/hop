@@ -111,6 +111,32 @@ impl Backend for MemoryBackend {
         Ok(resp)
     }
 
+    async fn exists<T: IntoIterator<Item = U> + Send, U: AsRef<[u8]> + Send>(
+        &self,
+        keys: T,
+    ) -> Result<bool, Self::Error> {
+        let args = keys
+            .into_iter()
+            .map(|arg| arg.as_ref().to_owned())
+            .collect();
+        let req = Request::new(CommandId::Exists, Some(args));
+        let mut resp = Vec::new();
+
+        self.hop.dispatch(&req, &mut resp)?;
+
+        let mut ctx = Context::new();
+
+        let resp = match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(value) => value,
+            Instruction::ReadBytes(_) => unreachable!(),
+        };
+
+        match resp {
+            Response::Value(Value::Boolean(exists)) => Ok(exists),
+            _ => panic!(),
+        }
+    }
+
     async fn increment(&self, key: &[u8], kind: Option<KeyType>) -> Result<i64, Self::Error> {
         let req = request(CommandId::Increment, Some(vec![key.to_vec()]), kind);
         let mut resp = Vec::new();

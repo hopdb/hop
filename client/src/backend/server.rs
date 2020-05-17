@@ -172,6 +172,24 @@ impl Backend for ServerBackend {
         }
     }
 
+    async fn exists<T: IntoIterator<Item = U> + Send, U: AsRef<[u8]> + Send>(
+        &self,
+        keys: T,
+    ) -> Result<bool> {
+        let args = keys
+            .into_iter()
+            .map(|key| key.as_ref().to_owned())
+            .collect();
+        let req = Request::new(CommandId::Exists, Some(args));
+
+        let value = self.send_and_wait(&req.into_bytes()).await?;
+
+        match value {
+            Value::Boolean(exists) => Ok(exists),
+            _ => Err(Error::BadResponse),
+        }
+    }
+
     async fn increment(&self, key: &[u8], _: Option<KeyType>) -> Result<i64> {
         let mut args = Vec::with_capacity(1);
         args.push(key.to_vec());

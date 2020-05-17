@@ -113,6 +113,37 @@ impl<B: Backend> Client<B> {
         Echo::new(self.backend(), content)
     }
 
+    /// Check if one or more keys exist.
+    ///
+    /// Returns `true` if all of the keys exist, or `false` if at least one of
+    /// them does not.
+    ///
+    /// Refer to the documentation for the [`Exists`] request for more
+    /// information on how to use the request struct returned by this method.
+    ///
+    /// This is an `O(n)` time complexity operation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// // "foo" doesn't exist
+    /// assert!(!client.exists().key("foo").await?);
+    /// client.increment("foo").await?;
+    ///
+    /// // and now it does
+    /// assert!(client.exists().key("foo").await?);
+    /// # Ok(()) }
+    /// ```
+    ///
+    /// [`Exists`]: request/exists/struct.Exists.html
+    pub fn exists(&self) -> Exists<B> {
+        Exists::new(self.backend())
+    }
+
     /// Increments a float or integer key by one.
     ///
     /// Returns the new value on success.
