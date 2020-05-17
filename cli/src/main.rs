@@ -4,7 +4,7 @@
 
 mod input;
 
-use hop::{backend::memory::Error as MemoryError, Client};
+use hop::{backend::memory::Error as MemoryError, request::exists::ExistsError, Client};
 use hop_engine::command::{CommandId, DispatchError};
 use std::error::Error;
 use tokio::{
@@ -97,6 +97,33 @@ async fn run(
                 } else {
                     writer.write_all(&[b'\n']).await?;
                 }
+            }
+            CommandId::Exists => {
+                let args = match req.args() {
+                    Some(args) => args,
+                    None => {
+                        writer.write_all(b"At least one key is required.\n").await?;
+
+                        continue;
+                    }
+                };
+
+                let req = match client.exists().keys(args) {
+                    Ok(req) => req,
+                    Err(ExistsError::NoKeys) => unreachable!(),
+                    Err(ExistsError::TooManyKeys) => {
+                        writer
+                            .write_all(b"Only 255 arguments are allowed in a single request.\n")
+                            .await?;
+
+                        continue;
+                    }
+                };
+
+                let exists = req.await?;
+
+                writer.write_all(exists.to_string().as_bytes()).await?;
+                writer.write(b"\n").await?;
             }
             CommandId::Increment => {
                 let key = match req.key() {

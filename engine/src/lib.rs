@@ -46,6 +46,7 @@ impl Hop {
             CommandId::Decrement => Decrement::dispatch(self, req, res),
             CommandId::Delete => Delete::dispatch(self, req, res),
             CommandId::Echo => Echo::dispatch(self, req, res),
+            CommandId::Exists => Exists::dispatch(self, req, res),
             CommandId::Increment => Increment::dispatch(self, req, res),
             CommandId::IncrementBy => IncrementBy::dispatch(self, req, res),
             CommandId::Rename => Rename::dispatch(self, req, res),

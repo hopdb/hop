@@ -1,3 +1,5 @@
+pub mod exists;
+
 mod decrement;
 mod delete;
 mod echo;
@@ -6,7 +8,12 @@ mod rename;
 mod stats;
 
 pub use self::{
-    decrement::Decrement, delete::Delete, echo::Echo, increment::Increment, rename::Rename,
+    decrement::Decrement,
+    delete::Delete,
+    echo::Echo,
+    exists::{Exists, ExistsConfigured},
+    increment::Increment,
+    rename::Rename,
     stats::Stats,
 };
 
