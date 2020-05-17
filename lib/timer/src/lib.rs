@@ -234,12 +234,16 @@ pub fn test_now() -> Duration {
 fn now() -> Duration {
     let timespec = monotonic_time();
 
+    parse_timespec(timespec)
+}
+
+fn parse_timespec(timespec: timespec) -> Duration {
     let mut s = u64::try_from(timespec.tv_sec).unwrap_or(0);
     let ns = u32::try_from(timespec.tv_nsec).unwrap_or_else(|_| {
         if timespec.tv_nsec < 0 {
             u32::MIN
         } else {
-            s = s.saturating_add(1);
+            s = s.saturating_sub(1);
 
             999_999_999
         }
@@ -264,11 +268,58 @@ fn monotonic_time() -> timespec {
 #[cfg(test)]
 mod tests {
     use super::Timer;
+    use core::time::Duration;
+    use libc::timespec;
 
     #[test]
     fn test_now() {
         let time = super::now();
         assert!(time.as_secs() > 0);
+    }
+
+    #[cfg(feature = "__internal_test")]
+    #[test]
+    fn test_exported_now() {
+        let time = super::now();
+        assert!(time.as_secs() > 0);
+    }
+
+    #[test]
+    fn test_parse_timespec_corrects_negative_seconds() {
+        let time = timespec {
+            tv_sec: -1,
+            tv_nsec: 5_000_000,
+        };
+
+        assert_eq!(super::parse_timespec(time), Duration::new(0, 5_000_000));
+    }
+
+    #[test]
+    fn test_parse_timespec_corrects_overflowing_nanos() {
+        let time = timespec {
+            tv_nsec: i64::MAX,
+            tv_sec: 3,
+        };
+
+        assert_eq!(super::parse_timespec(time), Duration::new(2, 999_999_999));
+    }
+
+    #[test]
+    fn test_parse_timespec_corrects_negative_nanos() {
+        let time = timespec {
+            tv_nsec: -1,
+            tv_sec: 3,
+        };
+
+        assert_eq!(super::parse_timespec(time), Duration::new(3, 0));
+    }
+
+    #[test]
+    fn test_new_defaults() {
+        let timer = Timer::new();
+        assert_eq!(timer, Timer::default());
+        assert!(timer.start.is_none());
+        assert!(timer.stop.is_none());
     }
 
     #[test]
@@ -315,5 +366,15 @@ mod tests {
         assert!(timer.duration().is_none());
         timer.stop();
         assert!(timer.duration().is_some());
+    }
+
+    #[test]
+    fn test_is_running() {
+        let mut timer = Timer::new();
+        assert!(!timer.is_running());
+        timer.start();
+        assert!(timer.is_running());
+        timer.stop();
+        assert!(!timer.is_running());
     }
 }
