@@ -21,6 +21,7 @@ pub enum CommandId {
     Decrement = 1,
     IncrementBy = 2,
     DecrementBy = 3,
+    Delete = 12,
     Rename = 15,
     Append = 20,
     Length = 21,
@@ -35,6 +36,7 @@ impl CommandId {
 
         match self {
             Append => One,
+            Delete => One,
             Echo => Multiple,
             Increment => None,
             IncrementBy => One,
@@ -64,6 +66,7 @@ impl CommandId {
             Self::Append => "append",
             Self::DecrementBy => "decrement:by",
             Self::Decrement => "decrement",
+            Self::Delete => "delete",
             Self::Echo => "echo",
             Self::IncrementBy => "increment:by",
             Self::Increment => "increment",
@@ -88,6 +91,7 @@ impl FromStr for CommandId {
             "append" => Self::Append,
             "decrement:by" => Self::DecrementBy,
             "decrement" => Self::Decrement,
+            "delete" => Self::Delete,
             "echo" => Self::Echo,
             "increment:by" => Self::IncrementBy,
             "increment" => Self::Increment,
@@ -108,6 +112,7 @@ impl TryFrom<u8> for CommandId {
             1 => Self::Decrement,
             2 => Self::IncrementBy,
             3 => Self::DecrementBy,
+            12 => Self::Delete,
             15 => Self::Rename,
             20 => Self::Append,
             21 => Self::Length,
@@ -165,6 +170,7 @@ mod tests {
             CommandId::Decrement,
             CommandId::from_str("decrement").unwrap()
         );
+        assert_eq!(CommandId::Delete, CommandId::from_str("delete").unwrap());
         assert_eq!(CommandId::Echo, CommandId::from_str("echo").unwrap());
         assert_eq!(
             CommandId::IncrementBy,
@@ -184,6 +190,7 @@ mod tests {
         assert_eq!(CommandId::Append, CommandId::try_from(20).unwrap());
         assert_eq!(CommandId::DecrementBy, CommandId::try_from(3).unwrap());
         assert_eq!(CommandId::Decrement, CommandId::try_from(1).unwrap());
+        assert_eq!(CommandId::Delete, CommandId::try_from(12).unwrap());
         assert_eq!(CommandId::Echo, CommandId::try_from(100).unwrap());
         assert_eq!(CommandId::IncrementBy, CommandId::try_from(2).unwrap());
         assert_eq!(CommandId::Increment, CommandId::try_from(0).unwrap());
@@ -197,6 +204,7 @@ mod tests {
         assert_eq!("append", CommandId::Append.name());
         assert_eq!("decrement:by", CommandId::DecrementBy.name());
         assert_eq!("decrement", CommandId::Decrement.name());
+        assert_eq!("delete", CommandId::Delete.name());
         assert_eq!("echo", CommandId::Echo.name());
         assert_eq!("increment:by", CommandId::IncrementBy.name());
         assert_eq!("increment", CommandId::Increment.name());

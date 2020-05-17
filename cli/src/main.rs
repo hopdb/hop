@@ -50,6 +50,45 @@ async fn run(
                 writer.write_all(v.to_string().as_bytes()).await?;
                 writer.write_all(&[b'\n']).await?;
             }
+            CommandId::Delete => {
+                let key = match req.key() {
+                    Some(key) => key,
+                    None => {
+                        writer
+                            .write_all(b"The key to delete is required.\n")
+                            .await?;
+
+                        continue;
+                    }
+                };
+
+                let v = match client.delete(key).await {
+                    Ok(v) => v,
+                    Err(MemoryError::RunningCommand { source }) => {
+                        writer.write_all(b"Dispatch error: ").await?;
+
+                        match source {
+                            DispatchError::PreconditionFailed => {
+                                let key = String::from_utf8_lossy(key);
+
+                                writer
+                                    .write_all(
+                                        format!("the key \"{}\" doesn't exist.\n", key).as_bytes(),
+                                    )
+                                    .await?;
+                            }
+                            _ => unreachable!(),
+                        }
+
+                        continue;
+                    }
+                };
+
+                writer
+                    .write_all(String::from_utf8_lossy(&v).as_bytes())
+                    .await?;
+                writer.write_all(&[b'\n']).await?;
+            }
             CommandId::Echo => {
                 if let Some(args) = req.flatten_args() {
                     let v = client.echo(args).await?;

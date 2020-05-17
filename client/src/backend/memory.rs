@@ -77,6 +77,27 @@ impl Backend for MemoryBackend {
         Ok(num)
     }
 
+    async fn delete(&self, key: &[u8]) -> Result<Vec<u8>, Self::Error> {
+        let req = Request::new(CommandId::Delete, Some(vec![key.to_vec()]));
+        let mut resp = Vec::new();
+
+        self.hop.dispatch(&req, &mut resp)?;
+
+        let mut ctx = Context::new();
+
+        let resp = match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(value) => value,
+            Instruction::ReadBytes(_) => unreachable!(),
+        };
+
+        let bytes = match resp {
+            Response::Value(Value::Bytes(bytes)) => bytes,
+            other => panic!("Other response: {:?}", other),
+        };
+
+        Ok(bytes)
+    }
+
     async fn echo(&self, content: &[u8]) -> Result<Vec<u8>, Self::Error> {
         let req = Request::new(CommandId::Echo, Some(vec![content.to_vec()]));
         let mut resp = Vec::new();
