@@ -2,7 +2,10 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]
 
-use hop_engine::{command::request::Context, Hop};
+use hop_engine::{
+    command::{request::Context, Response},
+    Hop,
+};
 use log::{debug, warn};
 use std::{
     env,
@@ -96,22 +99,31 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
             break;
         }
 
-        let req = match ctx.feed(&input) {
-            Ok(Some(cmd)) => cmd,
+        match ctx.feed(&input) {
+            Ok(Some(req)) => {
+                match hop.dispatch(&req, &mut resp) {
+                    Ok(()) => {}
+                    Err(why) => {
+                        let res = Response::DispatchError(why);
+
+                        res.copy_to(&mut resp);
+                    }
+                }
+
+                if let Some(args) = req.into_args() {
+                    ctx.reset(args);
+                }
+            }
             Ok(None) => continue,
             Err(why) => {
-                todo!("sending error response not implemented: {:?}", why);
+                let res = Response::ParseError(why);
+
+                res.copy_to(&mut resp);
             }
         };
 
-        resp.clear();
-        hop.dispatch(&req, &mut resp).unwrap();
         writer.write_all(&resp).await?;
-
-        if let Some(args) = req.into_args() {
-            ctx.reset(args);
-        }
-
+        resp.clear();
         input.clear();
     }
 
