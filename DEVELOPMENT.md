@@ -1,5 +1,12 @@
 # Development
 
+## Making a commit
+
+Before making a commit, be sure to run `cargo test`. This will install
+[`rusty-hook`], which will add some git hooks. One of these will be a pre-commit
+hook, which will run tests, clippy, and rustfmt before allowing you to commit.
+This will help make sure pull requests build successfully the first time around.
+
 ## Codebase
 
 ### Design Decisions
@@ -21,3 +28,5 @@ which is important for the project for reasons like depending on a smaller
 number of maintainers, potential distro packaging, and a smaller surface of
 potential security issues. Additionally, a clean hot cache -O3 compile time was
 reduced from 45.73 seconds to 31.94.
+
+[`rusty-hook`]: https://github.com/swellaby/rusty-hook
