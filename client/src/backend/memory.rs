@@ -143,10 +143,19 @@ impl Backend for MemoryBackend {
 
         self.hop.dispatch(&req, &mut resp)?;
 
-        let arr = resp.get(1..9).unwrap().try_into().unwrap();
-        let num = i64::from_be_bytes(arr);
+        let mut ctx = Context::new();
 
-        Ok(num)
+        let resp = match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(value) => value,
+            Instruction::ReadBytes(_) => unreachable!(),
+        };
+
+        let int = match resp {
+            Response::Value(Value::Integer(int)) => int,
+            _ => panic!(),
+        };
+
+        Ok(int)
     }
 
     async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>, Self::Error> {

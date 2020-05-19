@@ -39,6 +39,7 @@ pub enum Instruction {
 #[derive(Clone, Debug)]
 enum Stage {
     Init,
+    DetermineType,
     /// The type is known, and now the length of the argument(s) is being read
     /// for the following types:
     ///
@@ -97,6 +98,7 @@ impl Context {
         loop {
             let instruction = match self.stage {
                 Stage::Init => self.stage_init(buf)?,
+                Stage::DetermineType => self.stage_determine_type(buf)?,
                 Stage::Boolean => self.stage_boolean(buf)?,
                 Stage::Bytes { len } => self.stage_bytes(buf, len)?,
                 Stage::Float => self.stage_float(buf)?,
@@ -125,7 +127,35 @@ impl Context {
     fn stage_init(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
         debug_assert!(self.idx == 0);
 
-        let byte = match buf.get(0) {
+        // parse message length, if buffer contains less bytes than this header
+        // then we'll request the consumer to read to the end
+        match buf.get(..4) {
+            Some(bytes) => {
+                let msg_len = u32::from_be_bytes(bytes.try_into().unwrap());
+
+                if buf.len() < msg_len as usize + 4 {
+                    return Ok(Some(Instruction::ReadBytes(
+                        4 + msg_len as usize - buf.len(),
+                    )));
+                }
+            }
+            None => {
+                return Ok(Some(Instruction::ReadBytes(
+                    4usize.saturating_sub(buf.len()),
+                )))
+            }
+        };
+
+        self.stage = Stage::DetermineType;
+        self.idx += 4;
+
+        Ok(None)
+    }
+
+    fn stage_determine_type(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
+        debug_assert!(self.idx == 4);
+
+        let byte = match buf.get(self.idx) {
             Some(byte) => *byte,
             None => return Ok(Some(Instruction::ReadBytes(1))),
         };
@@ -150,7 +180,7 @@ impl Context {
     }
 
     fn stage_boolean(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
-        debug_assert_eq!(self.idx, 1);
+        debug_assert_eq!(self.idx, 5);
 
         let byte = match buf.get(self.idx) {
             Some(byte) => *byte,
@@ -161,7 +191,7 @@ impl Context {
     }
 
     fn stage_bytes(&mut self, buf: &[u8], len: u32) -> Result<Option<Instruction>, ParseError> {
-        debug_assert_eq!(self.idx, 5);
+        debug_assert_eq!(self.idx, 9);
         debug_assert_ne!(len, 0);
 
         let bytes = match buf.get(self.idx..self.idx + len as usize) {
@@ -178,7 +208,7 @@ impl Context {
     }
 
     fn stage_dispatch_error(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
-        debug_assert_eq!(self.idx, 1);
+        debug_assert_eq!(self.idx, 5);
 
         let byte = match buf.get(self.idx) {
             Some(byte) => *byte,
@@ -191,7 +221,7 @@ impl Context {
     }
 
     fn stage_float(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
-        debug_assert_eq!(self.idx, 1);
+        debug_assert_eq!(self.idx, 5);
 
         let bytes = match buf.get(self.idx..self.idx + 8) {
             Some(bytes) => bytes,
@@ -204,7 +234,7 @@ impl Context {
     }
 
     fn stage_integer(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
-        debug_assert_eq!(self.idx, 1);
+        debug_assert_eq!(self.idx, 5);
 
         let bytes = match buf.get(self.idx..self.idx + 8) {
             Some(bytes) => bytes,
@@ -217,8 +247,8 @@ impl Context {
     }
 
     fn stage_list(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
-        debug_assert!(self.idx > 2);
-        debug_assert!(buf.len() > 2);
+        debug_assert!(self.idx > 6);
+        debug_assert!(buf.len() > 6);
 
         let arg_size_end = self.idx + 4;
 
@@ -262,8 +292,8 @@ impl Context {
     }
 
     fn stage_map(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
-        debug_assert!(self.idx > 2);
-        debug_assert!(buf.len() > 2);
+        debug_assert!(self.idx > 6);
+        debug_assert!(buf.len() > 6);
 
         let key_size_end = self.idx + 1;
 
@@ -329,7 +359,7 @@ impl Context {
     }
 
     fn stage_parse_error(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
-        debug_assert_eq!(self.idx, 1);
+        debug_assert_eq!(self.idx, 5);
 
         let byte = match buf.get(self.idx) {
             Some(byte) => *byte,
@@ -347,7 +377,7 @@ impl Context {
         kind: ResponseType,
         read_len: usize,
     ) -> Result<Option<Instruction>, ParseError> {
-        debug_assert_eq!(self.idx, 1);
+        debug_assert_eq!(self.idx, 5);
 
         let bytes = match buf.get(self.idx..self.idx + read_len) {
             Some(bytes) => bytes,
@@ -420,8 +450,8 @@ impl Context {
     }
 
     fn stage_set(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
-        debug_assert!(self.idx > 2);
-        debug_assert!(buf.len() > 2);
+        debug_assert!(self.idx > 6);
+        debug_assert!(buf.len() > 6);
 
         let arg_size_end = self.idx + 2;
 
@@ -522,7 +552,8 @@ mod tests {
     fn test_resets_automatically() {
         let mut ctx = Context::new();
 
-        ctx.feed(&[ResponseType::Boolean as u8, 1]).unwrap();
+        ctx.feed(&[0, 0, 0, 2, ResponseType::Boolean as u8, 1])
+            .unwrap();
         assert_eq!(ctx.idx, 0);
         assert!(matches!(ctx.stage, Stage::Init));
     }
@@ -531,10 +562,10 @@ mod tests {
     fn test_boolean() {
         let mut ctx = Context::new();
 
-        let res = ctx.feed(&[ResponseType::Boolean as u8]);
+        let res = ctx.feed(&[0, 0, 0, 2, ResponseType::Boolean as u8]);
         assert!(matches!(res, Ok(Instruction::ReadBytes(1))));
 
-        let res = ctx.feed(&[ResponseType::Boolean as u8, 1]);
+        let res = ctx.feed(&[0, 0, 0, 2, ResponseType::Boolean as u8, 1]);
         assert!(matches!(
             res,
             Ok(Instruction::Concluded(Response::Value(Value::Boolean(
@@ -546,7 +577,7 @@ mod tests {
     #[test]
     fn test_bytes() {
         let mut ctx = Context::new();
-        let mut buf = [1u8, 0, 0, 0, 3].to_vec();
+        let mut buf = [0, 0, 0, 5, 1u8, 0, 0, 0, 3].to_vec();
         assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(3))));
         buf.push(2);
         buf.push(3);
@@ -560,7 +591,7 @@ mod tests {
     #[test]
     fn test_req_dispatch_error_unfinished() {
         let mut ctx = Context::new();
-        let buf = [ResponseType::DispatchError as u8];
+        let buf = [0, 0, 0, 0, 2, ResponseType::DispatchError as u8];
         assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(1))));
     }
 
@@ -568,6 +599,10 @@ mod tests {
     fn test_req_dispatch_error_argument_retrieval() {
         let mut ctx = Context::new();
         let buf = [
+            0,
+            0,
+            0,
+            2,
             ResponseType::DispatchError as u8,
             DispatchError::ArgumentRetrieval as u8,
         ];
@@ -583,6 +618,10 @@ mod tests {
     fn test_req_dispatch_error_key_retrieval() {
         let mut ctx = Context::new();
         let buf = [
+            0,
+            0,
+            0,
+            2,
             ResponseType::DispatchError as u8,
             DispatchError::KeyRetrieval as u8,
         ];
@@ -598,6 +637,10 @@ mod tests {
     fn test_req_dispatch_error_wrong_type() {
         let mut ctx = Context::new();
         let buf = [
+            0,
+            0,
+            0,
+            2,
             ResponseType::DispatchError as u8,
             DispatchError::WrongType as u8,
         ];
@@ -619,6 +662,10 @@ mod tests {
     fn test_list() {
         let mut ctx = Context::new();
         let buf = [
+            0,
+            0,
+            0,
+            17,
             ResponseType::List as u8,
             // list items
             0,
@@ -651,6 +698,10 @@ mod tests {
     fn test_map() {
         let mut ctx = Context::new();
         let buf = [
+            0,
+            0,
+            0,
+            15,
             ResponseType::Map as u8,
             // item count
             0,
@@ -681,7 +732,7 @@ mod tests {
     #[test]
     fn test_map_no_items() {
         let mut ctx = Context::new();
-        let buf = [ResponseType::Map as u8, 0, 0];
+        let buf = [0, 0, 0, 3, ResponseType::Map as u8, 0, 0];
         assert!(
             matches!(ctx.feed(&buf), Ok(Instruction::Concluded(Response::Value(Value::Map(map)))) if map.is_empty())
         );
@@ -691,6 +742,10 @@ mod tests {
     fn test_set() {
         let mut ctx = Context::new();
         let buf = [
+            0,
+            0,
+            0,
+            8,
             ResponseType::Set as u8,
             // set len
             0,
@@ -712,7 +767,7 @@ mod tests {
     fn test_string() {
         let mut ctx = Context::new();
 
-        let mut input = [ResponseType::String as u8, 0, 0, 0, 3, b'a'].to_vec();
+        let mut input = [0, 0, 0, 8, ResponseType::String as u8, 0, 0, 0, 3, b'a'].to_vec();
 
         let res = ctx.feed(input.as_slice());
         assert!(matches!(res, Ok(Instruction::ReadBytes(2))));
@@ -728,5 +783,31 @@ mod tests {
         );
 
         assert_eq!(ctx.idx, 0);
+    }
+
+    #[test]
+    fn test_completeness() {
+        let mut ctx = Context::new();
+        let mut buf = Vec::new();
+        assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(4))));
+        buf.push(0);
+        assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(3))));
+        buf.push(0);
+        assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(2))));
+        buf.push(0);
+        assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(1))));
+        buf.push(8);
+        buf.push(ResponseType::String as u8);
+        assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(7))));
+        buf.extend_from_slice(&[0, 0, 0]);
+        assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(4))));
+        buf.push(3);
+        assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(3))));
+        buf.push(b'a');
+        assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(2))));
+        buf.push(b'b');
+        assert!(matches!(ctx.feed(&buf), Ok(Instruction::ReadBytes(1))));
+        buf.push(b'c');
+        assert!(matches!(ctx.feed(&buf), Ok(Instruction::Concluded(_))));
     }
 }
