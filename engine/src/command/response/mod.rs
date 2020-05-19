@@ -136,6 +136,8 @@ impl From<RequestParseError> for Response {
 }
 
 pub fn write_bool(to: &mut Vec<u8>, value: bool) {
+    // kind + 1 byte bool
+    to.extend_from_slice(&2u32.to_be_bytes());
     to.push(ResponseType::Boolean as u8);
     to.push(if value { 1 } else { 0 });
 }
@@ -143,32 +145,55 @@ pub fn write_bool(to: &mut Vec<u8>, value: bool) {
 pub fn write_bytes(to: &mut Vec<u8>, value: &[u8]) {
     let len = value.len() as u32;
 
+    // kind + 4 byte bytestream len + value len
+    let response_len = 1 + 4 + len;
+    to.extend_from_slice(&response_len.to_be_bytes());
     to.push(ResponseType::Bytes as u8);
     to.extend_from_slice(&len.to_be_bytes());
     to.extend_from_slice(value);
 }
 
 pub fn write_dispatch_error(to: &mut Vec<u8>, value: DispatchError) {
+    // kind + 1 byte error
+    to.extend_from_slice(&2u32.to_be_bytes());
     to.push(ResponseType::DispatchError as u8);
     to.push(value as u8);
 }
 
 pub fn write_parse_error(to: &mut Vec<u8>, value: RequestParseError) {
+    // kind + 1 byte error
+    to.extend_from_slice(&2u32.to_be_bytes());
     to.push(ResponseType::ParseError as u8);
     to.push(value as u8);
 }
 
 pub fn write_float(to: &mut Vec<u8>, value: f64) {
+    // kind + 8 byte int
+    to.extend_from_slice(&9u32.to_be_bytes());
     to.push(ResponseType::Float as u8);
     to.extend_from_slice(&value.to_be_bytes());
 }
 
 pub fn write_int(to: &mut Vec<u8>, value: i64) {
+    // kind + 8 byte int
+    to.extend_from_slice(&9u32.to_be_bytes());
     to.push(ResponseType::Integer as u8);
     to.extend_from_slice(&value.to_be_bytes());
 }
 
 pub fn write_list(to: &mut Vec<u8>, value: &[Vec<u8>]) {
+    {
+        // kind + 2 byte list len
+        let mut response_len: u32 = 1 + 2;
+
+        for item in value {
+            // 4 byte item len + item len
+            response_len += 4 + item.len() as u32;
+        }
+
+        to.extend_from_slice(&response_len.to_be_bytes());
+    }
+
     to.push(ResponseType::List as u8);
 
     // The length of the list.
@@ -184,6 +209,20 @@ pub fn write_list(to: &mut Vec<u8>, value: &[Vec<u8>]) {
 }
 
 pub fn write_map(to: &mut Vec<u8>, value: &DashMap<Vec<u8>, Vec<u8>>) {
+    {
+        // kind + 2 byte map size
+        let mut response_len: u32 = 1 + 2;
+
+        for item in value.iter() {
+            let (key, value) = item.pair();
+
+            // key len + key bytes len + value len + value bytes len
+            response_len += 1 + key.len() as u32 + 4 + value.len() as u32;
+        }
+
+        to.extend_from_slice(&response_len.to_be_bytes());
+    }
+
     to.push(ResponseType::Map as u8);
 
     // Maps can only contain up to u16 items.
@@ -203,6 +242,18 @@ pub fn write_map(to: &mut Vec<u8>, value: &DashMap<Vec<u8>, Vec<u8>>) {
 }
 
 pub fn write_set(to: &mut Vec<u8>, value: &DashSet<Vec<u8>>) {
+    {
+        // kind + 2 byte set size
+        let mut response_len: u32 = 1 + 2;
+
+        for item in value.iter() {
+            // item len + item bytes len
+            response_len += 2 + item.len() as u32;
+        }
+
+        to.extend_from_slice(&response_len.to_be_bytes());
+    }
+
     to.push(ResponseType::Set as u8);
 
     // Sets can only contain up to u16 items.
@@ -219,6 +270,9 @@ pub fn write_set(to: &mut Vec<u8>, value: &DashSet<Vec<u8>>) {
 pub fn write_str(to: &mut Vec<u8>, value: &str) {
     let len = value.len() as u32;
 
+    // kind + string len + string bytes len
+    let response_len = 1 + 4 + len;
+    to.extend_from_slice(&response_len.to_be_bytes());
     to.push(ResponseType::String as u8);
 
     to.extend_from_slice(&len.to_be_bytes());
@@ -251,11 +305,11 @@ mod tests {
     fn test_bool() {
         assert_eq!(
             Response::from(false).as_bytes(),
-            [ResponseType::Boolean as u8, 0]
+            [0, 0, 0, 2, ResponseType::Boolean as u8, 0]
         );
         assert_eq!(
             Response::from(true).as_bytes(),
-            [ResponseType::Boolean as u8, 1]
+            [0, 0, 0, 2, ResponseType::Boolean as u8, 1]
         );
     }
 
@@ -264,6 +318,10 @@ mod tests {
         assert_eq!(
             Response::from(b"hopdb".to_vec()).as_bytes(),
             [
+                0,
+                0,
+                0,
+                10,
                 ResponseType::Bytes as u8,
                 // length, max u32
                 0,
@@ -284,6 +342,10 @@ mod tests {
         assert_eq!(
             Response::from(b"".to_vec()).as_bytes(),
             [
+                0,
+                0,
+                0,
+                5,
                 ResponseType::Bytes as u8,
                 // length, max u32
                 0,
@@ -299,6 +361,10 @@ mod tests {
         assert_eq!(
             Response::from(7.4).as_bytes(),
             [
+                0,
+                0,
+                0,
+                9,
                 ResponseType::Float as u8,
                 64,
                 29,
@@ -316,11 +382,29 @@ mod tests {
     fn test_int() {
         assert_eq!(
             Response::from(7).as_bytes(),
-            [ResponseType::Integer as u8, 0, 0, 0, 0, 0, 0, 0, 7],
+            [
+                0,
+                0,
+                0,
+                9,
+                ResponseType::Integer as u8,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                7
+            ],
         );
         assert_eq!(
             Response::from(-7).as_bytes(),
             [
+                0,
+                0,
+                0,
+                9,
                 ResponseType::Integer as u8,
                 255,
                 255,
@@ -334,7 +418,21 @@ mod tests {
         );
         assert_eq!(
             Response::from(68125).as_bytes(),
-            [ResponseType::Integer as u8, 0, 0, 0, 0, 0, 1, 10, 29],
+            [
+                0,
+                0,
+                0,
+                9,
+                ResponseType::Integer as u8,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                10,
+                29
+            ],
         );
     }
 
@@ -347,6 +445,10 @@ mod tests {
         assert_eq!(
             Response::from(list).as_bytes(),
             [
+                0,
+                0,
+                0,
+                16,
                 ResponseType::List as u8,
                 // length of the list
                 0,
@@ -379,6 +481,10 @@ mod tests {
         assert_eq!(
             Response::from(v).as_bytes(),
             [
+                0,
+                0,
+                0,
+                3,
                 ResponseType::List as u8,
                 // length of the list
                 0,
@@ -397,6 +503,10 @@ mod tests {
         // these.
         let possible_values = [
             [
+                0,
+                0,
+                0,
+                20,
                 ResponseType::Map as u8,
                 // length of map (there can be up to u16 items)
                 0,
@@ -428,6 +538,10 @@ mod tests {
                 b'o',
             ],
             [
+                0,
+                0,
+                0,
+                20,
                 ResponseType::Map as u8,
                 // length of map (there can be up to u16 items)
                 0,
@@ -469,7 +583,7 @@ mod tests {
     fn test_map_empty() {
         assert_eq!(
             Response::from(DashMap::new()).as_bytes(),
-            [ResponseType::Map as u8, 0, 0]
+            [0, 0, 0, 3, ResponseType::Map as u8, 0, 0]
         );
     }
 
@@ -483,6 +597,10 @@ mod tests {
         // these.
         let possible_values = [
             [
+                0,
+                0,
+                0,
+                12,
                 ResponseType::Set as u8,
                 // length of set (there can be up to u16 items)
                 0,
@@ -502,6 +620,10 @@ mod tests {
                 b'b',
             ],
             [
+                0,
+                0,
+                0,
+                12,
                 ResponseType::Set as u8,
                 // length of set (there can be up to u16 items)
                 0,
@@ -531,7 +653,7 @@ mod tests {
     fn test_set_empty() {
         assert_eq!(
             Response::from(DashSet::new()).as_bytes(),
-            [ResponseType::Set as u8, 0, 0]
+            [0, 0, 0, 3, ResponseType::Set as u8, 0, 0]
         );
     }
 
@@ -540,6 +662,10 @@ mod tests {
         assert_eq!(
             Response::from("foo bar baz".to_owned()).as_bytes(),
             [
+                0,
+                0,
+                0,
+                16,
                 ResponseType::String as u8,
                 // 4 bytes string length
                 0,
@@ -566,7 +692,7 @@ mod tests {
     fn test_str_empty() {
         assert_eq!(
             Response::from(String::new()).as_bytes(),
-            [ResponseType::String as u8, 0, 0, 0, 0]
+            [0, 0, 0, 5, ResponseType::String as u8, 0, 0, 0, 0]
         );
     }
 
@@ -575,7 +701,21 @@ mod tests {
         let resp = Response::Value(Value::Integer(3));
         assert_eq!(
             resp.as_bytes(),
-            [ResponseType::Integer as u8, 0, 0, 0, 0, 0, 0, 0, 3,]
+            [
+                0,
+                0,
+                0,
+                9,
+                ResponseType::Integer as u8,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+            ]
         );
     }
 
@@ -584,6 +724,23 @@ mod tests {
         let resp = Response::Value(Value::Integer(3));
         let mut buf = Vec::new();
         resp.copy_to(&mut buf);
-        assert_eq!(buf, [ResponseType::Integer as u8, 0, 0, 0, 0, 0, 0, 0, 3,]);
+        assert_eq!(
+            buf,
+            [
+                0,
+                0,
+                0,
+                9,
+                ResponseType::Integer as u8,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+            ]
+        );
     }
 }
