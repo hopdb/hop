@@ -111,11 +111,12 @@ impl Context {
             };
 
             match instruction {
-                Some(instruction) => {
+                Some(Instruction::Concluded(response)) => {
                     self.reset();
 
-                    return Ok(instruction);
+                    return Ok(Instruction::Concluded(response));
                 }
+                Some(Instruction::ReadBytes(amount)) => return Ok(Instruction::ReadBytes(amount)),
                 None => continue,
             }
         }
@@ -235,7 +236,7 @@ impl Context {
         let arg = match buf.get(arg_size_end..arg_value_end) {
             Some(arg) => arg,
             None => {
-                let remaining = remaining_bytes(arg_size_end, buf.len(), arg_value_end);
+                let remaining = arg_value_end - buf.len();
 
                 return Ok(Some(Instruction::ReadBytes(remaining)));
             }
