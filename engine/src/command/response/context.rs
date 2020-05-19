@@ -58,6 +58,7 @@ enum Stage {
     Float,
     Integer,
     List {
+        args: Vec<Vec<u8>>,
         len: u16,
     },
     Map {
@@ -100,13 +101,13 @@ impl Context {
                 Stage::Bytes { len } => self.stage_bytes(buf, len)?,
                 Stage::Float => self.stage_float(buf)?,
                 Stage::Integer => self.stage_integer(buf)?,
+                Stage::List { .. } => self.stage_list(buf)?,
                 Stage::Map { .. } => self.stage_map(buf)?,
                 Stage::Set { .. } => self.stage_set(buf)?,
                 Stage::String { len } => self.stage_string(buf, len)?,
                 Stage::TypeInit { kind, read_len } => self.stage_type_init(buf, kind, read_len)?,
                 Stage::DispatchError => self.stage_dispatch_error(buf)?,
                 Stage::ParseError => self.stage_parse_error(buf)?,
-                ref other => unreachable!("{:?}", other),
             };
 
             match instruction {
@@ -214,6 +215,51 @@ impl Context {
         Ok(Some(Instruction::Concluded(Response::from(int))))
     }
 
+    fn stage_list(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
+        debug_assert!(self.idx > 2);
+        debug_assert!(buf.len() > 2);
+
+        let arg_size_end = self.idx + 4;
+
+        let arg_len = match buf.get(self.idx..arg_size_end) {
+            Some(arg_len) => u32::from_be_bytes(arg_len.try_into().unwrap()),
+            None => {
+                let remaining = remaining_bytes(self.idx, buf.len(), 4);
+
+                return Ok(Some(Instruction::ReadBytes(remaining)));
+            }
+        };
+
+        let arg_value_end = arg_size_end + arg_len as usize;
+
+        let arg = match buf.get(arg_size_end..arg_value_end) {
+            Some(arg) => arg,
+            None => {
+                let remaining = remaining_bytes(arg_size_end, buf.len(), arg_value_end);
+
+                return Ok(Some(Instruction::ReadBytes(remaining)));
+            }
+        };
+
+        match self.stage {
+            Stage::List { ref mut args, len } => {
+                args.push(arg.to_vec());
+
+                if args.len() < len as usize {
+                    self.idx = arg_value_end;
+
+                    return Ok(None);
+                }
+            }
+            _ => unreachable!(),
+        };
+
+        match mem::take(&mut self.stage) {
+            Stage::List { args, .. } => Ok(Some(Instruction::Concluded(Response::from(args)))),
+            _ => unreachable!(),
+        }
+    }
+
     fn stage_map(&mut self, buf: &[u8]) -> Result<Option<Instruction>, ParseError> {
         debug_assert!(self.idx > 2);
         debug_assert!(buf.len() > 2);
@@ -318,7 +364,10 @@ impl Context {
             ResponseType::List => {
                 let len = u16::from_be_bytes(bytes.try_into().unwrap());
 
-                Stage::List { len }
+                Stage::List {
+                    args: Vec::new(),
+                    len,
+                }
             }
             ResponseType::Map => {
                 let len = u16::from_be_bytes(bytes.try_into().unwrap());
@@ -563,6 +612,38 @@ mod tests {
     fn test_remaining_bytes() {
         assert_eq!(super::remaining_bytes(5, 5, 4), 4);
         assert_eq!(super::remaining_bytes(5, 7, 4), 2);
+    }
+
+    #[test]
+    fn test_list() {
+        let mut ctx = Context::new();
+        let buf = [
+            ResponseType::List as u8,
+            // list items
+            0,
+            2,
+            // item 1 len
+            0,
+            0,
+            0,
+            3,
+            // arg 1 value
+            b'f',
+            b'o',
+            b'o',
+            // arg 2 len
+            0,
+            0,
+            0,
+            3,
+            b'b',
+            b'a',
+            b'r',
+        ]
+        .to_vec();
+        assert!(matches!(
+            ctx.feed(&buf),
+            Ok(Instruction::Concluded(Response::Value(Value::List(list)))) if list == &[b"foo", b"bar"]));
     }
 
     #[test]
