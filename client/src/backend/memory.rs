@@ -98,17 +98,23 @@ impl Backend for MemoryBackend {
         Ok(bytes)
     }
 
-    async fn echo(&self, content: &[u8]) -> Result<Vec<u8>, Self::Error> {
+    async fn echo(&self, content: &[u8]) -> Result<Vec<Vec<u8>>, Self::Error> {
         let req = Request::new(CommandId::Echo, Some(vec![content.to_vec()]));
         let mut resp = Vec::new();
 
         self.hop.dispatch(&req, &mut resp)?;
 
-        if !resp.is_empty() {
-            resp.remove(resp.len() - 1);
-        }
+        let mut ctx = Context::new();
 
-        Ok(resp)
+        let resp = match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(value) => value,
+            Instruction::ReadBytes(_) => unreachable!(),
+        };
+
+        match resp {
+            Response::Value(Value::List(args)) => Ok(args),
+            _ => panic!(),
+        }
     }
 
     async fn exists<T: IntoIterator<Item = U> + Send, U: AsRef<[u8]> + Send>(
@@ -198,5 +204,15 @@ impl Backend for MemoryBackend {
         };
 
         Ok(StatsData::new(stats.into_iter().collect()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Backend, MemoryBackend};
+    #[tokio::test]
+    async fn test_echo() {
+        let backend = MemoryBackend::new();
+        assert!(matches!(backend.echo(b"test").await, Ok(vec) if vec == vec![b"test"]));
     }
 }

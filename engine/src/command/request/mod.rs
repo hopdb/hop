@@ -4,8 +4,11 @@ pub use context::{Context, ParseError};
 
 use super::CommandId;
 use crate::state::KeyType;
-use alloc::vec::Vec;
-use core::slice::SliceIndex;
+use alloc::vec::{Drain, Vec};
+use core::{
+    ops::{Bound, RangeBounds},
+    slice::SliceIndex,
+};
 
 #[derive(Debug)]
 pub struct Request {
@@ -31,35 +34,34 @@ impl Request {
         }
     }
 
-    pub fn args(&self) -> Option<&[Vec<u8>]> {
-        self.args.as_deref()
+    pub fn args<I: SliceIndex<[Vec<u8>]>>(&self, index: I) -> Option<&I::Output> {
+        self.args.as_ref()?.get(index)
     }
 
-    pub fn arg<I: SliceIndex<[Vec<u8>]>>(
-        &self,
-        index: I,
-    ) -> Option<&<I as SliceIndex<[Vec<u8>]>>::Output> {
-        let args = self.args.as_ref()?;
-
-        let refs = args.get(index)?;
-
-        Some(refs)
+    pub fn arg(&self, idx: usize) -> Option<&[u8]> {
+        self.args.as_ref()?.get(idx).map(AsRef::as_ref)
     }
 
-    pub fn flatten_args(&self) -> Option<Vec<u8>> {
-        let start = if self.kind.has_key() { 1 } else { 0 };
+    pub fn arg_count(&self) -> usize {
+        self.args.as_ref().map(|args| args.len()).unwrap_or(0)
+    }
 
-        Some(
-            self.args
-                .as_ref()?
-                .get(start..)?
-                .iter()
-                .fold(Vec::new(), |mut acc, arg| {
-                    acc.extend_from_slice(arg);
+    pub fn take_args(&mut self, range: impl RangeBounds<usize>) -> Option<Drain<'_, Vec<u8>>> {
+        let start = match range.start_bound() {
+            Bound::Excluded(amt) => *amt + 1,
+            Bound::Included(amt) => *amt,
+            Bound::Unbounded => 0,
+        };
+        let end = match range.end_bound() {
+            Bound::Excluded(amt) => *amt,
+            Bound::Included(amt) => *amt + 1,
+            Bound::Unbounded => match self.args.as_ref() {
+                Some(args) => args.len(),
+                None => return None,
+            },
+        };
 
-                    acc
-                }),
-        )
+        Some(self.args.as_mut()?.drain(start..end))
     }
 
     pub fn key(&self) -> Option<&[u8]> {

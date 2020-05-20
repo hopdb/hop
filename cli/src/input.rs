@@ -83,7 +83,7 @@ mod tests {
         let req = super::process_command(&mut reader, &mut buf).await?;
 
         assert_eq!(req.kind(), CommandId::Echo);
-        assert_eq!(req.arg(0), Some(&b"abc".to_vec()));
+        assert_eq!(req.arg(0), Some("abc".as_bytes()));
 
         Ok(())
     }
@@ -96,7 +96,7 @@ mod tests {
         let req = super::process_command(&mut reader, &mut buf).await?;
 
         assert_eq!(req.kind(), CommandId::Echo);
-        assert!(req.args().is_none());
+        assert!(req.args(..).is_none());
 
         Ok(())
     }

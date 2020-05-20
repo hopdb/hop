@@ -10,7 +10,7 @@ use std::{
 pub struct Echo<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> {
     backend: Option<Arc<B>>,
     content: Option<K>,
-    fut: MaybeInFlightFuture<'a, Vec<u8>, B::Error>,
+    fut: MaybeInFlightFuture<'a, Vec<Vec<u8>>, B::Error>,
 }
 
 impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> Echo<'a, B, K> {
@@ -24,7 +24,7 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> Echo<'a, B, K> {
 }
 
 impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future for Echo<'a, B, K> {
-    type Output = Result<Vec<u8>, B::Error>;
+    type Output = Result<Vec<Vec<u8>>, B::Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if self.fut.is_none() {

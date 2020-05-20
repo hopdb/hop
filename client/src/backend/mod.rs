@@ -15,7 +15,7 @@ pub trait Backend {
 
     async fn delete(&self, key: &[u8]) -> Result<Vec<u8>, Self::Error>;
 
-    async fn echo(&self, content: &[u8]) -> Result<Vec<u8>, Self::Error>;
+    async fn echo(&self, content: &[u8]) -> Result<Vec<Vec<u8>>, Self::Error>;
 
     async fn exists<T: IntoIterator<Item = U> + Send, U: AsRef<[u8]> + Send>(
         &self,

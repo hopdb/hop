@@ -159,7 +159,7 @@ impl Backend for ServerBackend {
         }
     }
 
-    async fn echo(&self, content: &[u8]) -> Result<Vec<u8>> {
+    async fn echo(&self, content: &[u8]) -> Result<Vec<Vec<u8>>> {
         let mut args = Vec::with_capacity(1);
         args.push(content.to_vec());
         let req = Request::new(CommandId::Echo, Some(args));
@@ -167,7 +167,7 @@ impl Backend for ServerBackend {
         let value = self.send_and_wait(&req.into_bytes()).await?;
 
         match value {
-            Value::Bytes(bytes) => Ok(bytes),
+            Value::List(args) => Ok(args),
             _ => Err(Error::BadResponse),
         }
     }
