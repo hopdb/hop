@@ -18,7 +18,7 @@ fn bench_run(b: &mut Bencher) {
     let mut timer = Timer::new();
     b.iter(|| {
         timer.start();
-        timer.end();
+        timer.stop();
         timer.reset();
     });
 }
