@@ -15,7 +15,7 @@ pub struct Append;
 impl Dispatch for Append {
     fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = req.arg(0).ok_or(DispatchError::KeyRetrieval)?;
-        let args = req.arg(1..).ok_or(DispatchError::ArgumentRetrieval)?;
+        let args = req.args(1..).ok_or(DispatchError::ArgumentRetrieval)?;
 
         match req.key_type() {
             Some(KeyType::Bytes) | None => {

@@ -10,7 +10,7 @@ impl Dispatch for Exists {
             return Err(DispatchError::KeyTypeUnexpected);
         }
 
-        let args = req.args().ok_or(DispatchError::ArgumentRetrieval)?;
+        let args = req.args(..).ok_or(DispatchError::ArgumentRetrieval)?;
         let state = hop.state();
 
         let all = args.iter().all(|key| state.contains_key(key));

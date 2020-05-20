@@ -31,7 +31,7 @@ async fn run(
     loop {
         writer.write_all(b"> ").await?;
         writer.flush().await?;
-        let req = input::process_command(&mut reader, &mut input).await?;
+        let mut req = input::process_command(&mut reader, &mut input).await?;
         input.clear();
 
         match req.kind() {
@@ -90,16 +90,21 @@ async fn run(
                 writer.write_all(&[b'\n']).await?;
             }
             CommandId::Echo => {
-                if let Some(args) = req.flatten_args() {
-                    let v = client.echo(args).await?;
+                if let Some(args) = req.take_args(..) {
+                    let arg = args.collect::<Vec<_>>().join(b" ".as_ref());
 
-                    writer.write_all(v.as_slice()).await?;
-                } else {
-                    writer.write_all(&[b'\n']).await?;
+                    let v = client.echo(arg).await?;
+
+                    for arg in v {
+                        writer.write_all(arg.as_slice()).await?;
+                        writer.write(b" ").await?;
+                    }
                 }
+
+                writer.write_all(&[b'\n']).await?;
             }
             CommandId::Exists => {
-                let args = match req.args() {
+                let args = match req.take_args(..) {
                     Some(args) => args,
                     None => {
                         writer.write_all(b"At least one key is required.\n").await?;
