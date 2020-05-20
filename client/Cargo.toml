@@ -12,9 +12,11 @@ repository = "https://github.com/hopdb/hop.git"
 version = "0.1.0"
 
 [dependencies]
-tokio = { default-features = false, features = ["io-util", "net", "sync"], version = "^0.2.20" }
 async-trait = { default-features = false, version = "^0.1.30" }
 hop-engine = { default-features = false, path = "../engine" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { default-features = false, features = ["io-util", "net", "sync"], version = "^0.2.20" }
 
 [dev-dependencies]
 tokio = { default-features = false, features = ["io-util", "macros", "net", "sync"], version = "^0.2.20" }
