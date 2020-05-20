@@ -6,10 +6,9 @@ pub mod backend;
 pub mod model;
 pub mod request;
 
-use backend::{Backend, MemoryBackend, ServerBackend};
+use backend::{Backend, MemoryBackend};
 use request::*;
 use std::sync::Arc;
-use tokio::net::ToSocketAddrs;
 
 /// A client for interfacing over Hop instances.
 pub struct Client<B: Backend> {
@@ -22,7 +21,8 @@ impl<B: Backend> Client<B> {
     }
 }
 
-impl Client<ServerBackend> {
+#[cfg(not(target_arch = "wasm32"))]
+impl Client<backend::ServerBackend> {
     /// Connect to a server instance of Hop by address.
     ///
     /// # Examples
@@ -37,9 +37,9 @@ impl Client<ServerBackend> {
     /// println!("Increment value: {}", client.increment("foo").await?);
     /// # Ok(()) }
     pub async fn connect(
-        addrs: impl ToSocketAddrs,
-    ) -> Result<Self, <ServerBackend as Backend>::Error> {
-        let backend = ServerBackend::connect(addrs).await.unwrap();
+        addrs: impl tokio::net::ToSocketAddrs,
+    ) -> Result<Self, <backend::ServerBackend as Backend>::Error> {
+        let backend = backend::ServerBackend::connect(addrs).await.unwrap();
 
         Ok(Self {
             backend: Arc::new(backend),

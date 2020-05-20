@@ -1,7 +1,12 @@
 pub mod memory;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 
-pub use self::{memory::MemoryBackend, server::ServerBackend};
+pub use self::memory::MemoryBackend;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use self::server::ServerBackend;
 
 use crate::model::StatsData;
 use async_trait::async_trait;
