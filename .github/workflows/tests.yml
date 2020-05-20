@@ -99,7 +99,7 @@ jobs:
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
-          command: test
+          command: check
           args: --target wasm32-unknown-unknown --package hop
   clippy_check:
     runs-on: ubuntu-latest
