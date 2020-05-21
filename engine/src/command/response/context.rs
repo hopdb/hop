@@ -623,12 +623,12 @@ mod tests {
             0,
             2,
             ResponseType::DispatchError as u8,
-            DispatchError::KeyRetrieval as u8,
+            DispatchError::KeyUnspecified as u8,
         ];
         assert!(matches!(
             ctx.feed(&buf),
             Ok(Instruction::Concluded(Response::DispatchError(
-                DispatchError::KeyRetrieval
+                DispatchError::KeyUnspecified
             )))
         ));
     }

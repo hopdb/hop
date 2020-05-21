@@ -96,11 +96,16 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - name: Run cargo test
+      - name: Run cargo check on hop
         uses: actions-rs/cargo@v1
         with:
           command: check
           args: --target wasm32-unknown-unknown --package hop
+      - name: Run cargo check on hop-cli-lib
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --target wasm32-unknown-unknown --package hop-cli-lib
   clippy_check:
     runs-on: ubuntu-latest
     steps:

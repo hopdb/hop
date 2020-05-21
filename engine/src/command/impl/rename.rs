@@ -10,19 +10,19 @@ impl Dispatch for Rename {
             return Err(DispatchError::KeyTypeUnexpected);
         }
 
-        let key = req.key().ok_or(DispatchError::KeyRetrieval)?;
+        let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
         let arg = req.arg(1).ok_or(DispatchError::ArgumentRetrieval)?;
         let state = hop.state();
 
         if !state.contains_key(key) {
-            return Err(DispatchError::KeyRetrieval);
+            return Err(DispatchError::KeyNonexistent);
         }
 
         if state.contains_key(arg) {
             return Err(DispatchError::PreconditionFailed);
         }
 
-        let (_, v) = state.remove(key).ok_or(DispatchError::KeyRetrieval)?;
+        let (_, v) = state.remove(key).ok_or(DispatchError::KeyNonexistent)?;
         state.insert(arg.to_vec(), v);
 
         response::write_bytes(resp, arg);
@@ -73,7 +73,7 @@ mod tests {
 
         assert!(matches!(
             Rename::dispatch(&hop, &req, &mut resp),
-            Err(DispatchError::KeyRetrieval)
+            Err(DispatchError::KeyNonexistent)
         ));
     }
 
@@ -112,7 +112,7 @@ mod tests {
 
         assert!(matches!(
             Rename::dispatch(&hop, &req, &mut resp),
-            Err(DispatchError::KeyRetrieval)
+            Err(DispatchError::KeyUnspecified)
         ));
     }
 }

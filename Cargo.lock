@@ -178,8 +178,16 @@ name = "hop-cli"
 version = "0.1.0"
 dependencies = [
  "hop 0.1.0",
- "hop-engine 0.1.0",
+ "hop-cli-lib 0.1.0",
  "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "hop-cli-lib"
+version = "0.1.0"
+dependencies = [
+ "hop 0.1.0",
+ "hop-engine 0.1.0",
 ]
 
 [[package]]
