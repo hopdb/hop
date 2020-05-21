@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "client",
-    "cli",
+    "cli/bin",
+    "cli/lib",
     "engine",
     "lib/metrics",
     "lib/timer",

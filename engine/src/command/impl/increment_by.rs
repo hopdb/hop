@@ -23,7 +23,7 @@ impl IncrementBy {
                 let mut int = hop
                     .state()
                     .typed_key::<Integer>(key)
-                    .ok_or(DispatchError::KeyRetrieval)?;
+                    .ok_or(DispatchError::KeyUnspecified)?;
 
                 *int += amount;
 
@@ -33,7 +33,7 @@ impl IncrementBy {
                 let mut float = hop
                     .state()
                     .typed_key::<Float>(key)
-                    .ok_or(DispatchError::KeyRetrieval)?;
+                    .ok_or(DispatchError::KeyUnspecified)?;
 
                 *float += amount as f64;
 
@@ -48,7 +48,7 @@ impl IncrementBy {
 
 impl Dispatch for IncrementBy {
     fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
-        let key = req.key().ok_or(DispatchError::KeyRetrieval)?;
+        let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
 
         Self::increment(hop, key, req.key_type(), 1, resp)
     }

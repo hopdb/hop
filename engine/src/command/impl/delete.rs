@@ -10,7 +10,7 @@ impl Dispatch for Delete {
             return Err(DispatchError::KeyTypeUnexpected);
         }
 
-        let key = req.key().ok_or(DispatchError::KeyRetrieval)?;
+        let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
         let state = hop.state();
 
         let (k, _) = state.remove(key).ok_or(DispatchError::PreconditionFailed)?;
@@ -90,7 +90,7 @@ mod tests {
         let hop = Hop::new();
         assert!(matches!(
             Delete::dispatch(&hop, &req, &mut resp),
-            Err(DispatchError::KeyRetrieval)
+            Err(DispatchError::KeyUnspecified)
         ));
     }
 }

@@ -47,7 +47,7 @@ impl Length {
 
 impl Dispatch for Length {
     fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
-        let key = req.key().ok_or(DispatchError::KeyRetrieval)?;
+        let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
 
         match req.key_type() {
             Some(KeyType::Bytes) => Self::bytes(hop, key, resp),
@@ -87,7 +87,7 @@ mod tests {
 
         assert_eq!(
             Length::dispatch(&hop, &req, &mut resp).unwrap_err(),
-            DispatchError::KeyRetrieval
+            DispatchError::KeyUnspecified
         );
     }
 
