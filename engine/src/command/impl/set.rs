@@ -17,7 +17,7 @@ impl Set {
         let mut boolean = hop
             .state()
             .typed_key::<Boolean>(key)
-            .ok_or(DispatchError::WrongType)?;
+            .ok_or(DispatchError::KeyTypeDifferent)?;
 
         *boolean = arg;
 
@@ -34,7 +34,7 @@ impl Set {
         let mut bytes = hop
             .state()
             .typed_key::<Bytes>(key)
-            .ok_or(DispatchError::WrongType)?;
+            .ok_or(DispatchError::KeyTypeDifferent)?;
 
         *bytes = arg.to_vec();
 
@@ -49,7 +49,7 @@ impl Set {
         let mut float = hop
             .state()
             .typed_key::<Float>(key)
-            .ok_or(DispatchError::WrongType)?;
+            .ok_or(DispatchError::KeyTypeDifferent)?;
 
         *float = arg;
 
@@ -64,7 +64,7 @@ impl Set {
         let mut int = hop
             .state()
             .typed_key::<Integer>(key)
-            .ok_or(DispatchError::WrongType)?;
+            .ok_or(DispatchError::KeyTypeDifferent)?;
 
         *int = arg;
 
@@ -79,7 +79,7 @@ impl Set {
         let mut list = hop
             .state()
             .typed_key::<List>(key)
-            .ok_or(DispatchError::WrongType)?;
+            .ok_or(DispatchError::KeyTypeDifferent)?;
 
         *list = args.to_vec();
 
@@ -94,7 +94,7 @@ impl Set {
         let mut map = hop
             .state()
             .typed_key::<Map>(key)
-            .ok_or(DispatchError::WrongType)?;
+            .ok_or(DispatchError::KeyTypeDifferent)?;
 
         response::write_map(resp, &args);
 
@@ -109,7 +109,7 @@ impl Set {
         let mut set = hop
             .state()
             .typed_key::<SetObject>(key)
-            .ok_or(DispatchError::WrongType)?;
+            .ok_or(DispatchError::KeyTypeDifferent)?;
 
         response::write_set(resp, &args);
 
@@ -126,7 +126,7 @@ impl Set {
         let mut string = hop
             .state()
             .typed_key::<Str>(key)
-            .ok_or(DispatchError::WrongType)?;
+            .ok_or(DispatchError::KeyTypeDifferent)?;
 
         *string = arg.to_owned();
 

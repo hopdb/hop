@@ -39,7 +39,7 @@ impl IncrementBy {
 
                 response::write_float(resp, *float)
             }
-            Some(_) => return Err(DispatchError::WrongType),
+            Some(_) => return Err(DispatchError::KeyTypeInvalid),
         }
 
         Ok(())

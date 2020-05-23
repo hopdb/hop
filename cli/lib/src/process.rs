@@ -76,6 +76,7 @@ enum InnerProcessError<B: Backend> {
     KeyRequiredMinimum,
     KeySourceRequired,
     KeyTypeDifferent,
+    KeyTypeInvalid,
     KeyTypeRequired,
     KeyTypeUnexpected,
     KeyUnspecified,
@@ -123,6 +124,9 @@ where
         Err(InnerProcessError::KeyTypeDifferent) => {
             "The type of the key is different than specified by the command.".into()
         }
+        Err(InnerProcessError::KeyTypeInvalid) => {
+            "A key type was provided that isn't supported by the command.".into()
+        }
         Err(InnerProcessError::KeyTypeRequired) => {
             "A key type was required but one was not specified.".into()
         }
@@ -157,11 +161,12 @@ where
                 MemoryError::RunningCommand { source } => match source {
                     DispatchError::ArgumentRetrieval => InnerProcessError::TooFewArguments,
                     DispatchError::KeyNonexistent => InnerProcessError::KeyNonexistent,
+                    DispatchError::KeyTypeDifferent => InnerProcessError::KeyTypeDifferent,
+                    DispatchError::KeyTypeInvalid => InnerProcessError::KeyTypeInvalid,
                     DispatchError::KeyTypeRequired => InnerProcessError::KeyTypeRequired,
                     DispatchError::KeyTypeUnexpected => InnerProcessError::KeyTypeUnexpected,
                     DispatchError::KeyUnspecified => InnerProcessError::KeyUnspecified,
                     DispatchError::PreconditionFailed => InnerProcessError::PreconditionFailed,
-                    DispatchError::WrongType => InnerProcessError::KeyTypeDifferent,
                 },
             }
         }

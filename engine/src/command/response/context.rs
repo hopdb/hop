@@ -634,7 +634,7 @@ mod tests {
     }
 
     #[test]
-    fn test_req_dispatch_error_wrong_type() {
+    fn test_req_dispatch_error_key_type_different() {
         let mut ctx = Context::new();
         let buf = [
             0,
@@ -642,12 +642,12 @@ mod tests {
             0,
             2,
             ResponseType::DispatchError as u8,
-            DispatchError::WrongType as u8,
+            DispatchError::KeyTypeDifferent as u8,
         ];
         assert!(matches!(
             ctx.feed(&buf),
             Ok(Instruction::Concluded(Response::DispatchError(
-                DispatchError::WrongType
+                DispatchError::KeyTypeDifferent
             )))
         ));
     }

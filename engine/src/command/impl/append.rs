@@ -22,7 +22,7 @@ impl Dispatch for Append {
                 let mut bytes = hop
                     .state()
                     .typed_key::<Bytes>(key)
-                    .ok_or(DispatchError::WrongType)?;
+                    .ok_or(DispatchError::KeyTypeDifferent)?;
 
                 for arg in args {
                     bytes.extend_from_slice(arg);
@@ -34,7 +34,7 @@ impl Dispatch for Append {
                 let mut list = hop
                     .state()
                     .typed_key::<List>(key)
-                    .ok_or(DispatchError::WrongType)?;
+                    .ok_or(DispatchError::KeyTypeDifferent)?;
 
                 list.append(&mut args.to_owned());
 
@@ -44,7 +44,7 @@ impl Dispatch for Append {
                 let mut string = hop
                     .state()
                     .typed_key::<Str>(key)
-                    .ok_or(DispatchError::WrongType)?;
+                    .ok_or(DispatchError::KeyTypeDifferent)?;
 
                 for arg in args {
                     if let Ok(arg) = str::from_utf8(arg) {
@@ -54,7 +54,7 @@ impl Dispatch for Append {
 
                 response::write_str(resp, &string);
             }
-            Some(_) => return Err(DispatchError::WrongType),
+            Some(_) => return Err(DispatchError::KeyTypeDifferent),
         }
 
         Ok(())
