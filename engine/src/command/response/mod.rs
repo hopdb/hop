@@ -181,31 +181,49 @@ pub fn write_int(to: &mut Vec<u8>, value: i64) {
     to.extend_from_slice(&value.to_be_bytes());
 }
 
-pub fn write_list(to: &mut Vec<u8>, value: &[Vec<u8>]) {
-    {
-        // kind + 2 byte list len
-        let mut response_len: u32 = 1 + 2;
-
-        for item in value {
-            // 4 byte item len + item len
-            response_len += 4 + item.len() as u32;
-        }
-
-        to.extend_from_slice(&response_len.to_be_bytes());
-    }
+pub fn write_list<T: IntoIterator<Item = U>, U: AsRef<[u8]>>(to: &mut Vec<u8>, value: T) {
+    // We're going to keep a note of how long the buffer to write to is now and
+    // pre-insert 4 bytes set to 0.
+    //
+    // During iteration, a total length of the message while it's being written
+    // to the buffer will be counted and tracked. When it's done, we'll write
+    // over these 4 bytes with the actual counted length.
+    //
+    // This needs to be done because core iterators can't efficiently be
+    // "rewinded" back to the beginning, so you'd have to clone the entire
+    // target of the iterator to iterate over it twice.
+    let start = to.len();
+    to.extend_from_slice(&[0, 0, 0, 0]);
 
     to.push(ResponseType::List as u8);
 
-    // The length of the list.
-    to.extend_from_slice(&(value.len() as u16).to_be_bytes());
+    // 1 byte for response type + 2 bytes for item length
+    let mut msg_len = 1 + 2;
+
+    // Same story here, we'll pre-write 2 0-value bytes for the list length.
+    to.push(0);
+    to.push(0);
+
+    let mut item_count = 0u16;
 
     // Now for each list item, push its length and then the item itself.
     for item in value {
-        let len = item.len() as u32;
+        item_count += 1;
 
-        to.extend_from_slice(&len.to_be_bytes());
+        let item = item.as_ref();
+
+        let item_len = item.len() as u32;
+        // item len in bytes + item len
+        msg_len += 4 + item_len;
+
+        to.extend_from_slice(&item_len.to_be_bytes());
         to.extend_from_slice(item);
     }
+
+    let msg_len_bytes = msg_len.to_be_bytes();
+
+    to[start..start + 4].clone_from_slice(&msg_len_bytes[..4]);
+    to[start + 5..start + 7].clone_from_slice(&item_count.to_be_bytes());
 }
 
 pub fn write_map(to: &mut Vec<u8>, value: &DashMap<Vec<u8>, Vec<u8>>) {

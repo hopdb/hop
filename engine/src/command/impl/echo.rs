@@ -8,7 +8,11 @@ impl Dispatch for Echo {
     fn dispatch(_: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         match req.args(..) {
             Some(args) => response::write_list(resp, args),
-            None => response::write_list(resp, &[]),
+            None => {
+                let empty_slice: &[&[u8]] = &[];
+
+                response::write_list(resp, empty_slice);
+            }
         }
 
         Ok(())
