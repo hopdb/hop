@@ -26,6 +26,7 @@ fn request(id: CommandId, args: Option<Vec<Vec<u8>>>, kind: Option<KeyType>) -> 
 
 #[derive(Debug)]
 pub enum Error {
+    KeyTypeInvalid { number: u8 },
     RunningCommand { source: DispatchError },
 }
 
@@ -38,6 +39,10 @@ impl From<DispatchError> for Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
+            Self::KeyTypeInvalid { number } => f.write_fmt(format_args!(
+                "the provided key type ({}) is invalid",
+                number
+            )),
             Self::RunningCommand { source } => f.write_fmt(format_args!("{}", source)),
         }
     }
@@ -46,6 +51,7 @@ impl Display for Error {
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
+            Self::KeyTypeInvalid { .. } => None,
             Self::RunningCommand { .. } => None,
         }
     }
@@ -188,6 +194,33 @@ impl Backend for MemoryBackend {
 
         match resp {
             Response::Value(Value::Boolean(exists)) => Ok(exists),
+            _ => panic!(),
+        }
+    }
+
+    async fn key_type(&self, key: &[u8]) -> Result<KeyType, Self::Error> {
+        let mut args = Vec::new();
+        args.push(key.to_vec());
+        let req = Request::new(CommandId::Type, Some(args));
+        let mut resp = Vec::new();
+
+        self.hop.dispatch(&req, &mut resp)?;
+
+        let mut ctx = Context::new();
+
+        let resp = match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(value) => value,
+            Instruction::ReadBytes(_) => unreachable!(),
+        };
+
+        match resp {
+            Response::Value(Value::Integer(int)) => {
+                let number = int as u8;
+
+                number
+                    .try_into()
+                    .map_err(|_| Error::KeyTypeInvalid { number })
+            }
             _ => panic!(),
         }
     }

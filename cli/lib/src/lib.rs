@@ -5,6 +5,7 @@
 extern crate alloc;
 
 mod parse;
+mod print;
 mod process;
 
 pub use self::{

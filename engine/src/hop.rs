@@ -182,6 +182,7 @@ impl Hop {
             CommandId::Rename => Rename::dispatch(self, req, res),
             CommandId::Set => Set::dispatch(self, req, res),
             CommandId::Stats => Stats::dispatch(self, req, res),
+            CommandId::Type => Type::dispatch(self, req, res),
             CommandId::Length => Length::dispatch(self, req, res),
         };
 

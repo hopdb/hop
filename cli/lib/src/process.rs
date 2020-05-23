@@ -1,4 +1,7 @@
-use crate::parse::{self, ParseError};
+use crate::{
+    parse::{self, ParseError},
+    print,
+};
 use alloc::borrow::Cow;
 use core::fmt::{Debug, Display, Error as FmtError, Formatter, Result as FmtResult, Write};
 use hop::{
@@ -158,6 +161,7 @@ where
     let err = match b.downcast::<MemoryError>() {
         Ok(memory_error) => {
             return match *memory_error {
+                MemoryError::KeyTypeInvalid { .. } => InnerProcessError::KeyTypeInvalid,
                 MemoryError::RunningCommand { source } => match source {
                     DispatchError::ArgumentRetrieval => InnerProcessError::TooFewArguments,
                     DispatchError::KeyNonexistent => InnerProcessError::KeyNonexistent,
@@ -293,6 +297,13 @@ where
                 .map_err(|source| InnerProcessError::WritingOutput { source })?;
 
             Ok(output.into())
+        }
+        CommandId::Type => {
+            let key = req.key().ok_or_else(|| InnerProcessError::KeyUnspecified)?;
+
+            let key_type = client.key_type(key).await.map_err(backend_err)?;
+
+            Ok(print::key_type_name(key_type).into())
         }
         _ => panic!(),
     }
