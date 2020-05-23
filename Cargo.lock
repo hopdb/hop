@@ -169,6 +169,7 @@ name = "hop"
 version = "0.1.0"
 dependencies = [
  "async-trait 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dashmap 3.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hop-engine 0.1.0",
  "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

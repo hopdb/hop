@@ -3,6 +3,7 @@ use crate::model::StatsData;
 use async_trait::async_trait;
 use hop_engine::{
     command::{
+        request,
         response::{Context, Instruction, Response},
         CommandId, DispatchError, Request,
     },
@@ -185,6 +186,33 @@ impl Backend for MemoryBackend {
         Ok(bytes)
     }
 
+    async fn set<T: Into<Value> + Send>(&self, key: &[u8], value: T) -> Result<Value, Self::Error> {
+        let mut args = Vec::new();
+        args.push(key.to_vec());
+
+        let value = value.into();
+        let key_type = value.kind();
+
+        request::write_value_to_args(value, &mut args);
+
+        let req = request(CommandId::Set, Some(args), Some(key_type));
+        let mut resp = Vec::new();
+
+        self.hop.dispatch(&req, &mut resp)?;
+
+        let mut ctx = Context::new();
+
+        let resp = match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(value) => value,
+            Instruction::ReadBytes(_) => unreachable!(),
+        };
+
+        match resp {
+            Response::Value(value) => Ok(value),
+            _ => panic!(),
+        }
+    }
+
     async fn stats(&self) -> Result<StatsData, Self::Error> {
         let req = request(CommandId::Stats, None, None);
         let mut resp = Vec::new();
@@ -210,9 +238,78 @@ impl Backend for MemoryBackend {
 #[cfg(test)]
 mod tests {
     use super::{Backend, MemoryBackend};
+    use hop_engine::state::{
+        object::{Boolean, Bytes, Float, Integer, Str},
+        Value,
+    };
+
     #[tokio::test]
     async fn test_echo() {
         let backend = MemoryBackend::new();
         assert!(matches!(backend.echo(b"test").await, Ok(vec) if vec == vec![b"test"]));
+    }
+
+    #[tokio::test]
+    async fn test_set_bool() {
+        let backend = MemoryBackend::new();
+        assert!(
+            matches!(backend.set(b"foo", true).await, Ok(Value::Boolean(bool)) if bool == true)
+        );
+        assert!(matches!(
+            backend.hop.state().typed_key::<Boolean>(b"foo").as_deref(),
+            Some(true)
+        ));
+        assert!(
+            matches!(backend.set(b"bar", false).await, Ok(Value::Boolean(bool)) if bool == false)
+        );
+        assert!(matches!(
+            backend.hop.state().typed_key::<Boolean>(b"bar").as_deref(),
+            Some(false)
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_set_bytes() {
+        let backend = MemoryBackend::new();
+        assert!(
+            matches!(backend.set(b"foo", [1u8, 2, 3].to_vec()).await, Ok(Value::Bytes(bytes)) if bytes == [1, 2, 3])
+        );
+        assert!(
+            matches!(backend.hop.state().typed_key::<Bytes>(b"foo").as_deref(), Some(vec) if *vec == [1u8, 2, 3].to_vec())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_set_float() {
+        let backend = MemoryBackend::new();
+        assert!(matches!(
+            backend.set(b"foo", 1.23).await,
+            Ok(Value::Float(_))
+        ));
+        assert!(backend.hop.state().typed_key::<Float>(b"foo").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_set_int() {
+        let backend = MemoryBackend::new();
+        assert!(matches!(
+            backend.set(b"foo", 123).await,
+            Ok(Value::Integer(123))
+        ));
+        assert!(matches!(
+            backend.hop.state().typed_key::<Integer>(b"foo").as_deref(),
+            Some(123)
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_set_string() {
+        let backend = MemoryBackend::new();
+        assert!(
+            matches!(backend.set(b"foo", "bar".to_owned()).await, Ok(Value::String(str)) if str == "bar")
+        );
+        assert!(
+            matches!(backend.hop.state().typed_key::<Str>(b"foo").as_deref(), Some(s) if s == "bar")
+        );
     }
 }

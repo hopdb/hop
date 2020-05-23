@@ -61,11 +61,72 @@ impl Value {
     }
 }
 
+impl From<bool> for Value {
+    fn from(value: bool) -> Self {
+        Self::Boolean(value)
+    }
+}
+
+impl From<Vec<u8>> for Value {
+    fn from(value: Vec<u8>) -> Self {
+        Self::Bytes(value)
+    }
+}
+
+impl From<f64> for Value {
+    fn from(value: f64) -> Self {
+        Self::Float(value)
+    }
+}
+
+impl From<i64> for Value {
+    fn from(value: i64) -> Self {
+        Self::Integer(value)
+    }
+}
+
+impl From<Vec<Vec<u8>>> for Value {
+    fn from(value: Vec<Vec<u8>>) -> Self {
+        Self::List(value)
+    }
+}
+
+impl From<DashMap<Vec<u8>, Vec<u8>>> for Value {
+    fn from(value: DashMap<Vec<u8>, Vec<u8>>) -> Self {
+        Self::Map(value)
+    }
+}
+
+impl From<DashSet<Vec<u8>>> for Value {
+    fn from(value: DashSet<Vec<u8>>) -> Self {
+        Self::Set(value)
+    }
+}
+
+impl From<String> for Value {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Value;
+    use alloc::{string::String, vec::Vec};
     use core::fmt::Debug;
+    use dashmap::{DashMap, DashSet};
     use static_assertions::assert_impl_all;
 
-    assert_impl_all!(Value: Debug);
+    assert_impl_all!(
+        Value: Debug,
+        From<bool>,
+        From<Vec<u8>>,
+        From<f64>,
+        From<i64>,
+        From<Vec<Vec<u8>>>,
+        From<DashMap<Vec<u8>, Vec<u8>>>,
+        From<Vec<u8>>,
+        From<DashSet<Vec<u8>>>,
+        From<String>,
+    );
 }

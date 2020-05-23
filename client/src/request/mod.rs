@@ -1,4 +1,5 @@
 pub mod exists;
+pub mod set;
 
 mod decrement;
 mod delete;
@@ -14,6 +15,7 @@ pub use self::{
     exists::{Exists, ExistsConfigured},
     increment::Increment,
     rename::Rename,
+    set::{SetBytes, SetUnconfigured},
     stats::Stats,
 };
 
