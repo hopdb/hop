@@ -14,7 +14,7 @@ impl Length {
     fn bytes(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
         let bytes = match hop.state().typed_key::<Bytes>(key) {
             Some(bytes) => bytes,
-            None => return Err(DispatchError::WrongType),
+            None => return Err(DispatchError::KeyTypeDifferent),
         };
 
         response::write_int(resp, bytes.len() as i64);
@@ -25,7 +25,7 @@ impl Length {
     fn list(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
         let list = match hop.state().typed_key::<List>(key) {
             Some(list) => list,
-            None => return Err(DispatchError::WrongType),
+            None => return Err(DispatchError::KeyTypeDifferent),
         };
 
         response::write_int(resp, list.len() as i64);
@@ -36,7 +36,7 @@ impl Length {
     fn string(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
         let string = match hop.state().typed_key::<Str>(key) {
             Some(string) => string,
-            None => return Err(DispatchError::WrongType),
+            None => return Err(DispatchError::KeyTypeDifferent),
         };
 
         response::write_int(resp, string.chars().count() as i64);
@@ -53,7 +53,7 @@ impl Dispatch for Length {
             Some(KeyType::Bytes) => Self::bytes(hop, key, resp),
             Some(KeyType::List) => Self::list(hop, key, resp),
             Some(KeyType::String) => Self::string(hop, key, resp),
-            Some(_) => Err(DispatchError::WrongType),
+            Some(_) => Err(DispatchError::KeyTypeInvalid),
             None => {
                 let kind = hop
                     .state()
@@ -65,7 +65,7 @@ impl Dispatch for Length {
                     KeyType::Bytes => Self::bytes(hop, key, resp),
                     KeyType::List => Self::list(hop, key, resp),
                     KeyType::String => Self::string(hop, key, resp),
-                    _ => Err(DispatchError::WrongType),
+                    _ => Err(DispatchError::KeyTypeInvalid),
                 }
             }
         }
@@ -96,7 +96,7 @@ mod tests {
     }
 
     #[test]
-    fn test_wrong_type() {
+    fn test_invalid_key_type() {
         let hop = Hop::new();
 
         let mut args = Vec::new();
@@ -117,7 +117,7 @@ mod tests {
 
             assert_eq!(
                 Length::dispatch(&hop, &req, &mut resp).unwrap_err(),
-                DispatchError::WrongType
+                DispatchError::KeyTypeInvalid
             );
 
             resp.clear();

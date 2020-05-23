@@ -11,23 +11,27 @@ pub type Result<T, E = Error> = CoreResult<T, E>;
 pub enum Error {
     ArgumentRetrieval = 0,
     KeyUnspecified = 1,
-    WrongType = 2,
+    KeyTypeDifferent = 2,
     KeyTypeUnexpected = 3,
     PreconditionFailed = 4,
     KeyNonexistent = 5,
     KeyTypeRequired = 6,
+    KeyTypeInvalid = 7,
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
             Self::ArgumentRetrieval => f.write_str("couldn't retrieve required argument"),
-            Self::KeyUnspecified => f.write_str("the key wasn't specified"),
             Self::KeyNonexistent => f.write_str("the specified key does not exist"),
+            Self::KeyTypeDifferent => f.write_str("the key has a different type than required"),
+            Self::KeyTypeInvalid => {
+                f.write_str("the specified key type is not supported by the command")
+            }
             Self::KeyTypeRequired => f.write_str("a key type is required to be specified"),
             Self::KeyTypeUnexpected => f.write_str("didn't expect a specified request key type"),
+            Self::KeyUnspecified => f.write_str("the key wasn't specified"),
             Self::PreconditionFailed => f.write_str("a precondition for the command failed"),
-            Self::WrongType => f.write_str("the key has the wrong type"),
         }
     }
 }
@@ -39,11 +43,12 @@ impl TryFrom<u8> for Error {
         Ok(match value {
             0 => Self::ArgumentRetrieval,
             1 => Self::KeyUnspecified,
-            2 => Self::WrongType,
+            2 => Self::KeyTypeDifferent,
             3 => Self::KeyTypeUnexpected,
             4 => Self::PreconditionFailed,
             5 => Self::KeyNonexistent,
             6 => Self::KeyTypeRequired,
+            7 => Self::KeyTypeInvalid,
             _ => return Err(()),
         })
     }
@@ -74,12 +79,13 @@ mod tests {
     fn test_error_try_from_u8() {
         let variants = &[
             Error::ArgumentRetrieval,
-            Error::KeyUnspecified,
-            Error::WrongType,
             Error::KeyNonexistent,
-            Error::KeyTypeUnexpected,
-            Error::PreconditionFailed,
+            Error::KeyTypeDifferent,
+            Error::KeyTypeInvalid,
             Error::KeyTypeRequired,
+            Error::KeyTypeUnexpected,
+            Error::KeyUnspecified,
+            Error::PreconditionFailed,
         ];
 
         for variant in variants {
