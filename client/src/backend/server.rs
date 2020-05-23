@@ -222,6 +222,20 @@ impl Backend for ServerBackend {
         }
     }
 
+    async fn keys(&self, key: &[u8]) -> Result<Vec<Vec<u8>>> {
+        let mut args = Vec::with_capacity(1);
+        args.push(key.to_vec());
+
+        let req = Request::new(CommandId::Keys, Some(args));
+
+        let value = self.send_and_wait(&req.into_bytes()).await?;
+
+        match value {
+            Value::List(list) => Ok(list),
+            _ => Err(Error::BadResponse),
+        }
+    }
+
     async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>> {
         let mut args = Vec::with_capacity(2);
         args.push(from.to_vec());

@@ -192,6 +192,27 @@ impl Backend for MemoryBackend {
         }
     }
 
+    async fn keys(&self, key: &[u8]) -> Result<Vec<Vec<u8>>, Self::Error> {
+        let mut args = Vec::new();
+        args.push(key.to_vec());
+        let req = Request::new(CommandId::Keys, Some(args));
+        let mut resp = Vec::new();
+
+        self.hop.dispatch(&req, &mut resp)?;
+
+        let mut ctx = Context::new();
+
+        let resp = match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(value) => value,
+            Instruction::ReadBytes(_) => unreachable!(),
+        };
+
+        match resp {
+            Response::Value(Value::List(list)) => Ok(list),
+            _ => panic!(),
+        }
+    }
+
     async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>, Self::Error> {
         let req = Request::new(CommandId::Rename, Some(vec![from.to_vec(), to.to_vec()]));
         let mut resp = Vec::new();

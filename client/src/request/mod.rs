@@ -6,6 +6,7 @@ mod decrement;
 mod delete;
 mod echo;
 mod increment;
+mod keys;
 mod rename;
 mod stats;
 
@@ -16,6 +17,7 @@ pub use self::{
     exists::{Exists, ExistsConfigured},
     increment::Increment,
     is::Is,
+    keys::Keys,
     rename::Rename,
     set::{SetBytes, SetUnconfigured},
     stats::Stats,
