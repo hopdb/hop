@@ -1,4 +1,5 @@
 pub mod exists;
+pub mod get;
 pub mod is;
 pub mod set;
 
@@ -21,7 +22,6 @@ pub use self::{
     keys::Keys,
     r#type::Type,
     rename::Rename,
-    set::{SetBytes, SetUnconfigured},
     stats::Stats,
 };
 

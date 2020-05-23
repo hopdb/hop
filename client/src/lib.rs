@@ -6,10 +6,10 @@ pub mod backend;
 pub mod model;
 pub mod request;
 
-pub use hop_engine::state::KeyType;
+pub use hop_engine::state::{KeyType, Value};
 
 use backend::{Backend, MemoryBackend};
-use request::*;
+use request::{get::GetUnconfigured, set::SetUnconfigured, *};
 use std::sync::Arc;
 
 /// A client for interfacing over Hop instances.
@@ -144,6 +144,56 @@ impl<B: Backend> Client<B> {
     /// [`Exists`]: request/exists/struct.Exists.html
     pub fn exists(&self) -> Exists<B> {
         Exists::new(self.backend())
+    }
+
+    /// Get a key's value.
+    ///
+    /// The returned request struct, [`GetUnconfigured`] can be `await`ed or can
+    /// be called with the type-specific methods if you know the type of the
+    /// key. If you call one of these methods, the type that `await`ing the
+    /// struct resolves to will be more fine-grained.
+    ///
+    /// Refer to [`GetUnconfigured`] for more information and available methods.
+    ///
+    /// # Examples
+    ///
+    /// Get the "foo" key as an integer, since we know it is one:
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    ///
+    /// client.set("foo").int(123).await?;
+    ///
+    /// assert_eq!(123, client.get("foo").int().await?);
+    /// # Ok(()) }
+    /// ```
+    ///
+    /// If we didn't know the type of the key, we could match on a generic Value
+    /// enum:
+    ///
+    /// ```
+    /// use hop::{Client, Value};
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    ///
+    /// client.set("foo").string("this is a string").await?;
+    ///
+    /// match client.get("foo").await? {
+    ///     Value::Boolean(boolean) => println!("it's a boolean: {}", boolean),
+    ///     Value::Integer(int) => println!("it's an integer: {}", int),
+    ///     Value::String(string) => println!("it's a string: {}", string),
+    ///     _ => println!("it's something else"),
+    /// }
+    /// # Ok(()) }
+    /// ```
+    ///
+    /// [`GetUnconfigured`]: request/get/struct.GetUnconfigured.html
+    pub fn get<'a, K: AsRef<[u8]> + Unpin + 'a>(&self, key: K) -> GetUnconfigured<'a, B, K> {
+        GetUnconfigured::new(self.backend(), key)
     }
 
     /// Increments a float or integer key by one.

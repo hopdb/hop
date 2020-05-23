@@ -241,6 +241,13 @@ where
 
             Ok(exists.to_string().into())
         }
+        CommandId::Get => {
+            let key = req.key().ok_or_else(|| InnerProcessError::KeyUnspecified)?;
+
+            let value = client.get(key).await.map_err(backend_err)?;
+
+            Ok(print::value(value).into())
+        }
         CommandId::Increment => {
             let key = req.key().ok_or_else(|| InnerProcessError::KeyUnspecified)?;
 

@@ -197,6 +197,15 @@ impl Backend for ServerBackend {
         }
     }
 
+    async fn get(&self, key: &[u8]) -> Result<Value> {
+        let mut args = Vec::new();
+        args.push(key.to_vec());
+
+        let req = Request::new(CommandId::Get, Some(args));
+
+        self.send_and_wait(&req.into_bytes()).await
+    }
+
     async fn increment(&self, key: &[u8], _: Option<KeyType>) -> Result<i64> {
         let mut args = Vec::with_capacity(1);
         args.push(key.to_vec());

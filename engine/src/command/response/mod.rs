@@ -63,14 +63,7 @@ impl Response {
         match self {
             Self::DispatchError(err) => write_dispatch_error(buf, *err),
             Self::ParseError(err) => write_parse_error(buf, *err),
-            Self::Value(Value::Boolean(boolean)) => write_bool(buf, *boolean),
-            Self::Value(Value::Bytes(bytes)) => write_bytes(buf, bytes),
-            Self::Value(Value::Float(float)) => write_float(buf, *float),
-            Self::Value(Value::Integer(int)) => write_int(buf, *int),
-            Self::Value(Value::List(list)) => write_list(buf, list),
-            Self::Value(Value::Map(map)) => write_map(buf, map),
-            Self::Value(Value::Set(set)) => write_set(buf, set),
-            Self::Value(Value::String(string)) => write_str(buf, string),
+            Self::Value(value) => write_value(buf, value),
         }
     }
 }
@@ -295,6 +288,19 @@ pub fn write_str(to: &mut Vec<u8>, value: &str) {
 
     to.extend_from_slice(&len.to_be_bytes());
     to.extend_from_slice(value.as_bytes());
+}
+
+pub fn write_value(to: &mut Vec<u8>, value: &Value) {
+    match value {
+        Value::Boolean(boolean) => write_bool(to, *boolean),
+        Value::Bytes(bytes) => write_bytes(to, bytes),
+        Value::Float(float) => write_float(to, *float),
+        Value::Integer(int) => write_int(to, *int),
+        Value::List(list) => write_list(to, list),
+        Value::Map(map) => write_map(to, map),
+        Value::Set(set) => write_set(to, set),
+        Value::String(string) => write_str(to, string),
+    }
 }
 
 #[cfg(test)]
