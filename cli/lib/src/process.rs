@@ -3,7 +3,7 @@ use alloc::borrow::Cow;
 use core::fmt::{Debug, Display, Error as FmtError, Formatter, Result as FmtResult, Write};
 use hop::{
     backend::{memory::Error as MemoryError, Backend},
-    request::exists::ExistsError,
+    request::CommandConfigurationError,
     Client,
 };
 use hop_engine::command::{CommandId, DispatchError, Request};
@@ -76,6 +76,7 @@ enum InnerProcessError<B: Backend> {
     KeyRequiredMinimum,
     KeySourceRequired,
     KeyTypeDifferent,
+    KeyTypeRequired,
     KeyTypeUnexpected,
     KeyUnspecified,
     PreconditionFailed,
@@ -113,6 +114,9 @@ where
         Err(InnerProcessError::KeyTypeDifferent) => {
             "The type of the key is different than specified by the command.".into()
         }
+        Err(InnerProcessError::KeyTypeRequired) => {
+            "A key type was required but one was not specified.".into()
+        }
         Err(InnerProcessError::KeyTypeUnexpected) => {
             "A key type was specified when the command can't be given one.".into()
         }
@@ -144,6 +148,7 @@ where
                 MemoryError::RunningCommand { source } => match source {
                     DispatchError::ArgumentRetrieval => InnerProcessError::TooFewArguments,
                     DispatchError::KeyNonexistent => InnerProcessError::KeyNonexistent,
+                    DispatchError::KeyTypeRequired => InnerProcessError::KeyTypeRequired,
                     DispatchError::KeyTypeUnexpected => InnerProcessError::KeyTypeUnexpected,
                     DispatchError::KeyUnspecified => InnerProcessError::KeyUnspecified,
                     DispatchError::PreconditionFailed => InnerProcessError::PreconditionFailed,
@@ -206,8 +211,12 @@ where
 
             let req = match client.exists().keys(args) {
                 Ok(req) => req,
-                Err(ExistsError::NoKeys) => return Err(InnerProcessError::KeyRequiredMinimum),
-                Err(ExistsError::TooManyKeys) => return Err(InnerProcessError::TooManyArguments),
+                Err(CommandConfigurationError::NoKeys) => {
+                    return Err(InnerProcessError::KeyRequiredMinimum)
+                }
+                Err(CommandConfigurationError::TooManyKeys) => {
+                    return Err(InnerProcessError::TooManyArguments)
+                }
             };
 
             let exists = req.await.map_err(backend_err)?;

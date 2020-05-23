@@ -177,6 +177,7 @@ impl Hop {
             CommandId::Exists => Exists::dispatch(self, req, res),
             CommandId::Increment => Increment::dispatch(self, req, res),
             CommandId::IncrementBy => IncrementBy::dispatch(self, req, res),
+            CommandId::Is => Is::dispatch(self, req, res),
             CommandId::Rename => Rename::dispatch(self, req, res),
             CommandId::Set => Set::dispatch(self, req, res),
             CommandId::Stats => Stats::dispatch(self, req, res),

@@ -5,6 +5,7 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
+use hop_engine::state::KeyType;
 use std::sync::Arc;
 
 /// Request to determine whether one or more keys exist.
@@ -43,31 +44,29 @@ use std::sync::Arc;
 /// [`Client::exists`]: ../../struct.Client.html#method.exists
 /// [`key`]: #method.key
 /// [`keys`]: #method.keys
-pub struct Exists<B: Backend> {
+pub struct Is<B: Backend> {
     backend: Arc<B>,
+    key_type: KeyType,
 }
 
-impl<'a, B: Backend> Exists<B> {
-    pub(crate) fn new(backend: Arc<B>) -> Self {
-        Self { backend }
+impl<'a, B: Backend> Is<B> {
+    pub(crate) fn new(backend: Arc<B>, key_type: KeyType) -> Self {
+        Self { backend, key_type }
     }
 
-    /// Check that a single key exists.
+    /// Check that a single key is the specified type.
     ///
     /// Refer to the [struct docs] for more information.
     ///
     /// [struct docs]: #main
-    pub fn key<K: AsRef<[u8]> + 'a + Unpin + Send + Sync>(
-        self,
-        key: K,
-    ) -> ExistsConfigured<'a, B, K> {
+    pub fn key<K: AsRef<[u8]> + 'a + Unpin + Send + Sync>(self, key: K) -> IsConfigured<'a, B, K> {
         let mut keys = Vec::new();
         keys.push(key);
 
-        ExistsConfigured::new(self.backend, keys)
+        IsConfigured::new(self.backend, self.key_type, keys)
     }
 
-    /// Check that one or more keys exist.
+    /// Check that one or more keys is the specified type.
     ///
     /// Refer to the [struct docs] for more information.
     ///
@@ -84,7 +83,7 @@ impl<'a, B: Backend> Exists<B> {
     pub fn keys<K: AsRef<[u8]> + 'a + Unpin + Send + Sync>(
         self,
         keys: impl IntoIterator<Item = K>,
-    ) -> Result<ExistsConfigured<'a, B, K>, CommandConfigurationError> {
+    ) -> Result<IsConfigured<'a, B, K>, CommandConfigurationError> {
         let keys: Vec<K> = keys.into_iter().collect();
 
         if keys.is_empty() {
@@ -93,29 +92,31 @@ impl<'a, B: Backend> Exists<B> {
             return Err(CommandConfigurationError::TooManyKeys);
         }
 
-        Ok(ExistsConfigured::new(self.backend, keys))
+        Ok(IsConfigured::new(self.backend, self.key_type, keys))
     }
 }
 
 /// A configured request to check if one or more keys exist.
-pub struct ExistsConfigured<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> {
+pub struct IsConfigured<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> {
     backend: Option<Arc<B>>,
     fut: MaybeInFlightFuture<'a, bool, B::Error>,
+    key_type: KeyType,
     keys: Option<Vec<K>>,
 }
 
-impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> ExistsConfigured<'a, B, K> {
-    fn new(backend: Arc<B>, keys: Vec<K>) -> Self {
+impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> IsConfigured<'a, B, K> {
+    fn new(backend: Arc<B>, key_type: KeyType, keys: Vec<K>) -> Self {
         Self {
             backend: Some(backend),
             fut: None,
+            key_type,
             keys: Some(keys),
         }
     }
 }
 
 impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> Future
-    for ExistsConfigured<'a, B, K>
+    for IsConfigured<'a, B, K>
 {
     type Output = Result<bool, B::Error>;
 
@@ -123,10 +124,11 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + 'a + Unpin + Send 
         if self.fut.is_none() {
             let backend = { self.backend.take().expect("backend only taken once") };
             let keys = self.keys.take().expect("keys only taken once");
+            let key_type = self.key_type;
 
-            self.fut.replace(Box::pin(
-                async move { backend.exists((*keys).iter()).await },
-            ));
+            self.fut.replace(Box::pin(async move {
+                backend.is(key_type, (*keys).iter()).await
+            }));
         }
 
         self.fut.as_mut().expect("future exists").as_mut().poll(cx)

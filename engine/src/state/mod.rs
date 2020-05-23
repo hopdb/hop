@@ -6,7 +6,10 @@ pub use self::value::Value;
 use self::object::Object;
 use alloc::{borrow::ToOwned, string::String, sync::Arc, vec::Vec};
 use core::convert::TryFrom;
-use dashmap::{mapref::one::RefMut, DashMap};
+use dashmap::{
+    mapref::one::{Ref, RefMut},
+    DashMap,
+};
 
 pub type Key = Vec<u8>;
 
@@ -96,7 +99,7 @@ impl State {
     ///
     /// let state = State::new();
     /// // set a default string value to "foo"
-    /// state.key(b"foo", Value::string);
+    /// state.key_or_insert_with(b"foo", Value::string);
     ///
     /// assert!(state.contains_key(b"foo"));
     /// assert!(state.remove(b"foo").is_some());
@@ -106,8 +109,36 @@ impl State {
         self.0.remove(key)
     }
 
-    /// Retrieve a key's value, providing the default value to insert if the key
-    /// doesn't exist.
+    /// Retrieve an immutable reference to a key-value pair by key.
+    ///
+    /// Returns `None` if the key does not exist.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop_engine::state::{State, Value};
+    ///
+    /// let state = State::new();
+    ///
+    /// // the key "foo" does not exist right now
+    /// assert!(state.key_ref(b"foo").is_none());
+    ///
+    /// // but if we insert a key and then check again, it does:
+    /// state.insert(b"foo".to_vec(), Value::string());
+    /// assert!(state.key_ref(b"foo").is_some());
+    /// ```
+    pub fn key_ref<'a>(&'a self, key: &[u8]) -> Option<Ref<'a, Key, Value>> {
+        if key.starts_with(b"__hop__:") {
+            panic!("Accessed internal key: {}", String::from_utf8_lossy(key));
+        }
+
+        debug_assert!(!key.is_empty());
+
+        self.0.get(key)
+    }
+
+    /// Retrieve a key's value, providing a function returning the value to
+    /// insert if the key doesn't exist.
     ///
     /// # Examples
     ///
@@ -115,7 +146,7 @@ impl State {
     /// use hop_engine::state::{State, Value};
     ///
     /// let state = State::new();
-    /// let key = state.key(b"some:key", Value::boolean);
+    /// let key = state.key_or_insert_with(b"some:key", Value::boolean);
     ///
     /// match key.value() {
     ///     Value::Boolean(_) => println!("it's a boolean"),
@@ -123,7 +154,11 @@ impl State {
     ///     _ => println!("it's something else"),
     /// }
     /// ```
-    pub fn key<'a>(&'a self, key: &[u8], f: impl Fn() -> Value) -> RefMut<'a, Key, Value> {
+    pub fn key_or_insert_with<'a>(
+        &'a self,
+        key: &[u8],
+        f: impl Fn() -> Value,
+    ) -> RefMut<'a, Key, Value> {
         if key.starts_with(b"__hop__:") {
             panic!("Accessed internal key: {}", String::from_utf8_lossy(key));
         }
@@ -166,7 +201,7 @@ impl State {
     /// # try_main().unwrap();
     /// ```
     pub fn typed_key<'a, K: Object<'a>>(&'a self, key: &[u8]) -> Option<K> {
-        let key = self.key(key, K::default);
+        let key = self.key_or_insert_with(key, K::default);
 
         if key.value().kind() == K::key_type() {
             Some(K::new(key))
