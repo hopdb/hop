@@ -11,6 +11,14 @@ pub enum ArgumentNotation {
     One,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum KeyNotation {
+    Multiple,
+    None,
+    One,
+    Two,
+}
+
 #[derive(Debug)]
 pub struct InvalidCommandId;
 
@@ -34,37 +42,52 @@ pub enum CommandId {
 
 impl CommandId {
     pub fn argument_notation(self) -> ArgumentNotation {
-        use ArgumentNotation::*;
+        use ArgumentNotation::{Multiple, None, One};
         use CommandId::*;
 
         match self {
             Append => One,
             Delete => One,
-            Echo => Multiple,
-            Exists => Multiple,
-            Increment => None,
-            IncrementBy => One,
-            Is => Multiple,
             Decrement => None,
             DecrementBy => One,
+            Echo => Multiple,
+            Exists => None,
+            Increment => None,
+            IncrementBy => One,
+            Is => None,
             Length => One,
-            Rename => One,
-            Set => Multiple,
+            Rename => None,
+            Set => One,
             Stats => None,
         }
     }
 
-    pub fn has_key(self) -> bool {
+    pub fn key_notation(self) -> KeyNotation {
         use CommandId::*;
+        use KeyNotation::{Multiple, None, One, Two};
 
         match self {
-            Echo | Stats => false,
-            _ => true,
+            Append => One,
+            Delete => One,
+            Decrement => One,
+            DecrementBy => One,
+            Echo => None,
+            Exists => Multiple,
+            Increment => One,
+            IncrementBy => One,
+            Is => Multiple,
+            Length => One,
+            Rename => Two,
+            Set => One,
+            Stats => None,
         }
     }
 
     pub fn is_simple(self) -> bool {
-        self.argument_notation() == ArgumentNotation::None && !self.has_key()
+        let no_args = self.argument_notation() == ArgumentNotation::None;
+        let no_keys = self.key_notation() == KeyNotation::None;
+
+        no_args && no_keys
     }
 
     pub fn name(&self) -> &str {
