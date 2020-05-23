@@ -91,6 +91,15 @@ impl<B: Backend> From<FmtError> for InnerProcessError<B> {
     }
 }
 
+impl<B: Backend> From<CommandConfigurationError> for InnerProcessError<B> {
+    fn from(source: CommandConfigurationError) -> Self {
+        match source {
+            CommandConfigurationError::NoKeys => Self::KeyRequiredMinimum,
+            CommandConfigurationError::TooManyKeys => Self::TooManyArguments,
+        }
+    }
+}
+
 pub async fn process<B: Backend + Send + Sync + 'static>(
     client: &Client<B>,
     input: &str,
@@ -100,7 +109,7 @@ where
 {
     let req = parse::parse(input)?;
 
-    Ok(match process_inner(client, &req).await {
+    Ok(match process_inner(client, req).await {
         Ok(output) => output,
         Err(InnerProcessError::Backend { source }) => return Err(ProcessError::Backend { source }),
         Err(InnerProcessError::KeyDestinationRequired) => {
@@ -168,7 +177,7 @@ where
 
 async fn process_inner<B: Backend + Send + Sync + 'static>(
     client: &Client<B>,
-    req: &Request,
+    req: Request,
 ) -> Result<Cow<'static, str>, InnerProcessError<B>>
 where
     B::Error: Error,
@@ -229,6 +238,18 @@ where
             let v = client.increment(key).await.map_err(backend_err)?;
 
             Ok(v.to_string().into())
+        }
+        CommandId::Is => {
+            let key_type = req
+                .key_type()
+                .ok_or_else(|| InnerProcessError::KeyTypeRequired)?;
+            let args = req
+                .into_args()
+                .ok_or_else(|| InnerProcessError::TooFewArguments)?;
+
+            let is_type = client.is(key_type).keys(args)?.await.map_err(backend_err)?;
+
+            Ok(is_type.to_string().into())
         }
         CommandId::Rename => {
             let from = req

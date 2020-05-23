@@ -10,7 +10,7 @@ impl Dispatch for Rename {
             return Err(DispatchError::KeyTypeUnexpected);
         }
 
-        let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
+        let key = req.arg(0).ok_or(DispatchError::KeyUnspecified)?;
         let arg = req.arg(1).ok_or(DispatchError::ArgumentRetrieval)?;
         let state = hop.state();
 

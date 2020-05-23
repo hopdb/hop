@@ -1,8 +1,8 @@
+pub mod command_id;
 pub(crate) mod r#impl;
 pub mod request;
 pub mod response;
 
-mod command_id;
 mod error;
 
 pub use self::{

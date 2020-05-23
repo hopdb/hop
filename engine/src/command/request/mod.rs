@@ -2,7 +2,7 @@ mod context;
 
 pub use context::{Context, ParseError};
 
-use super::CommandId;
+use super::command_id::{CommandId, KeyNotation};
 use crate::state::{KeyType, Value};
 use alloc::{
     borrow::ToOwned,
@@ -157,7 +157,7 @@ impl Request {
     }
 
     pub fn key(&self) -> Option<&[u8]> {
-        if !self.kind.has_key() {
+        if self.kind.key_notation() == KeyNotation::None {
             return None;
         }
 
