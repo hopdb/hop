@@ -30,6 +30,7 @@ pub enum CommandId {
     IncrementBy = 2,
     DecrementBy = 3,
     Set = 10,
+    Get = 11,
     Delete = 12,
     Exists = 13,
     Is = 14,
@@ -54,6 +55,7 @@ impl CommandId {
             DecrementBy => One,
             Echo => Multiple,
             Exists => None,
+            Get => None,
             Increment => None,
             IncrementBy => One,
             Is => None,
@@ -77,6 +79,7 @@ impl CommandId {
             DecrementBy => One,
             Echo => None,
             Exists => Multiple,
+            Get => One,
             Increment => One,
             IncrementBy => One,
             Is => Multiple,
@@ -104,6 +107,7 @@ impl CommandId {
             Self::Delete => "delete",
             Self::Echo => "echo",
             Self::Exists => "exists",
+            Self::Get => "get",
             Self::IncrementBy => "increment:by",
             Self::Increment => "increment",
             Self::Is => "is",
@@ -134,6 +138,7 @@ impl FromStr for CommandId {
             "delete" => Self::Delete,
             "echo" => Self::Echo,
             "exists" => Self::Exists,
+            "get" => Self::Get,
             "increment:by" => Self::IncrementBy,
             "increment" => Self::Increment,
             "is" => Self::Is,
@@ -158,6 +163,7 @@ impl TryFrom<u8> for CommandId {
             2 => Self::IncrementBy,
             3 => Self::DecrementBy,
             10 => Self::Set,
+            11 => Self::Get,
             12 => Self::Delete,
             13 => Self::Exists,
             14 => Self::Is,
@@ -223,6 +229,7 @@ mod tests {
         assert_eq!(CommandId::Delete, CommandId::from_str("delete").unwrap());
         assert_eq!(CommandId::Echo, CommandId::from_str("echo").unwrap());
         assert_eq!(CommandId::Exists, CommandId::from_str("exists").unwrap());
+        assert_eq!(CommandId::Get, CommandId::from_str("get").unwrap());
         assert_eq!(
             CommandId::IncrementBy,
             CommandId::from_str("increment:by").unwrap()
@@ -248,6 +255,7 @@ mod tests {
         assert_eq!(CommandId::Delete, CommandId::try_from(12).unwrap());
         assert_eq!(CommandId::Echo, CommandId::try_from(100).unwrap());
         assert_eq!(CommandId::Exists, CommandId::try_from(13).unwrap());
+        assert_eq!(CommandId::Get, CommandId::try_from(11).unwrap());
         assert_eq!(CommandId::IncrementBy, CommandId::try_from(2).unwrap());
         assert_eq!(CommandId::Increment, CommandId::try_from(0).unwrap());
         assert_eq!(CommandId::Is, CommandId::try_from(14).unwrap());
@@ -267,6 +275,7 @@ mod tests {
         assert_eq!("delete", CommandId::Delete.name());
         assert_eq!("echo", CommandId::Echo.name());
         assert_eq!("exists", CommandId::Exists.name());
+        assert_eq!("get", CommandId::Get.name());
         assert_eq!("increment:by", CommandId::IncrementBy.name());
         assert_eq!("increment", CommandId::Increment.name());
         assert_eq!("is", CommandId::Is.name());

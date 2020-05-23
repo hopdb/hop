@@ -150,6 +150,25 @@ impl Backend for MemoryBackend {
         }
     }
 
+    async fn get(&self, key: &[u8]) -> Result<Value, Self::Error> {
+        let req = Request::new(CommandId::Get, Some(vec![key.to_vec()]));
+        let mut resp = Vec::new();
+
+        self.hop.dispatch(&req, &mut resp)?;
+
+        let mut ctx = Context::new();
+
+        let resp = match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(resp) => resp,
+            Instruction::ReadBytes(_) => unreachable!(),
+        };
+
+        match resp {
+            Response::Value(value) => Ok(value),
+            _ => panic!(),
+        }
+    }
+
     async fn increment(&self, key: &[u8], kind: Option<KeyType>) -> Result<i64, Self::Error> {
         let req = request(CommandId::Increment, Some(vec![key.to_vec()]), kind);
         let mut resp = Vec::new();

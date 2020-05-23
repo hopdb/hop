@@ -27,6 +27,8 @@ pub trait Backend {
         keys: T,
     ) -> Result<bool, Self::Error>;
 
+    async fn get(&self, key: &[u8]) -> Result<Value, Self::Error>;
+
     async fn increment(&self, key: &[u8], key_type: Option<KeyType>) -> Result<i64, Self::Error>;
 
     async fn is<T: IntoIterator<Item = U> + Send, U: AsRef<[u8]> + Send>(
