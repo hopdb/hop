@@ -192,6 +192,34 @@ impl<B: Backend> Client<B> {
         Rename::new(self.backend(), from, to)
     }
 
+    /// Set a key to a new value, overriding it regardless of whether it exists
+    /// and its current key type.
+    ///
+    /// Returns the new value on success as confirmation.
+    ///
+    /// Refer to [`SetUnconfigured`] for more information and available methods.
+    ///
+    /// # Examples
+    ///
+    /// Set the key "foo" to the integer `123`, and then set "foo" to the string
+    /// "bar".
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// assert_eq!(123, client.set("foo").int(123).await?);
+    ///
+    /// assert_eq!("bar", client.set("foo").string("bar").await?);
+    /// # Ok(()) }
+    /// ```
+    ///
+    /// [`SetUnconfigured`]: request/set/struct.SetUnconfigured.html
+    pub fn set<K: AsRef<[u8]> + Unpin>(&self, key: K) -> SetUnconfigured<B, K> {
+        SetUnconfigured::new(self.backend(), key)
+    }
+
     /// Retrieve statistics about the current runtime of Hop.
     ///
     /// When Hop is restarted, many of the statistics - like commands run - are

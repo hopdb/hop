@@ -10,7 +10,7 @@ pub use self::server::ServerBackend;
 
 use crate::model::StatsData;
 use async_trait::async_trait;
-use hop_engine::state::KeyType;
+use hop_engine::state::{KeyType, Value};
 
 #[async_trait]
 pub trait Backend {
@@ -30,6 +30,8 @@ pub trait Backend {
     async fn increment(&self, key: &[u8], key_type: Option<KeyType>) -> Result<i64, Self::Error>;
 
     async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>, Self::Error>;
+
+    async fn set<T: Into<Value> + Send>(&self, key: &[u8], value: T) -> Result<Value, Self::Error>;
 
     async fn stats(&self) -> Result<StatsData, Self::Error>;
 }

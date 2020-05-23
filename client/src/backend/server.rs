@@ -3,7 +3,7 @@ use crate::model::StatsData;
 use async_trait::async_trait;
 use hop_engine::{
     command::{
-        request::{ParseError, Request},
+        request::{self, ParseError, Request},
         response::{Context, Instruction, Response},
         CommandId, DispatchError,
     },
@@ -229,5 +229,19 @@ impl Backend for ServerBackend {
         };
 
         Ok(StatsData::new(map.into_iter().collect()))
+    }
+
+    async fn set<T: Into<Value> + Send>(&self, key: &[u8], value: T) -> Result<Value> {
+        let mut args = Vec::new();
+        args.push(key.to_vec());
+
+        let value = value.into();
+        let key_type = value.kind();
+
+        request::write_value_to_args(value, &mut args);
+
+        let req = Request::new_with_type(CommandId::Set, Some(args), key_type);
+
+        self.send_and_wait(&req.into_bytes()).await
     }
 }
