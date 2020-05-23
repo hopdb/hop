@@ -38,7 +38,7 @@ impl Dispatch for Append {
 
                 list.append(&mut args.to_owned());
 
-                response::write_list(resp, &list);
+                response::write_list(resp, list.iter());
             }
             Some(KeyType::String) => {
                 let mut string = hop
