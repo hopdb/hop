@@ -55,7 +55,11 @@ impl Dispatch for Length {
             Some(KeyType::String) => Self::string(hop, key, resp),
             Some(_) => Err(DispatchError::WrongType),
             None => {
-                let kind = hop.state().key(key, Value::bytes).value().kind();
+                let kind = hop
+                    .state()
+                    .key_or_insert_with(key, Value::bytes)
+                    .value()
+                    .kind();
 
                 match kind {
                     KeyType::Bytes => Self::bytes(hop, key, resp),

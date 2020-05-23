@@ -165,6 +165,33 @@ impl Backend for MemoryBackend {
         Ok(int)
     }
 
+    async fn is<T: IntoIterator<Item = U> + Send, U: AsRef<[u8]> + Send>(
+        &self,
+        key_type: KeyType,
+        keys: T,
+    ) -> Result<bool, Self::Error> {
+        let args = keys
+            .into_iter()
+            .map(|arg| arg.as_ref().to_owned())
+            .collect();
+        let req = Request::new_with_type(CommandId::Is, Some(args), key_type);
+        let mut resp = Vec::new();
+
+        self.hop.dispatch(&req, &mut resp)?;
+
+        let mut ctx = Context::new();
+
+        let resp = match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(value) => value,
+            Instruction::ReadBytes(_) => unreachable!(),
+        };
+
+        match resp {
+            Response::Value(Value::Boolean(exists)) => Ok(exists),
+            _ => panic!(),
+        }
+    }
+
     async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>, Self::Error> {
         let req = Request::new(CommandId::Rename, Some(vec![from.to_vec(), to.to_vec()]));
         let mut resp = Vec::new();
@@ -240,13 +267,22 @@ mod tests {
     use super::{Backend, MemoryBackend};
     use hop_engine::state::{
         object::{Boolean, Bytes, Float, Integer, Str},
-        Value,
+        KeyType, Value,
     };
 
     #[tokio::test]
     async fn test_echo() {
         let backend = MemoryBackend::new();
         assert!(matches!(backend.echo(b"test").await, Ok(vec) if vec == vec![b"test"]));
+    }
+
+    #[tokio::test]
+    async fn test_is() {
+        let backend = MemoryBackend::new();
+        backend.set(b"foo", Value::Boolean(true)).await.unwrap();
+
+        assert!(backend.is(KeyType::Boolean, &["foo"]).await.unwrap());
+        assert!(!backend.is(KeyType::Integer, &["foo"]).await.unwrap());
     }
 
     #[tokio::test]

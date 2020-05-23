@@ -203,6 +203,25 @@ impl Backend for ServerBackend {
         }
     }
 
+    async fn is<T: IntoIterator<Item = U> + Send, U: AsRef<[u8]> + Send>(
+        &self,
+        key_type: KeyType,
+        keys: T,
+    ) -> Result<bool> {
+        let args = keys
+            .into_iter()
+            .map(|key| key.as_ref().to_owned())
+            .collect();
+        let req = Request::new_with_type(CommandId::Is, Some(args), key_type);
+
+        let value = self.send_and_wait(&req.into_bytes()).await?;
+
+        match value {
+            Value::Boolean(exists) => Ok(exists),
+            _ => Err(Error::BadResponse),
+        }
+    }
+
     async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>> {
         let mut args = Vec::with_capacity(2);
         args.push(from.to_vec());

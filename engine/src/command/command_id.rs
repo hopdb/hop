@@ -24,6 +24,7 @@ pub enum CommandId {
     Set = 10,
     Delete = 12,
     Exists = 13,
+    Is = 14,
     Rename = 15,
     Append = 20,
     Length = 21,
@@ -43,6 +44,7 @@ impl CommandId {
             Exists => Multiple,
             Increment => None,
             IncrementBy => One,
+            Is => Multiple,
             Decrement => None,
             DecrementBy => One,
             Length => One,
@@ -75,6 +77,7 @@ impl CommandId {
             Self::Exists => "exists",
             Self::IncrementBy => "increment:by",
             Self::Increment => "increment",
+            Self::Is => "is",
             Self::Length => "length",
             Self::Rename => "rename",
             Self::Set => "set",
@@ -102,6 +105,7 @@ impl FromStr for CommandId {
             "exists" => Self::Exists,
             "increment:by" => Self::IncrementBy,
             "increment" => Self::Increment,
+            "is" => Self::Is,
             "length" => Self::Length,
             "rename" => Self::Rename,
             "set" => Self::Set,
@@ -123,6 +127,7 @@ impl TryFrom<u8> for CommandId {
             10 => Self::Set,
             12 => Self::Delete,
             13 => Self::Exists,
+            14 => Self::Is,
             15 => Self::Rename,
             20 => Self::Append,
             21 => Self::Length,
@@ -191,6 +196,7 @@ mod tests {
             CommandId::Increment,
             CommandId::from_str("increment").unwrap()
         );
+        assert_eq!(CommandId::Is, CommandId::from_str("is").unwrap());
         assert_eq!(CommandId::Length, CommandId::from_str("length").unwrap());
         assert_eq!(CommandId::Rename, CommandId::from_str("rename").unwrap());
         assert_eq!(CommandId::Set, CommandId::from_str("set").unwrap());
@@ -207,6 +213,7 @@ mod tests {
         assert_eq!(CommandId::Exists, CommandId::try_from(13).unwrap());
         assert_eq!(CommandId::IncrementBy, CommandId::try_from(2).unwrap());
         assert_eq!(CommandId::Increment, CommandId::try_from(0).unwrap());
+        assert_eq!(CommandId::Is, CommandId::from_str("is").unwrap());
         assert_eq!(CommandId::Length, CommandId::try_from(21).unwrap());
         assert_eq!(CommandId::Rename, CommandId::try_from(15).unwrap());
         assert_eq!(CommandId::Set, CommandId::try_from(10).unwrap());
@@ -223,6 +230,7 @@ mod tests {
         assert_eq!("exists", CommandId::Exists.name());
         assert_eq!("increment:by", CommandId::IncrementBy.name());
         assert_eq!("increment", CommandId::Increment.name());
+        assert_eq!("is", CommandId::Is.name());
         assert_eq!("length", CommandId::Length.name());
         assert_eq!("rename", CommandId::Rename.name());
         assert_eq!("set", CommandId::Set.name());

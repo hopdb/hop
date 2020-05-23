@@ -6,6 +6,8 @@ pub mod backend;
 pub mod model;
 pub mod request;
 
+pub use hop_engine::state::KeyType;
+
 use backend::{Backend, MemoryBackend};
 use request::*;
 use std::sync::Arc;
@@ -165,6 +167,45 @@ impl<B: Backend> Client<B> {
     /// ```
     pub fn increment<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Increment<'_, B, K> {
         Increment::new(self.backend(), key)
+    }
+
+    /// Check if one or more keys is a specified key type.
+    ///
+    /// Returns `true` if all of the keys both exist and are the specified key
+    /// type, or `false` if at least one of the keys does not exist or is of a
+    /// different key type.
+    ///
+    /// Refer to the documentation for the [`Is`] request for more
+    /// information on how to use the request struct returned by this method.
+    ///
+    /// This is an `O(n)` time complexity operation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop::{Client, KeyType};
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    ///
+    /// // make a key named "foo" that is an integer
+    /// client.set("foo").int(123).await?;
+    ///
+    /// // check if "foo" is an integer, which it is:
+    /// assert!(client.is(KeyType::Integer).key("foo").await?);
+    ///
+    /// // now make a key named "bar" that is a float
+    /// client.set("bar").float(1.23).await?;
+    ///
+    /// // now if we check that both are an integer, we'll get back false, since
+    /// // "foo" is an integer but "bar" is not
+    /// assert!(!client.is(KeyType::Integer).keys(&["foo", "bar"])?.await?);
+    /// # Ok(()) }
+    /// ```
+    ///
+    /// [`Exists`]: request/exists/struct.Exists.html
+    pub fn is(&self, key_type: KeyType) -> Is<B> {
+        Is::new(self.backend(), key_type)
     }
 
     /// Rename a key to a new key name, if the new key name doesn't already
