@@ -10,6 +10,7 @@ use hop_engine::{
     state::{KeyType, Value},
 };
 use std::{
+    convert::TryInto,
     error::Error as StdError,
     fmt::{Display, Formatter, Result as FmtResult},
     io::Error as IoError,
@@ -33,6 +34,7 @@ pub enum Error {
     Connecting { source: IoError },
     ConnectionClosed,
     Dispatching { reason: DispatchError },
+    KeyTypeInvalid { number: u8 },
     ReadingMessage { source: IoError },
     WritingMessage { source: IoError },
 }
@@ -50,6 +52,10 @@ impl Display for Error {
                 "server couldn't process command: {:?}",
                 reason
             )),
+            Self::KeyTypeInvalid { number } => f.write_fmt(format_args!(
+                "the provided key type ({}) is invalid",
+                number
+            )),
             Self::ReadingMessage { .. } => f.write_str("failed to read a message"),
             Self::WritingMessage { .. } => f.write_str("failed to write a message"),
         }
@@ -64,6 +70,7 @@ impl StdError for Error {
             Self::Connecting { source } => Some(source),
             Self::ConnectionClosed => None,
             Self::Dispatching { .. } => None,
+            Self::KeyTypeInvalid { .. } => None,
             Self::ReadingMessage { source } => Some(source),
             Self::WritingMessage { source } => Some(source),
         }
@@ -218,6 +225,26 @@ impl Backend for ServerBackend {
 
         match value {
             Value::Boolean(exists) => Ok(exists),
+            _ => Err(Error::BadResponse),
+        }
+    }
+
+    async fn key_type(&self, key: &[u8]) -> Result<KeyType> {
+        let mut args = Vec::with_capacity(1);
+        args.push(key.to_vec());
+
+        let req = Request::new(CommandId::Type, Some(args));
+
+        let value = self.send_and_wait(&req.into_bytes()).await?;
+
+        match value {
+            Value::Integer(int) => {
+                let number = int as u8;
+
+                number
+                    .try_into()
+                    .map_err(|_| Error::KeyTypeInvalid { number })
+            }
             _ => Err(Error::BadResponse),
         }
     }

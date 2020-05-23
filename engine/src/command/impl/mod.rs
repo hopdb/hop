@@ -12,9 +12,10 @@ mod length;
 mod rename;
 mod set;
 mod stats;
+mod r#type;
 
 pub use self::{
     append::Append, decrement::Decrement, decrement_by::DecrementBy, delete::Delete, echo::Echo,
     exists::Exists, increment::Increment, increment_by::IncrementBy, is::Is, keys::Keys,
-    length::Length, rename::Rename, set::Set, stats::Stats,
+    length::Length, r#type::Type, rename::Rename, set::Set, stats::Stats,
 };

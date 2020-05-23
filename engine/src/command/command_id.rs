@@ -34,6 +34,7 @@ pub enum CommandId {
     Exists = 13,
     Is = 14,
     Rename = 15,
+    Type = 16,
     Append = 20,
     Length = 21,
     Keys = 22,
@@ -61,6 +62,7 @@ impl CommandId {
             Rename => None,
             Set => One,
             Stats => None,
+            Type => None,
         }
     }
 
@@ -83,6 +85,7 @@ impl CommandId {
             Rename => Two,
             Set => One,
             Stats => None,
+            Type => One,
         }
     }
 
@@ -109,6 +112,7 @@ impl CommandId {
             Self::Rename => "rename",
             Self::Set => "set",
             Self::Stats => "stats",
+            Self::Type => "type",
         }
     }
 }
@@ -138,6 +142,7 @@ impl FromStr for CommandId {
             "rename" => Self::Rename,
             "set" => Self::Set,
             "stats" => Self::Stats,
+            "type" => Self::Type,
             _ => return Err(InvalidCommandId),
         })
     }
@@ -157,6 +162,7 @@ impl TryFrom<u8> for CommandId {
             13 => Self::Exists,
             14 => Self::Is,
             15 => Self::Rename,
+            16 => Self::Type,
             20 => Self::Append,
             21 => Self::Length,
             22 => Self::Keys,
@@ -231,6 +237,7 @@ mod tests {
         assert_eq!(CommandId::Rename, CommandId::from_str("rename").unwrap());
         assert_eq!(CommandId::Set, CommandId::from_str("set").unwrap());
         assert_eq!(CommandId::Stats, CommandId::from_str("stats").unwrap());
+        assert_eq!(CommandId::Type, CommandId::from_str("type").unwrap());
     }
 
     #[test]
@@ -249,6 +256,7 @@ mod tests {
         assert_eq!(CommandId::Rename, CommandId::try_from(15).unwrap());
         assert_eq!(CommandId::Set, CommandId::try_from(10).unwrap());
         assert_eq!(CommandId::Stats, CommandId::try_from(101).unwrap());
+        assert_eq!(CommandId::Type, CommandId::try_from(16).unwrap());
     }
 
     #[test]
@@ -267,5 +275,6 @@ mod tests {
         assert_eq!("rename", CommandId::Rename.name());
         assert_eq!("set", CommandId::Set.name());
         assert_eq!("stats", CommandId::Stats.name());
+        assert_eq!("type", CommandId::Type.name());
     }
 }

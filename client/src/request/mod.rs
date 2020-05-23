@@ -9,6 +9,7 @@ mod increment;
 mod keys;
 mod rename;
 mod stats;
+mod r#type;
 
 pub use self::{
     decrement::Decrement,
@@ -18,6 +19,7 @@ pub use self::{
     increment::Increment,
     is::Is,
     keys::Keys,
+    r#type::Type,
     rename::Rename,
     set::{SetBytes, SetUnconfigured},
     stats::Stats,

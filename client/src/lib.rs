@@ -208,6 +208,24 @@ impl<B: Backend> Client<B> {
         Is::new(self.backend(), key_type)
     }
 
+    /// Retrieve the type of a key.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop::{Client, KeyType};
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// client.set("foo").int(123).await?;
+    ///
+    /// assert_eq!(KeyType::Integer, client.key_type("foo").await?);
+    /// # Ok(()) }
+    /// ```
+    pub fn key_type<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Type<'_, B, K> {
+        Type::new(self.backend(), key)
+    }
+
     /// Retrieve a list of the keys of a map.
     ///
     /// Returns the list of keys on success.
