@@ -208,6 +208,26 @@ impl<B: Backend> Client<B> {
         Is::new(self.backend(), key_type)
     }
 
+    /// Retrieve a list of the keys of a map.
+    ///
+    /// Returns the list of keys on success.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// client.set("foo").map([(b"key".to_vec(), b"value".to_vec())].to_vec()).await?;
+    ///
+    /// assert_eq!([b"key".to_vec()].to_vec(), client.keys("foo").await?);
+    /// # Ok(()) }
+    /// ```
+    pub fn keys<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Keys<'_, B, K> {
+        Keys::new(self.backend(), key)
+    }
+
     /// Rename a key to a new key name, if the new key name doesn't already
     /// exist.
     ///

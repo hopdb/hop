@@ -256,6 +256,13 @@ where
 
             Ok(is_type.to_string().into())
         }
+        CommandId::Keys => {
+            let key = req.key().ok_or_else(|| InnerProcessError::KeyUnspecified)?;
+
+            let v = client.keys(key).await.map_err(backend_err)?;
+
+            Ok(print_list(v).into())
+        }
         CommandId::Rename => {
             let from = req
                 .key()
@@ -289,4 +296,11 @@ where
         }
         _ => panic!(),
     }
+}
+
+fn print_list(list: Vec<Vec<u8>>) -> String {
+    list.into_iter()
+        .map(|item| String::from_utf8_lossy(&item).into_owned())
+        .collect::<Vec<_>>()
+        .join("\n")
 }

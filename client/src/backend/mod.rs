@@ -35,6 +35,8 @@ pub trait Backend {
         keys: T,
     ) -> Result<bool, Self::Error>;
 
+    async fn keys(&self, key: &[u8]) -> Result<Vec<Vec<u8>>, Self::Error>;
+
     async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>, Self::Error>;
 
     async fn set<T: Into<Value> + Send>(&self, key: &[u8], value: T) -> Result<Value, Self::Error>;
