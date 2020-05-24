@@ -57,10 +57,7 @@ impl<'a, B: Backend> Exists<B> {
     /// Refer to the [struct docs] for more information.
     ///
     /// [struct docs]: #main
-    pub fn key<K: AsRef<[u8]> + 'a + Unpin + Send + Sync>(
-        self,
-        key: K,
-    ) -> ExistsConfigured<'a, B, K> {
+    pub fn key<K: AsRef<[u8]> + 'a + Send + Unpin>(self, key: K) -> ExistsConfigured<'a, B, K> {
         let mut keys = Vec::new();
         keys.push(key);
 
@@ -81,7 +78,7 @@ impl<'a, B: Backend> Exists<B> {
     /// [`CommandConfigurationError::NoKeys`]: enum.CommandConfigurationError.html#variant.NoKeys
     /// [`CommandConfigurationError::TooManyKeys`]: enum.CommandConfigurationError.html#variant.TooManyKeys
     /// [struct docs]: #main
-    pub fn keys<K: AsRef<[u8]> + 'a + Unpin + Send + Sync>(
+    pub fn keys<K: AsRef<[u8]> + 'a + Send + Unpin>(
         self,
         keys: impl IntoIterator<Item = K>,
     ) -> Result<ExistsConfigured<'a, B, K>, CommandConfigurationError> {
@@ -98,13 +95,13 @@ impl<'a, B: Backend> Exists<B> {
 }
 
 /// A configured request to check if one or more keys exist.
-pub struct ExistsConfigured<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> {
+pub struct ExistsConfigured<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> {
     backend: Option<Arc<B>>,
     fut: MaybeInFlightFuture<'a, bool, B::Error>,
     keys: Option<Vec<K>>,
 }
 
-impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> ExistsConfigured<'a, B, K> {
+impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> ExistsConfigured<'a, B, K> {
     fn new(backend: Arc<B>, keys: Vec<K>) -> Self {
         Self {
             backend: Some(backend),
@@ -114,7 +111,7 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> ExistsConfigured
     }
 }
 
-impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> Future
+impl<'a, B: Backend + Send + 'static, K: AsRef<[u8]> + 'a + Send + Unpin> Future
     for ExistsConfigured<'a, B, K>
 {
     type Output = Result<bool, B::Error>;
@@ -124,11 +121,20 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + 'a + Unpin + Send 
             let backend = { self.backend.take().expect("backend only taken once") };
             let keys = self.keys.take().expect("keys only taken once");
 
-            self.fut.replace(Box::pin(
-                async move { backend.exists((*keys).iter()).await },
-            ));
+            self.fut
+                .replace(Box::pin(async move { backend.exists(keys).await }));
         }
 
         self.fut.as_mut().expect("future exists").as_mut().poll(cx)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Exists, ExistsConfigured};
+    use crate::backend::MemoryBackend;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Exists<MemoryBackend>: Send);
+    assert_impl_all!(ExistsConfigured<MemoryBackend, Vec<u8>>: Send);
 }

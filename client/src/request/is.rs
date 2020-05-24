@@ -59,7 +59,7 @@ impl<'a, B: Backend> Is<B> {
     /// Refer to the [struct docs] for more information.
     ///
     /// [struct docs]: #main
-    pub fn key<K: AsRef<[u8]> + 'a + Unpin + Send + Sync>(self, key: K) -> IsConfigured<'a, B, K> {
+    pub fn key<K: AsRef<[u8]> + 'a + Send + Unpin>(self, key: K) -> IsConfigured<'a, B, K> {
         let mut keys = Vec::new();
         keys.push(key);
 
@@ -80,7 +80,7 @@ impl<'a, B: Backend> Is<B> {
     /// [`CommandConfigurationError::NoKeys`]: enum.CommandConfigurationError.html#variant.NoKeys
     /// [`CommandConfigurationError::TooManyKeys`]: enum.CommandConfigurationError.html#variant.TooManyKeys
     /// [struct docs]: #main
-    pub fn keys<K: AsRef<[u8]> + 'a + Unpin + Send + Sync>(
+    pub fn keys<K: AsRef<[u8]> + 'a + Send + Unpin>(
         self,
         keys: impl IntoIterator<Item = K>,
     ) -> Result<IsConfigured<'a, B, K>, CommandConfigurationError> {
@@ -97,14 +97,14 @@ impl<'a, B: Backend> Is<B> {
 }
 
 /// A configured request to check if one or more keys exist.
-pub struct IsConfigured<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> {
+pub struct IsConfigured<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> {
     backend: Option<Arc<B>>,
     fut: MaybeInFlightFuture<'a, bool, B::Error>,
     key_type: KeyType,
     keys: Option<Vec<K>>,
 }
 
-impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> IsConfigured<'a, B, K> {
+impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> IsConfigured<'a, B, K> {
     fn new(backend: Arc<B>, key_type: KeyType, keys: Vec<K>) -> Self {
         Self {
             backend: Some(backend),
@@ -115,7 +115,7 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> IsConfigured<'a,
     }
 }
 
-impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + 'a + Unpin + Send + Sync> Future
+impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + 'a + Send + Unpin> Future
     for IsConfigured<'a, B, K>
 {
     type Output = Result<bool, B::Error>;
@@ -126,11 +126,20 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + 'a + Unpin + Send 
             let keys = self.keys.take().expect("keys only taken once");
             let key_type = self.key_type;
 
-            self.fut.replace(Box::pin(async move {
-                backend.is(key_type, (*keys).iter()).await
-            }));
+            self.fut
+                .replace(Box::pin(async move { backend.is(key_type, keys).await }));
         }
 
         self.fut.as_mut().expect("future exists").as_mut().poll(cx)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Is, IsConfigured};
+    use crate::backend::MemoryBackend;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Is<MemoryBackend>: Send);
+    assert_impl_all!(IsConfigured<MemoryBackend, Vec<u8>>: Send);
 }

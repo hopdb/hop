@@ -13,6 +13,7 @@ use request::{get::GetUnconfigured, set::SetUnconfigured, *};
 use std::sync::Arc;
 
 /// A client for interfacing over Hop instances.
+#[derive(Clone, Debug)]
 pub struct Client<B: Backend> {
     backend: Arc<B>,
 }
@@ -81,7 +82,7 @@ impl<B: Backend> Client<B> {
     /// and then decremented by 1, resulting in the value being -1.
     ///
     /// This is an `O(1)` time complexity operation.
-    pub fn decrement<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Decrement<'_, B, K> {
+    pub fn decrement<K: AsRef<[u8]> + Send + Unpin>(&self, key: K) -> Decrement<'_, B, K> {
         Decrement::new(self.backend(), key)
     }
 
@@ -104,14 +105,14 @@ impl<B: Backend> Client<B> {
     /// assert_eq!(1, client.increment("foo").await?);
     /// # Ok(()) }
     /// ```
-    pub fn delete<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Delete<'_, B, K> {
+    pub fn delete<K: AsRef<[u8]> + Send + Unpin>(&self, key: K) -> Delete<'_, B, K> {
         Delete::new(self.backend(), key)
     }
 
     /// Echos the provided content back at you.
     ///
     /// Returns the input content.
-    pub fn echo<K: AsRef<[u8]> + Unpin>(&self, content: K) -> Echo<'_, B, K> {
+    pub fn echo<K: AsRef<[u8]> + Send + Unpin>(&self, content: K) -> Echo<'_, B, K> {
         Echo::new(self.backend(), content)
     }
 
@@ -192,7 +193,7 @@ impl<B: Backend> Client<B> {
     /// ```
     ///
     /// [`GetUnconfigured`]: request/get/struct.GetUnconfigured.html
-    pub fn get<'a, K: AsRef<[u8]> + Unpin + 'a>(&self, key: K) -> GetUnconfigured<'a, B, K> {
+    pub fn get<'a, K: AsRef<[u8]> + Send + Unpin + 'a>(&self, key: K) -> GetUnconfigured<'a, B, K> {
         GetUnconfigured::new(self.backend(), key)
     }
 
@@ -215,7 +216,7 @@ impl<B: Backend> Client<B> {
     /// println!("New value: {}", client.increment("foo").await?);
     /// # Ok(()) }
     /// ```
-    pub fn increment<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Increment<'_, B, K> {
+    pub fn increment<K: AsRef<[u8]> + Send + Unpin>(&self, key: K) -> Increment<'_, B, K> {
         Increment::new(self.backend(), key)
     }
 
@@ -272,7 +273,7 @@ impl<B: Backend> Client<B> {
     /// assert_eq!(KeyType::Integer, client.key_type("foo").await?);
     /// # Ok(()) }
     /// ```
-    pub fn key_type<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Type<'_, B, K> {
+    pub fn key_type<K: AsRef<[u8]> + Send + Unpin>(&self, key: K) -> Type<'_, B, K> {
         Type::new(self.backend(), key)
     }
 
@@ -292,7 +293,7 @@ impl<B: Backend> Client<B> {
     /// assert_eq!([b"key".to_vec()].to_vec(), client.keys("foo").await?);
     /// # Ok(()) }
     /// ```
-    pub fn keys<K: AsRef<[u8]> + Unpin>(&self, key: K) -> Keys<'_, B, K> {
+    pub fn keys<K: AsRef<[u8]> + Send + Unpin>(&self, key: K) -> Keys<'_, B, K> {
         Keys::new(self.backend(), key)
     }
 
@@ -313,7 +314,7 @@ impl<B: Backend> Client<B> {
     /// println!("New incremented value: {}", client.increment("foo").await?);
     /// # Ok(()) }
     /// ```
-    pub fn rename<F: AsRef<[u8]> + Unpin, T: AsRef<[u8]> + Unpin>(
+    pub fn rename<F: AsRef<[u8]> + Send + Unpin, T: AsRef<[u8]> + Send + Unpin>(
         &self,
         from: F,
         to: T,
@@ -345,7 +346,7 @@ impl<B: Backend> Client<B> {
     /// ```
     ///
     /// [`SetUnconfigured`]: request/set/struct.SetUnconfigured.html
-    pub fn set<K: AsRef<[u8]> + Unpin>(&self, key: K) -> SetUnconfigured<B, K> {
+    pub fn set<K: AsRef<[u8]> + Send + Unpin>(&self, key: K) -> SetUnconfigured<B, K> {
         SetUnconfigured::new(self.backend(), key)
     }
 
@@ -368,4 +369,13 @@ impl<B: Backend> Client<B> {
     pub fn stats(&self) -> Stats<'_, B> {
         Stats::new(self.backend())
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{backend::MemoryBackend, Client};
+    use static_assertions::assert_impl_all;
+    use std::fmt::Debug;
+
+    assert_impl_all!(Client<MemoryBackend>: Debug, Send, Sync);
 }

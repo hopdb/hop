@@ -13,13 +13,13 @@ use std::{
 /// This is returned by [`GetUnconfigured::list`].
 ///
 /// [`GetUnconfigured::list`]: struct.GetUnconfigured.html#method.list
-pub struct GetList<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> {
+pub struct GetList<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> {
     backend: Option<Arc<B>>,
     fut: MaybeInFlightFuture<'a, Vec<Vec<u8>>, B::Error>,
     key: Option<K>,
 }
 
-impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> GetList<'a, B, K> {
+impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> GetList<'a, B, K> {
     pub(crate) fn new(backend: Arc<B>, key: K) -> Self {
         Self {
             backend: Some(backend),
@@ -29,7 +29,9 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> GetList<'a, B, K> {
     }
 }
 
-impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future for GetList<'a, B, K> {
+impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Send + Unpin> Future
+    for GetList<'a, B, K>
+{
     type Output = Result<Vec<Vec<u8>>, B::Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -38,7 +40,8 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future for 
             let key = self.key.take().expect("key only taken once");
 
             self.fut.replace(Box::pin(async move {
-                let value = backend.get(key.as_ref()).await?;
+                let key = key.as_ref();
+                let value = backend.get(key).await?;
 
                 match value {
                     Value::List(list) => Ok(list),
@@ -49,4 +52,13 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future for 
 
         self.fut.as_mut().expect("future exists").as_mut().poll(cx)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::GetList;
+    use crate::backend::MemoryBackend;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(GetList<MemoryBackend, Vec<u8>>: Send);
 }

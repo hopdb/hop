@@ -13,13 +13,13 @@ use std::{
 /// This is returned by [`GetUnconfigured::bool`].
 ///
 /// [`GetUnconfigured::bool`]: struct.GetUnconfigured.html#method.bool
-pub struct GetBoolean<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> {
+pub struct GetBoolean<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> {
     backend: Option<Arc<B>>,
     fut: MaybeInFlightFuture<'a, bool, B::Error>,
     key: Option<K>,
 }
 
-impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> GetBoolean<'a, B, K> {
+impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> GetBoolean<'a, B, K> {
     pub(crate) fn new(backend: Arc<B>, key: K) -> Self {
         Self {
             backend: Some(backend),
@@ -29,7 +29,7 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> GetBoolean<'a, B, K> {
     }
 }
 
-impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future
+impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Send + Unpin> Future
     for GetBoolean<'a, B, K>
 {
     type Output = Result<bool, B::Error>;
@@ -40,7 +40,8 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future
             let key = self.key.take().expect("key only taken once");
 
             self.fut.replace(Box::pin(async move {
-                let value = backend.get(key.as_ref()).await?;
+                let key = key.as_ref();
+                let value = backend.get(key).await?;
 
                 match value {
                     Value::Boolean(bool) => Ok(bool),
@@ -51,4 +52,13 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future
 
         self.fut.as_mut().expect("future exists").as_mut().poll(cx)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::GetBoolean;
+    use crate::backend::MemoryBackend;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(GetBoolean<MemoryBackend, Vec<u8>>: Send);
 }

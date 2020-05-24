@@ -20,4 +20,5 @@ hop-engine = { default-features = false, path = "../engine" }
 tokio = { default-features = false, features = ["io-util", "net", "sync"], version = "^0.2.20" }
 
 [dev-dependencies]
+static_assertions = { default-features = false, version = "^1.1.0" }
 tokio = { default-features = false, features = ["io-util", "macros", "net", "sync"], version = "^0.2.20" }
