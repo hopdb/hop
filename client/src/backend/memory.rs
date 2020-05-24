@@ -27,6 +27,7 @@ fn request(id: CommandId, args: Option<Vec<Vec<u8>>>, kind: Option<KeyType>) -> 
 #[derive(Debug)]
 pub enum Error {
     KeyTypeInvalid { number: u8 },
+    KeyTypeUnsupported { key_type: KeyType },
     RunningCommand { source: DispatchError },
 }
 
@@ -43,6 +44,10 @@ impl Display for Error {
                 "the provided key type ({}) is invalid",
                 number
             )),
+            Self::KeyTypeUnsupported { key_type } => f.write_fmt(format_args!(
+                "key type {} is not supported by this command",
+                *key_type as u8
+            )),
             Self::RunningCommand { source } => f.write_fmt(format_args!("{}", source)),
         }
     }
@@ -52,6 +57,7 @@ impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Self::KeyTypeInvalid { .. } => None,
+            Self::KeyTypeUnsupported { .. } => None,
             Self::RunningCommand { .. } => None,
         }
     }
@@ -86,11 +92,64 @@ impl MemoryBackend {
 impl Backend for MemoryBackend {
     type Error = Error;
 
-    async fn decrement(&self, key: &[u8], kind: Option<KeyType>) -> Result<i64, Self::Error> {
+    async fn append<T: Into<Value> + Send>(
+        &self,
+        key: &[u8],
+        value: T,
+    ) -> Result<Value, Self::Error> {
+        let mut args = Vec::new();
+        args.push(key.to_vec());
+        let value = value.into();
+        let key_type = value.kind();
+
+        match value {
+            Value::Bytes(bytes) => args.push(bytes),
+            Value::List(list) => {
+                for item in list {
+                    args.push(item);
+                }
+            }
+            Value::String(string) => args.push(string.into_bytes()),
+            _ => return Err(Error::KeyTypeUnsupported { key_type }),
+        }
+
+        let req = request(CommandId::Append, Some(args), Some(key_type));
+
+        self.send(&req)
+    }
+
+    async fn decrement_by<T: Into<Value> + Send>(
+        &self,
+        key: &[u8],
+        value: T,
+    ) -> Result<Value, Self::Error> {
+        let value = value.into();
+        let key_type = value.kind();
+
+        let mut args = Vec::new();
+        args.push(key.to_vec());
+
+        if key_type != KeyType::Float && key_type != KeyType::Integer {
+            return Err(Error::KeyTypeUnsupported { key_type });
+        }
+
+        request::write_value_to_args(value, &mut args);
+
+        let req = Request::new_with_type(CommandId::DecrementBy, Some(args), key_type);
+
+        match self.send(&req)? {
+            Value::Float(float) => Ok(Value::Float(float)),
+            Value::Integer(int) => Ok(Value::Integer(int)),
+            other => panic!("Other response: {:?}", other),
+        }
+    }
+
+    async fn decrement(&self, key: &[u8], kind: Option<KeyType>) -> Result<Value, Self::Error> {
         let req = request(CommandId::Decrement, Some(vec![key.to_vec()]), kind);
 
         match self.send(&req)? {
-            Value::Integer(int) => Ok(int),
+            Value::Float(float) => Ok(Value::Float(float)),
+            Value::Integer(int) => Ok(Value::Integer(int)),
             other => panic!("Other response: {:?}", other),
         }
     }
@@ -180,7 +239,33 @@ impl Backend for MemoryBackend {
         }
     }
 
-    async fn increment(&self, key: &[u8], kind: Option<KeyType>) -> Result<i64, Self::Error> {
+    async fn increment_by<T: Into<Value> + Send>(
+        &self,
+        key: &[u8],
+        value: T,
+    ) -> Result<Value, Self::Error> {
+        let value = value.into();
+        let key_type = value.kind();
+
+        let mut args = Vec::new();
+        args.push(key.to_vec());
+
+        if key_type != KeyType::Float && key_type != KeyType::Integer {
+            return Err(Error::KeyTypeUnsupported { key_type });
+        }
+
+        request::write_value_to_args(value, &mut args);
+
+        let req = Request::new_with_type(CommandId::IncrementBy, Some(args), key_type);
+
+        match self.send(&req)? {
+            Value::Float(float) => Ok(Value::Float(float)),
+            Value::Integer(int) => Ok(Value::Integer(int)),
+            other => panic!("Other response: {:?}", other),
+        }
+    }
+
+    async fn increment(&self, key: &[u8], kind: Option<KeyType>) -> Result<Value, Self::Error> {
         let req = request(CommandId::Increment, Some(vec![key.to_vec()]), kind);
         let mut resp = Vec::new();
 
@@ -193,12 +278,11 @@ impl Backend for MemoryBackend {
             Instruction::ReadBytes(_) => unreachable!(),
         };
 
-        let int = match resp {
-            Response::Value(Value::Integer(int)) => int,
+        match resp {
+            Response::Value(Value::Float(float)) => Ok(Value::Float(float)),
+            Response::Value(Value::Integer(int)) => Ok(Value::Integer(int)),
             _ => panic!(),
-        };
-
-        Ok(int)
+        }
     }
 
     async fn is<T: IntoIterator<Item = U> + Send, U: AsRef<[u8]> + Send>(
@@ -273,6 +357,15 @@ impl Backend for MemoryBackend {
         match resp {
             Response::Value(Value::List(list)) => Ok(list),
             _ => panic!(),
+        }
+    }
+
+    async fn length(&self, key: &[u8], kind: Option<KeyType>) -> Result<i64, Self::Error> {
+        let req = request(CommandId::Length, Some(vec![key.to_vec()]), kind);
+
+        match self.send(&req)? {
+            Value::Integer(int) => Ok(int),
+            other => panic!("Other response: {:?}", other),
         }
     }
 
@@ -360,9 +453,27 @@ mod tests {
     assert_impl_all!(MemoryBackend: Debug, Default, Send, Sync);
 
     #[tokio::test]
+    async fn test_append() {
+        let backend = MemoryBackend::new();
+
+        assert!(backend
+            .set(b"foo", Value::String("foo".to_owned()))
+            .await
+            .is_ok());
+        assert!(backend
+            .append(b"foo", Value::String("bar".to_owned()))
+            .await
+            .is_ok());
+    }
+
+    #[tokio::test]
     async fn test_decrement() {
         let backend = MemoryBackend::new();
-        assert!(matches!(backend.decrement(b"foo", None).await, Ok(-1)));
+
+        assert!(matches!(
+            backend.decrement(b"foo", None).await,
+            Ok(Value::Integer(-1))
+        ));
     }
 
     #[tokio::test]
@@ -378,6 +489,19 @@ mod tests {
 
         assert!(backend.is(KeyType::Boolean, &["foo"]).await.unwrap());
         assert!(!backend.is(KeyType::Integer, &["foo"]).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_length() {
+        let backend = MemoryBackend::new();
+        assert!(backend
+            .set(b"foo", Value::String("foo".to_owned()))
+            .await
+            .is_ok());
+        assert_eq!(
+            3,
+            backend.length(b"foo", Some(KeyType::String)).await.unwrap()
+        );
     }
 
     #[tokio::test]

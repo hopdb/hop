@@ -10,13 +10,32 @@ pub use self::server::ServerBackend;
 
 use crate::model::StatsData;
 use async_trait::async_trait;
-use hop_engine::state::{KeyType, Value};
+use hop_engine::{
+    command::{CommandId, Request},
+    state::{KeyType, Value},
+};
 
 #[async_trait]
 pub trait Backend: Send + Sync {
     type Error;
 
-    async fn decrement(&self, key: &[u8], key_type: Option<KeyType>) -> Result<i64, Self::Error>
+    async fn append<T: Into<Value> + Send>(
+        &self,
+        key: &[u8],
+        value: T,
+    ) -> Result<Value, Self::Error>
+    where
+        Self: Sized;
+
+    async fn decrement_by<T: Into<Value> + Send>(
+        &self,
+        key: &[u8],
+        value: T,
+    ) -> Result<Value, Self::Error>
+    where
+        Self: Sized;
+
+    async fn decrement(&self, key: &[u8], key_type: Option<KeyType>) -> Result<Value, Self::Error>
     where
         Self: Sized;
 
@@ -39,7 +58,15 @@ pub trait Backend: Send + Sync {
     where
         Self: Sized;
 
-    async fn increment(&self, key: &[u8], key_type: Option<KeyType>) -> Result<i64, Self::Error>
+    async fn increment_by<T: Into<Value> + Send>(
+        &self,
+        key: &[u8],
+        value: T,
+    ) -> Result<Value, Self::Error>
+    where
+        Self: Sized;
+
+    async fn increment(&self, key: &[u8], key_type: Option<KeyType>) -> Result<Value, Self::Error>
     where
         Self: Sized;
 
@@ -59,6 +86,10 @@ pub trait Backend: Send + Sync {
     where
         Self: Sized;
 
+    async fn length(&self, key: &[u8], key_type: Option<KeyType>) -> Result<i64, Self::Error>
+    where
+        Self: Sized;
+
     async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>, Self::Error>
     where
         Self: Sized;
@@ -70,4 +101,16 @@ pub trait Backend: Send + Sync {
     async fn stats(&self) -> Result<StatsData, Self::Error>
     where
         Self: Sized;
+}
+
+fn make_request(
+    cmd_id: CommandId,
+    args: Option<Vec<Vec<u8>>>,
+    key_type: Option<KeyType>,
+) -> Request {
+    if let Some(key_type) = key_type {
+        Request::new_with_type(cmd_id, args, key_type)
+    } else {
+        Request::new(cmd_id, args)
+    }
 }
