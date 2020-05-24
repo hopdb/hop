@@ -162,6 +162,7 @@ where
         Ok(memory_error) => {
             return match *memory_error {
                 MemoryError::KeyTypeInvalid { .. } => InnerProcessError::KeyTypeInvalid,
+                MemoryError::KeyTypeUnsupported { .. } => InnerProcessError::KeyTypeInvalid,
                 MemoryError::RunningCommand { source } => match source {
                     DispatchError::ArgumentRetrieval => InnerProcessError::TooFewArguments,
                     DispatchError::KeyNonexistent => InnerProcessError::KeyNonexistent,
@@ -197,7 +198,7 @@ where
 
             let v = client.decrement(key).await.map_err(backend_err)?;
 
-            Ok(v.to_string().into())
+            Ok(print::value(v).into())
         }
         CommandId::Delete => {
             let key = req.key().ok_or_else(|| InnerProcessError::KeyUnspecified)?;
@@ -253,7 +254,7 @@ where
 
             let v = client.increment(key).await.map_err(backend_err)?;
 
-            Ok(v.to_string().into())
+            Ok(print::value(v).into())
         }
         CommandId::Is => {
             let key_type = req

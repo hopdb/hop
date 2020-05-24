@@ -1,3 +1,4 @@
+pub mod append;
 pub mod exists;
 pub mod get;
 pub mod is;
@@ -8,6 +9,7 @@ mod delete;
 mod echo;
 mod increment;
 mod keys;
+mod length;
 mod rename;
 mod stats;
 mod r#type;
@@ -20,6 +22,7 @@ pub use self::{
     increment::Increment,
     is::Is,
     keys::Keys,
+    length::Length,
     r#type::Type,
     rename::Rename,
     stats::Stats,

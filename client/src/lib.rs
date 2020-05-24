@@ -9,7 +9,7 @@ pub mod request;
 pub use hop_engine::state::{KeyType, Value};
 
 use backend::{Backend, MemoryBackend};
-use request::{get::GetUnconfigured, set::SetUnconfigured, *};
+use request::{append::AppendUnconfigured, get::GetUnconfigured, set::SetUnconfigured, *};
 use std::sync::Arc;
 
 /// A client for interfacing over Hop instances.
@@ -37,7 +37,7 @@ impl Client<backend::ServerBackend> {
     /// use hop::Client;
     ///
     /// let mut client = Client::connect("localhost:14000").await?;
-    /// println!("Increment value: {}", client.increment("foo").await?);
+    /// println!("Increment value: {}", client.increment("foo").int().await?);
     /// # Ok(()) }
     pub async fn connect(
         addrs: impl tokio::net::ToSocketAddrs,
@@ -62,8 +62,8 @@ impl Client<MemoryBackend> {
     /// use hop::Client;
     ///
     /// let mut client = Client::memory();
-    /// println!("Incremented value: {}", client.increment("foo").await?);
-    /// println!("Incremented again: {}", client.increment("foo").await?);
+    /// println!("Incremented value: {}", client.increment("foo").int().await?);
+    /// println!("Incremented again: {}", client.increment("foo").int().await?);
     /// # Ok(()) }
     /// ```
     pub fn memory() -> Self {
@@ -74,6 +74,34 @@ impl Client<MemoryBackend> {
 }
 
 impl<B: Backend> Client<B> {
+    /// Append to a key's value.
+    ///
+    /// The struct returned includes methods for appending to each key type.
+    /// Bytes can not be appended to a string, for example.
+    ///
+    /// If the key does not exist then an error is returned.
+    ///
+    /// Returns the new value on success.
+    ///
+    /// # Examples
+    ///
+    /// Append to a string:
+    ///
+    /// ```rust
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use hop::Client;
+    ///
+    /// let mut client = Client::memory();
+    ///
+    /// client.set("foo").str("this is").await?;
+    ///
+    /// assert_eq!("this is a string", client.append("foo").str(" a string").await?);
+    /// # Ok(()) }
+    /// ```
+    pub fn append<K: AsRef<[u8]> + Send + Unpin>(&self, key: K) -> AppendUnconfigured<B, K> {
+        AppendUnconfigured::new(self.backend(), key)
+    }
+
     /// Decrements a float or integer key by one.
     ///
     /// Returns the new value on success.
@@ -97,12 +125,12 @@ impl<B: Backend> Client<B> {
     ///
     /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = Client::memory();
-    /// assert_eq!(1, client.increment("foo").await?);
+    /// assert_eq!(1, client.increment("foo").int().await?);
     /// assert!(client.delete("foo").await.is_ok());
     ///
     /// // since the key doesn't exist anymore, incrementing it again will
     /// // result in a value of 1 again
-    /// assert_eq!(1, client.increment("foo").await?);
+    /// assert_eq!(1, client.increment("foo").int().await?);
     /// # Ok(()) }
     /// ```
     pub fn delete<K: AsRef<[u8]> + Send + Unpin>(&self, key: K) -> Delete<'_, B, K> {
@@ -208,12 +236,27 @@ impl<B: Backend> Client<B> {
     ///
     /// # Examples
     ///
+    /// Increment a nonexistent key, which will set it to 0 and then increment
+    /// it:
+    ///
     /// ```
     /// use hop::Client;
     ///
     /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = Client::memory();
-    /// println!("New value: {}", client.increment("foo").await?);
+    /// println!("New value: {}", client.increment("foo").int().await?);
+    /// # Ok(()) }
+    /// ```
+    ///
+    /// Increment the key "foo" by the integer 2 and then 4:
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// assert_eq!(2, client.increment("foo").int().by(2).await?);
+    /// assert_eq!(6, client.increment("foo").int().by(4).await?);
     /// # Ok(()) }
     /// ```
     pub fn increment<K: AsRef<[u8]> + Send + Unpin>(&self, key: K) -> Increment<'_, B, K> {
@@ -297,6 +340,51 @@ impl<B: Backend> Client<B> {
         Keys::new(self.backend(), key)
     }
 
+    /// Retrieve the length of a key's value.
+    ///
+    /// This command only works with bytes, lists, and strings by default. If
+    /// you want to specify to only retrieve the length if the key is of a
+    /// certain type, use the methods on the returned [`Length`] request struct.
+    ///
+    /// Returns the value's length on success.
+    ///
+    /// # Examples
+    ///
+    /// Get the length of a list key:
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// client.set("foo").list([b"foo".to_vec(), b"bar".to_vec()].to_vec()).await?;
+    ///
+    /// assert_eq!(2, client.length("foo").await?);
+    /// # Ok(()) }
+    /// ```
+    ///
+    /// Get the length of a key, but *only* if it is a string:
+    ///
+    /// ```
+    /// use hop::Client;
+    ///
+    /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Client::memory();
+    /// client.set("foo").string("this is a string").await?;
+    ///
+    /// assert_eq!(16, client.length("foo").str().await?);
+    ///
+    /// // if you try to get the length of a string key and specify list, it
+    /// // will error:
+    /// assert!(client.length("foo").list().await.is_err());
+    /// # Ok(()) }
+    /// ```
+    ///
+    /// [`Length`]: request/struct.Length.html
+    pub fn length<K: AsRef<[u8]> + Send + Unpin>(&self, key: K) -> Length<'_, B, K> {
+        Length::new(self.backend(), key)
+    }
+
     /// Rename a key to a new key name, if the new key name doesn't already
     /// exist.
     ///
@@ -309,9 +397,9 @@ impl<B: Backend> Client<B> {
     ///
     /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = Client::memory();
-    /// client.increment("foo").await?;
+    /// client.increment("foo").int().await?;
     /// println!("New key name: {:?}", client.rename("foo", "bar").await?);
-    /// println!("New incremented value: {}", client.increment("foo").await?);
+    /// println!("New incremented value: {}", client.increment("foo").int().await?);
     /// # Ok(()) }
     /// ```
     pub fn rename<F: AsRef<[u8]> + Send + Unpin, T: AsRef<[u8]> + Send + Unpin>(

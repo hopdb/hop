@@ -35,6 +35,7 @@ pub enum Error {
     ConnectionClosed,
     Dispatching { reason: DispatchError },
     KeyTypeInvalid { number: u8 },
+    KeyTypeUnsupported { key_type: KeyType },
     ReadingMessage { source: IoError },
     WritingMessage { source: IoError },
 }
@@ -56,6 +57,10 @@ impl Display for Error {
                 "the provided key type ({}) is invalid",
                 number
             )),
+            Self::KeyTypeUnsupported { key_type } => f.write_fmt(format_args!(
+                "key type {} is not supported by this command",
+                *key_type as u8
+            )),
             Self::ReadingMessage { .. } => f.write_str("failed to read a message"),
             Self::WritingMessage { .. } => f.write_str("failed to write a message"),
         }
@@ -71,6 +76,7 @@ impl StdError for Error {
             Self::ConnectionClosed => None,
             Self::Dispatching { .. } => None,
             Self::KeyTypeInvalid { .. } => None,
+            Self::KeyTypeUnsupported { .. } => None,
             Self::ReadingMessage { source } => Some(source),
             Self::WritingMessage { source } => Some(source),
         }
@@ -140,15 +146,62 @@ impl ServerBackend {
 impl Backend for ServerBackend {
     type Error = Error;
 
-    async fn decrement(&self, key: &[u8], _: Option<KeyType>) -> Result<i64> {
-        let mut args = Vec::with_capacity(1);
+    async fn append<T: Into<Value> + Send>(&self, key: &[u8], value: T) -> Result<Value> {
+        let mut args = Vec::new();
         args.push(key.to_vec());
-        let req = Request::new(CommandId::Decrement, Some(args));
+        let value = value.into();
+        let key_type = value.kind();
+
+        match value {
+            Value::Bytes(bytes) => args.push(bytes),
+            Value::List(list) => {
+                for item in list {
+                    args.push(item);
+                }
+            }
+            Value::String(string) => args.push(string.into_bytes()),
+            _ => return Err(Error::KeyTypeUnsupported { key_type }),
+        }
+
+        let req = Request::new_with_type(CommandId::Append, Some(args), key_type);
+
+        self.send_and_wait(&req.into_bytes()).await
+    }
+
+    async fn decrement_by<T: Into<Value> + Send>(&self, key: &[u8], value: T) -> Result<Value> {
+        let value = value.into();
+        let key_type = value.kind();
+
+        let mut args = Vec::new();
+        args.push(key.to_vec());
+
+        if key_type != KeyType::Float && key_type != KeyType::Integer {
+            return Err(Error::KeyTypeUnsupported { key_type });
+        }
+
+        request::write_value_to_args(value, &mut args);
+
+        let req = Request::new_with_type(CommandId::DecrementBy, Some(args), key_type);
 
         let value = self.send_and_wait(&req.into_bytes()).await?;
 
         match value {
-            Value::Integer(int) => Ok(int),
+            Value::Float(float) => Ok(Value::Float(float)),
+            Value::Integer(int) => Ok(Value::Integer(int)),
+            _ => Err(Error::BadResponse),
+        }
+    }
+
+    async fn decrement(&self, key: &[u8], key_type: Option<KeyType>) -> Result<Value> {
+        let mut args = Vec::with_capacity(1);
+        args.push(key.to_vec());
+        let req = super::make_request(CommandId::Decrement, Some(args), key_type);
+
+        let value = self.send_and_wait(&req.into_bytes()).await?;
+
+        match value {
+            Value::Float(float) => Ok(Value::Float(float)),
+            Value::Integer(int) => Ok(Value::Integer(int)),
             _ => Err(Error::BadResponse),
         }
     }
@@ -207,7 +260,31 @@ impl Backend for ServerBackend {
         self.send_and_wait(&req.into_bytes()).await
     }
 
-    async fn increment(&self, key: &[u8], _: Option<KeyType>) -> Result<i64> {
+    async fn increment_by<T: Into<Value> + Send>(&self, key: &[u8], value: T) -> Result<Value> {
+        let value = value.into();
+        let key_type = value.kind();
+
+        let mut args = Vec::new();
+        args.push(key.to_vec());
+
+        if key_type != KeyType::Float && key_type != KeyType::Integer {
+            return Err(Error::KeyTypeUnsupported { key_type });
+        }
+
+        request::write_value_to_args(value, &mut args);
+
+        let req = Request::new_with_type(CommandId::IncrementBy, Some(args), key_type);
+
+        let value = self.send_and_wait(&req.into_bytes()).await?;
+
+        match value {
+            Value::Float(float) => Ok(Value::Float(float)),
+            Value::Integer(int) => Ok(Value::Integer(int)),
+            _ => Err(Error::BadResponse),
+        }
+    }
+
+    async fn increment(&self, key: &[u8], _: Option<KeyType>) -> Result<Value> {
         let mut args = Vec::with_capacity(1);
         args.push(key.to_vec());
         let req = Request::new(CommandId::Increment, Some(args));
@@ -215,7 +292,8 @@ impl Backend for ServerBackend {
         let value = self.send_and_wait(&req.into_bytes()).await?;
 
         match value {
-            Value::Integer(int) => Ok(int),
+            Value::Float(float) => Ok(Value::Float(float)),
+            Value::Integer(int) => Ok(Value::Integer(int)),
             _ => Err(Error::BadResponse),
         }
     }
@@ -269,6 +347,19 @@ impl Backend for ServerBackend {
 
         match value {
             Value::List(list) => Ok(list),
+            _ => Err(Error::BadResponse),
+        }
+    }
+
+    async fn length(&self, key: &[u8], key_type: Option<KeyType>) -> Result<i64> {
+        let mut args = Vec::with_capacity(1);
+        args.push(key.to_vec());
+        let req = super::make_request(CommandId::Length, Some(args), key_type);
+
+        let value = self.send_and_wait(&req.into_bytes()).await?;
+
+        match value {
+            Value::Integer(int) => Ok(int),
             _ => Err(Error::BadResponse),
         }
     }
