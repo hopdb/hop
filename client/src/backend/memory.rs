@@ -66,6 +66,20 @@ impl MemoryBackend {
     pub fn new() -> Self {
         Default::default()
     }
+
+    fn send(&self, req: &Request) -> Result<Value, Error> {
+        let mut resp = Vec::new();
+
+        self.hop.dispatch(&req, &mut resp)?;
+
+        let mut ctx = Context::new();
+
+        match ctx.feed(&resp).unwrap() {
+            Instruction::Concluded(Response::Value(value)) => Ok(value),
+            Instruction::Concluded(_) => panic!("got an error"),
+            Instruction::ReadBytes(_) => unreachable!(),
+        }
+    }
 }
 
 #[async_trait]
@@ -74,14 +88,11 @@ impl Backend for MemoryBackend {
 
     async fn decrement(&self, key: &[u8], kind: Option<KeyType>) -> Result<i64, Self::Error> {
         let req = request(CommandId::Decrement, Some(vec![key.to_vec()]), kind);
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let arr = resp.get(1..9).unwrap().try_into().unwrap();
-        let num = i64::from_be_bytes(arr);
-
-        Ok(num)
+        match self.send(&req)? {
+            Value::Integer(int) => Ok(int),
+            other => panic!("Other response: {:?}", other),
+        }
     }
 
     async fn delete(&self, key: &[u8]) -> Result<Vec<u8>, Self::Error> {
@@ -347,6 +358,12 @@ mod tests {
 
     assert_impl_all!(Error: Debug, Send, Sync);
     assert_impl_all!(MemoryBackend: Debug, Default, Send, Sync);
+
+    #[tokio::test]
+    async fn test_decrement() {
+        let backend = MemoryBackend::new();
+        assert!(matches!(backend.decrement(b"foo", None).await, Ok(-1)));
+    }
 
     #[tokio::test]
     async fn test_echo() {
