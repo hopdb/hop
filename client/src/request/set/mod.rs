@@ -54,12 +54,12 @@ use std::{iter::FromIterator, sync::Arc};
 /// [`SetUnconfigured::int`]: #method.int
 /// [`SetBoolean`]: struct.SetBoolean.html
 /// [`SetInteger`]: struct.SetInteger.html
-pub struct SetUnconfigured<B: Backend, K: AsRef<[u8]> + Unpin> {
+pub struct SetUnconfigured<B: Backend, K: AsRef<[u8]> + Send + Unpin> {
     backend: Arc<B>,
     key: K,
 }
 
-impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> SetUnconfigured<B, K> {
+impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> SetUnconfigured<B, K> {
     pub(crate) fn new(backend: Arc<B>, key: K) -> Self {
         Self { backend, key }
     }
@@ -277,4 +277,13 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> SetUnconfigured<B, K> {
     pub fn value(self, value: impl Into<Value>) -> SetValue<'a, B, K> {
         SetValue::new(self.backend, self.key, value.into())
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SetUnconfigured;
+    use crate::backend::MemoryBackend;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(SetUnconfigured<MemoryBackend, Vec<u8>>: Send);
 }

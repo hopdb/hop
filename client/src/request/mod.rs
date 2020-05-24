@@ -32,7 +32,8 @@ use core::{
 };
 use std::error::Error;
 
-type MaybeInFlightFuture<'a, Ok, Err> = Option<Pin<Box<dyn Future<Output = Result<Ok, Err>> + 'a>>>;
+type MaybeInFlightFuture<'a, Ok, Err> =
+    Option<Pin<Box<dyn Future<Output = Result<Ok, Err>> + Send + 'a>>>;
 
 #[derive(Clone, Debug)]
 pub enum CommandConfigurationError {
@@ -50,3 +51,12 @@ impl Display for CommandConfigurationError {
 }
 
 impl Error for CommandConfigurationError {}
+
+#[cfg(test)]
+mod tests {
+    use super::CommandConfigurationError;
+    use static_assertions::assert_impl_all;
+    use std::fmt::Debug;
+
+    assert_impl_all!(CommandConfigurationError: Clone, Debug, Send);
+}

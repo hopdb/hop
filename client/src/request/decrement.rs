@@ -8,14 +8,14 @@ use std::{
     task::{Context, Poll},
 };
 
-pub struct Decrement<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> {
+pub struct Decrement<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> {
     backend: Option<Arc<B>>,
     fut: MaybeInFlightFuture<'a, i64, B::Error>,
     key: Option<K>,
     kind: Option<KeyType>,
 }
 
-impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> Decrement<'a, B, K> {
+impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> Decrement<'a, B, K> {
     pub(crate) fn new(backend: Arc<B>, key: K) -> Self {
         Self {
             backend: Some(backend),
@@ -38,7 +38,7 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> Decrement<'a, B, K> {
     }
 }
 
-impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future
+impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Send + Unpin> Future
     for Decrement<'a, B, K>
 {
     type Output = Result<i64, B::Error>;
@@ -50,10 +50,20 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future
             let kind = self.kind.take();
 
             self.fut.replace(Box::pin(async move {
-                backend.decrement(key.as_ref(), kind).await
+                let key = key.as_ref();
+                backend.decrement(key, kind).await
             }));
         }
 
         self.fut.as_mut().expect("future exists").as_mut().poll(cx)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Decrement;
+    use crate::backend::MemoryBackend;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Decrement<MemoryBackend, Vec<u8>>: Send);
 }

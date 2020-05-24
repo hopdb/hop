@@ -13,14 +13,14 @@ use std::{
 /// This is returned by [`SetUnconfigured::string`].
 ///
 /// [`SetUnconfigured::string`]: struct.SetUnconfigured.html#method.string
-pub struct SetString<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> {
+pub struct SetString<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> {
     backend: Option<Arc<B>>,
     fut: MaybeInFlightFuture<'a, String, B::Error>,
     key: Option<K>,
     value: Option<String>,
 }
 
-impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> SetString<'a, B, K> {
+impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> SetString<'a, B, K> {
     pub(crate) fn new(backend: Arc<B>, key: K, value: String) -> Self {
         Self {
             backend: Some(backend),
@@ -31,7 +31,7 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> SetString<'a, B, K> {
     }
 }
 
-impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future
+impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Send + Unpin> Future
     for SetString<'a, B, K>
 {
     type Output = Result<String, B::Error>;
@@ -43,7 +43,8 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future
             let value = self.value.take().expect("value only taken once");
 
             self.fut.replace(Box::pin(async move {
-                let value = backend.set(key.as_ref(), Value::String(value)).await?;
+                let key = key.as_ref();
+                let value = backend.set(key, Value::String(value)).await?;
 
                 match value {
                     Value::String(string) => Ok(string),
@@ -54,4 +55,13 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future
 
         self.fut.as_mut().expect("future exists").as_mut().poll(cx)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SetString;
+    use crate::backend::MemoryBackend;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(SetString<MemoryBackend, Vec<u8>>: Send);
 }

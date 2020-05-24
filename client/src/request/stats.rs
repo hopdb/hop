@@ -21,7 +21,7 @@ impl<'a, B: Backend> Stats<'a, B> {
     }
 }
 
-impl<'a, B: Backend + Send + Sync + 'static> Future for Stats<'a, B> {
+impl<'a, B: Backend + Send + 'static> Future for Stats<'a, B> {
     type Output = Result<StatsData, B::Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -34,4 +34,13 @@ impl<'a, B: Backend + Send + Sync + 'static> Future for Stats<'a, B> {
 
         self.fut.as_mut().expect("future exists").as_mut().poll(cx)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Stats;
+    use crate::backend::MemoryBackend;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Stats<MemoryBackend>: Send);
 }

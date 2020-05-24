@@ -7,14 +7,21 @@ use std::{
     task::{Context, Poll},
 };
 
-pub struct Rename<'a, B: Backend, F: AsRef<[u8]> + 'a + Unpin, T: AsRef<[u8]> + 'a + Unpin> {
+pub struct Rename<
+    'a,
+    B: Backend,
+    F: AsRef<[u8]> + 'a + Send + Unpin,
+    T: AsRef<[u8]> + 'a + Send + Unpin,
+> {
     backend: Option<Arc<B>>,
     fut: MaybeInFlightFuture<'a, Vec<u8>, B::Error>,
     from: Option<F>,
     to: Option<T>,
 }
 
-impl<'a, B: Backend, F: AsRef<[u8]> + 'a + Unpin, T: AsRef<[u8]> + 'a + Unpin> Rename<'a, B, F, T> {
+impl<'a, B: Backend, F: AsRef<[u8]> + 'a + Send + Unpin, T: AsRef<[u8]> + 'a + Send + Unpin>
+    Rename<'a, B, F, T>
+{
     pub(crate) fn new(backend: Arc<B>, from: F, to: T) -> Self {
         Self {
             backend: Some(backend),
@@ -25,8 +32,12 @@ impl<'a, B: Backend, F: AsRef<[u8]> + 'a + Unpin, T: AsRef<[u8]> + 'a + Unpin> R
     }
 }
 
-impl<'a, B: Backend + Send + Sync + 'static, F: AsRef<[u8]> + Unpin, T: AsRef<[u8]> + Unpin> Future
-    for Rename<'a, B, F, T>
+impl<
+        'a,
+        B: Backend + Send + Sync + 'static,
+        F: AsRef<[u8]> + Send + Unpin,
+        T: AsRef<[u8]> + Send + Unpin,
+    > Future for Rename<'a, B, F, T>
 {
     type Output = Result<Vec<u8>, B::Error>;
 
@@ -37,10 +48,22 @@ impl<'a, B: Backend + Send + Sync + 'static, F: AsRef<[u8]> + Unpin, T: AsRef<[u
             let to = self.to.take().expect("to only taken once");
 
             self.fut.replace(Box::pin(async move {
-                backend.rename(from.as_ref(), to.as_ref()).await
+                let from = from.as_ref();
+                let to = to.as_ref();
+
+                backend.rename(from, to).await
             }));
         }
 
         self.fut.as_mut().expect("future exists").as_mut().poll(cx)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Rename;
+    use crate::backend::MemoryBackend;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Rename<MemoryBackend, Vec<u8>, Vec<u8>>: Send);
 }

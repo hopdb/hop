@@ -1,6 +1,7 @@
 use hop_engine::metrics::Metric;
 use std::{collections::HashMap, convert::TryInto};
 
+#[derive(Clone, Debug)]
 pub struct StatsData {
     inner: HashMap<Vec<u8>, Vec<u8>>,
 }
@@ -33,4 +34,13 @@ impl StatsData {
     pub fn sessions_started(&self) -> i64 {
         self.int(Metric::SessionsStarted)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::StatsData;
+    use static_assertions::assert_impl_all;
+    use std::fmt::Debug;
+
+    assert_impl_all!(StatsData: Clone, Debug);
 }

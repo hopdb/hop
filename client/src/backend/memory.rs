@@ -337,11 +337,16 @@ impl Backend for MemoryBackend {
 
 #[cfg(test)]
 mod tests {
-    use super::{Backend, MemoryBackend};
+    use super::{Backend, Error, MemoryBackend};
     use hop_engine::state::{
         object::{Boolean, Bytes, Float, Integer, Str},
         KeyType, Value,
     };
+    use static_assertions::assert_impl_all;
+    use std::fmt::Debug;
+
+    assert_impl_all!(Error: Debug, Send, Sync);
+    assert_impl_all!(MemoryBackend: Debug, Default, Send, Sync);
 
     #[tokio::test]
     async fn test_echo() {

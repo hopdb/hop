@@ -13,14 +13,14 @@ use std::{
 /// This is returned by [`SetUnconfigured::list`].
 ///
 /// [`SetUnconfigured::list`]: struct.SetUnconfigured.html#method.list
-pub struct SetList<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> {
+pub struct SetList<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> {
     backend: Option<Arc<B>>,
     fut: MaybeInFlightFuture<'a, Vec<Vec<u8>>, B::Error>,
     key: Option<K>,
     value: Option<Vec<Vec<u8>>>,
 }
 
-impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> SetList<'a, B, K> {
+impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> SetList<'a, B, K> {
     pub(crate) fn new(backend: Arc<B>, key: K, value: Vec<Vec<u8>>) -> Self {
         Self {
             backend: Some(backend),
@@ -31,7 +31,9 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Unpin> SetList<'a, B, K> {
     }
 }
 
-impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future for SetList<'a, B, K> {
+impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Send + Unpin> Future
+    for SetList<'a, B, K>
+{
     type Output = Result<Vec<Vec<u8>>, B::Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -41,7 +43,8 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future for 
             let value = self.value.take().expect("value only taken once");
 
             self.fut.replace(Box::pin(async move {
-                let value = backend.set(key.as_ref(), Value::List(value)).await?;
+                let key = key.as_ref();
+                let value = backend.set(key, Value::List(value)).await?;
 
                 match value {
                     Value::List(list) => Ok(list),
@@ -52,4 +55,13 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Unpin> Future for 
 
         self.fut.as_mut().expect("future exists").as_mut().poll(cx)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SetList;
+    use crate::backend::MemoryBackend;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(SetList<MemoryBackend, Vec<u8>>: Send);
 }

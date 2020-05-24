@@ -77,6 +77,7 @@ impl StdError for Error {
     }
 }
 
+#[derive(Debug)]
 pub struct ServerBackend {
     reader: Mutex<BufReader<OwnedReadHalf>>,
     writer: Mutex<OwnedWriteHalf>,
@@ -313,4 +314,14 @@ impl Backend for ServerBackend {
 
         self.send_and_wait(&req.into_bytes()).await
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Error, ServerBackend};
+    use static_assertions::assert_impl_all;
+    use std::fmt::Debug;
+
+    assert_impl_all!(Error: Debug, Send, Sync);
+    assert_impl_all!(ServerBackend: Debug, Send, Sync);
 }
