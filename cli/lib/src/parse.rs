@@ -5,7 +5,7 @@ use core::{
 use hop_engine::{
     command::{
         command_id::{CommandId, KeyNotation},
-        Request,
+        request::{Request, RequestBuilder, RequestBuilderError},
     },
     state::KeyType,
 };
@@ -14,6 +14,7 @@ use std::error::Error;
 #[derive(Debug)]
 pub enum ParseError {
     ArgumentInvalid { argument: String, key_type: KeyType },
+    BuildingRequest { source: RequestBuilderError },
     InvalidCommandType { provided_name: String },
     KeyUnspecified,
     MapIncomplete { key: String },
@@ -28,6 +29,9 @@ impl Display for ParseError {
                 argument,
                 key_type_name(*key_type)
             )),
+            Self::BuildingRequest { source } => {
+                f.write_fmt(format_args!("Failed to build request: {}", source))
+            }
             Self::InvalidCommandType { provided_name } => {
                 f.write_fmt(format_args!("the command '{}' is invalid", provided_name))
             }
@@ -45,6 +49,12 @@ impl Display for ParseError {
 
 impl Error for ParseError {}
 
+impl From<RequestBuilderError> for ParseError {
+    fn from(source: RequestBuilderError) -> Self {
+        Self::BuildingRequest { source }
+    }
+}
+
 pub fn parse(input: &str) -> Result<Request, ParseError> {
     let mut split = input.split(' ');
 
@@ -59,20 +69,20 @@ pub fn parse(input: &str) -> Result<Request, ParseError> {
         provided_name: cmd_name.to_owned(),
     })?;
 
+    let mut builder = RequestBuilder::new(cmd_id);
+
     let mut arg_iter = split.peekable();
-    let args = if arg_iter.peek().is_some() {
-        let key_type = key_type.unwrap_or(KeyType::Bytes);
+    let key_type = key_type.unwrap_or(KeyType::Bytes);
 
-        Some(input_args(arg_iter, cmd_id, key_type)?)
-    } else {
-        None
-    };
+    if arg_iter.peek().is_some() {
+        for arg in input_args(arg_iter, cmd_id, key_type)? {
+            builder.bytes(arg)?;
+        }
+    }
 
-    Ok(if let Some(key_type) = key_type {
-        Request::new_with_type(cmd_id, args, key_type)
-    } else {
-        Request::new(cmd_id, args)
-    })
+    builder.key_type(key_type);
+
+    Ok(builder.into_request())
 }
 
 /// Iterate over the provided string input arguments and convert them to

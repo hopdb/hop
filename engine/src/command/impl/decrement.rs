@@ -19,7 +19,7 @@ impl Dispatch for Decrement {
 mod tests {
     use super::Decrement;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::object::Integer,
         Hop,
     };
@@ -27,9 +27,9 @@ mod tests {
 
     #[test]
     fn test_decrement() {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let req = Request::new(CommandId::Decrement, Some(args));
+        let mut builder = RequestBuilder::new(CommandId::Decrement);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
         let hop = Hop::new();
         let mut resp = Vec::new();
 
@@ -43,7 +43,7 @@ mod tests {
 
     #[test]
     fn test_no_key() {
-        let req = Request::new(CommandId::Decrement, None);
+        let req = RequestBuilder::new(CommandId::Decrement).into_request();
         let hop = Hop::new();
         let mut resp = Vec::new();
 

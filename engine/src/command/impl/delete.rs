@@ -26,23 +26,22 @@ impl Dispatch for Delete {
 mod tests {
     use super::Delete;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::{KeyType, Value},
         Hop,
     };
     use alloc::vec::Vec;
 
-    fn args() -> Vec<Vec<u8>> {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
+    fn builder() -> RequestBuilder {
+        let mut builder = RequestBuilder::new(CommandId::DecrementBy);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
 
-        args
+        builder
     }
 
     #[test]
     fn test_valid() {
-        let args = args();
-        let req = Request::new(CommandId::Delete, Some(args));
+        let req = builder().into_request();
         let mut resp = Vec::new();
 
         let hop = Hop::new();
@@ -56,8 +55,7 @@ mod tests {
 
     #[test]
     fn test_nonexistent() {
-        let args = args();
-        let req = Request::new(CommandId::Delete, Some(args));
+        let req = builder().into_request();
         let mut resp = Vec::new();
 
         let hop = Hop::new();
@@ -70,8 +68,9 @@ mod tests {
 
     #[test]
     fn test_key_type_specified() {
-        let args = args();
-        let req = Request::new_with_type(CommandId::Delete, Some(args), KeyType::Bytes);
+        let mut builder = builder();
+        builder.key_type(KeyType::Bytes);
+        let req = builder.into_request();
         let mut resp = Vec::new();
 
         let hop = Hop::new();
@@ -84,7 +83,7 @@ mod tests {
 
     #[test]
     fn test_no_arguments() {
-        let req = Request::new(CommandId::Delete, None);
+        let req = RequestBuilder::new(CommandId::Delete).into_request();
         let mut resp = Vec::new();
 
         let hop = Hop::new();

@@ -10,10 +10,7 @@ pub use self::server::ServerBackend;
 
 use crate::model::StatsData;
 use async_trait::async_trait;
-use hop_engine::{
-    command::{CommandId, Request},
-    state::{KeyType, Value},
-};
+use hop_engine::state::{KeyType, Value};
 
 #[async_trait]
 pub trait Backend: Send + Sync {
@@ -101,16 +98,4 @@ pub trait Backend: Send + Sync {
     async fn stats(&self) -> Result<StatsData, Self::Error>
     where
         Self: Sized;
-}
-
-fn make_request(
-    cmd_id: CommandId,
-    args: Option<Vec<Vec<u8>>>,
-    key_type: Option<KeyType>,
-) -> Request {
-    if let Some(key_type) = key_type {
-        Request::new_with_type(cmd_id, args, key_type)
-    } else {
-        Request::new(cmd_id, args)
-    }
 }

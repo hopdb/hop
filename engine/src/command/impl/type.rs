@@ -29,7 +29,7 @@ impl Dispatch for Type {
 mod tests {
     use super::Type;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::{KeyType, Value},
         Hop,
     };
@@ -37,11 +37,12 @@ mod tests {
 
     #[test]
     fn test_key() {
+        let mut builder = RequestBuilder::new(CommandId::Type);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes([1].as_ref()).is_ok());
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push([1].to_vec());
-        let req = Request::new(CommandId::Type, Some(args));
         let mut resp = Vec::new();
 
         hop.state().insert(b"foo".to_vec(), Value::Boolean(true));
@@ -52,8 +53,9 @@ mod tests {
 
     #[test]
     fn test_no_key() {
+        let req = RequestBuilder::new(CommandId::Type).into_request();
+
         let hop = Hop::new();
-        let req = Request::new(CommandId::Type, None);
         let mut resp = Vec::new();
 
         assert_eq!(
@@ -64,8 +66,11 @@ mod tests {
 
     #[test]
     fn test_key_type_specified() {
+        let mut builder = RequestBuilder::new(CommandId::Type);
+        builder.key_type(KeyType::Boolean);
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let req = Request::new(CommandId::Type, None);
         let mut resp = Vec::new();
 
         assert_eq!(

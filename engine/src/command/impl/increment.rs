@@ -19,7 +19,7 @@ impl Dispatch for Increment {
 mod tests {
     use super::Increment;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::object::Integer,
         Hop,
     };
@@ -27,9 +27,9 @@ mod tests {
 
     #[test]
     fn test_increment() {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let req = Request::new(CommandId::Increment, Some(args));
+        let mut builder = RequestBuilder::new(CommandId::Increment);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
         let hop = Hop::new();
         let mut resp = Vec::new();
 
@@ -43,7 +43,7 @@ mod tests {
 
     #[test]
     fn test_no_key() {
-        let req = Request::new(CommandId::Increment, None);
+        let req = RequestBuilder::new(CommandId::Increment).into_request();
         let hop = Hop::new();
         let mut resp = Vec::new();
 

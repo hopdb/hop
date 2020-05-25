@@ -27,7 +27,7 @@ impl Dispatch for Is {
 mod tests {
     use super::Is;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::{KeyType, Value},
         Hop,
     };
@@ -35,12 +35,14 @@ mod tests {
 
     #[test]
     fn test_one_arg() {
-        let hop = Hop::new();
-        let mut args = Vec::new();
-        hop.state().key_or_insert_with(b"foo", Value::string);
-        args.push(b"foo".to_vec());
+        let mut builder = RequestBuilder::new(CommandId::Is);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        builder.key_type(KeyType::String);
+        let req = builder.into_request();
 
-        let req = Request::new_with_type(CommandId::Is, Some(args), KeyType::String);
+        let hop = Hop::new();
+        hop.state().key_or_insert_with(b"foo", Value::string);
+
         let mut resp = Vec::new();
 
         assert!(Is::dispatch(&hop, &req, &mut resp).is_ok());
@@ -49,14 +51,16 @@ mod tests {
 
     #[test]
     fn test_two_args() {
-        let hop = Hop::new();
-        let mut args = Vec::new();
-        hop.state().key_or_insert_with(b"foo", Value::string);
-        args.push(b"foo".to_vec());
-        hop.state().key_or_insert_with(b"bar", Value::string);
-        args.push(b"bar".to_vec());
+        let mut builder = RequestBuilder::new(CommandId::Is);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"bar".as_ref()).is_ok());
+        builder.key_type(KeyType::String);
+        let req = builder.into_request();
 
-        let req = Request::new_with_type(CommandId::Is, Some(args), KeyType::String);
+        let hop = Hop::new();
+        hop.state().key_or_insert_with(b"foo", Value::string);
+        hop.state().key_or_insert_with(b"bar", Value::string);
+
         let mut resp = Vec::new();
 
         assert!(Is::dispatch(&hop, &req, &mut resp).is_ok());
@@ -65,14 +69,16 @@ mod tests {
 
     #[test]
     fn test_two_mismatched() {
-        let hop = Hop::new();
-        let mut args = Vec::new();
-        hop.state().key_or_insert_with(b"foo", Value::string);
-        args.push(b"foo".to_vec());
-        hop.state().key_or_insert_with(b"bar", Value::integer);
-        args.push(b"bar".to_vec());
+        let mut builder = RequestBuilder::new(CommandId::Is);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"bar".as_ref()).is_ok());
+        builder.key_type(KeyType::String);
+        let req = builder.into_request();
 
-        let req = Request::new_with_type(CommandId::Is, Some(args), KeyType::String);
+        let hop = Hop::new();
+        hop.state().key_or_insert_with(b"foo", Value::string);
+        hop.state().key_or_insert_with(b"bar", Value::integer);
+
         let mut resp = Vec::new();
 
         assert!(Is::dispatch(&hop, &req, &mut resp).is_ok());
@@ -81,9 +87,12 @@ mod tests {
 
     #[test]
     fn test_no_arguments() {
+        let mut builder = RequestBuilder::new(CommandId::Is);
+        builder.key_type(KeyType::Bytes);
+        let req = builder.into_request();
+
         let hop = Hop::new();
 
-        let req = Request::new_with_type(CommandId::Is, None, KeyType::Bytes);
         let mut resp = Vec::new();
 
         assert!(matches!(
@@ -94,11 +103,12 @@ mod tests {
 
     #[test]
     fn test_key_type_unspecified() {
-        let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
+        let mut builder = RequestBuilder::new(CommandId::Is);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
 
-        let req = Request::new(CommandId::Is, Some(args));
+        let hop = Hop::new();
+
         let mut resp = Vec::new();
 
         assert!(matches!(

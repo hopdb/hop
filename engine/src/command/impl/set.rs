@@ -169,7 +169,7 @@ impl Dispatch for Set {
 mod tests {
     use super::Set;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::{
             object::{Boolean, Bytes, Float, Integer, List, Map, Set as SetObject, Str},
             KeyType,
@@ -181,8 +181,9 @@ mod tests {
     #[test]
     fn test_types_no_arg() {
         let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
+
+        let mut builder = RequestBuilder::new(CommandId::Set);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
         let mut resp = Vec::new();
 
         let types = [
@@ -197,7 +198,9 @@ mod tests {
         ];
 
         for key_type in &types {
-            let req = Request::new_with_type(CommandId::Set, Some(args.clone()), *key_type);
+            let mut builder = builder.clone();
+            builder.key_type(*key_type);
+            let req = builder.into_request();
 
             assert_eq!(
                 Set::dispatch(&hop, &req, &mut resp).unwrap_err(),
@@ -210,11 +213,14 @@ mod tests {
 
     #[test]
     fn test_bool() {
+        let mut builder = RequestBuilder::new(CommandId::Set);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes([1].as_ref()).is_ok());
+        builder.key_type(KeyType::Boolean);
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push([1].to_vec());
-        let req = Request::new_with_type(CommandId::Set, Some(args), KeyType::Boolean);
+
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
@@ -224,11 +230,14 @@ mod tests {
 
     #[test]
     fn test_bytes() {
+        let mut builder = RequestBuilder::new(CommandId::Set);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"bar baz".to_vec()).is_ok());
+        builder.key_type(KeyType::Bytes);
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push(b"bar baz".to_vec());
-        let req = Request::new_with_type(CommandId::Set, Some(args), KeyType::Bytes);
+
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
@@ -238,11 +247,14 @@ mod tests {
 
     #[test]
     fn test_float() {
+        let mut builder = RequestBuilder::new(CommandId::Set);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(2f64.to_be_bytes().to_vec()).is_ok());
+        builder.key_type(KeyType::Float);
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push(2f64.to_be_bytes().to_vec());
-        let req = Request::new_with_type(CommandId::Set, Some(args), KeyType::Float);
+
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
@@ -252,11 +264,14 @@ mod tests {
 
     #[test]
     fn test_int() {
+        let mut builder = RequestBuilder::new(CommandId::Set);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(2i64.to_be_bytes().to_vec()).is_ok());
+        builder.key_type(KeyType::Integer);
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push(2i64.to_be_bytes().to_vec());
-        let req = Request::new_with_type(CommandId::Set, Some(args), KeyType::Integer);
+
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
@@ -266,13 +281,16 @@ mod tests {
 
     #[test]
     fn test_list_three_entries() {
+        let mut builder = RequestBuilder::new(CommandId::Set);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"value1".to_vec()).is_ok());
+        assert!(builder.bytes(b"value2".to_vec()).is_ok());
+        assert!(builder.bytes(b"value2".to_vec()).is_ok());
+        builder.key_type(KeyType::List);
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push(b"value1".to_vec());
-        args.push(b"value2".to_vec());
-        args.push(b"value2".to_vec());
-        let req = Request::new_with_type(CommandId::Set, Some(args), KeyType::List);
+
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
@@ -287,14 +305,17 @@ mod tests {
 
     #[test]
     fn test_map_two_entries() {
+        let mut builder = RequestBuilder::new(CommandId::Set);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"key1".to_vec()).is_ok());
+        assert!(builder.bytes(b"value1".to_vec()).is_ok());
+        assert!(builder.bytes(b"key2".to_vec()).is_ok());
+        assert!(builder.bytes(b"value2".to_vec()).is_ok());
+        builder.key_type(KeyType::Map);
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push(b"key1".to_vec());
-        args.push(b"value1".to_vec());
-        args.push(b"key2".to_vec());
-        args.push(b"value2".to_vec());
-        let req = Request::new_with_type(CommandId::Set, Some(args), KeyType::Map);
+
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
@@ -309,12 +330,15 @@ mod tests {
 
     #[test]
     fn test_set_two_entries() {
+        let mut builder = RequestBuilder::new(CommandId::Set);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"value1".to_vec()).is_ok());
+        assert!(builder.bytes(b"value2".to_vec()).is_ok());
+        builder.key_type(KeyType::Set);
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push(b"value1".to_vec());
-        args.push(b"value2".to_vec());
-        let req = Request::new_with_type(CommandId::Set, Some(args), KeyType::Set);
+
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
@@ -329,11 +353,14 @@ mod tests {
 
     #[test]
     fn test_str() {
+        let mut builder = RequestBuilder::new(CommandId::Set);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes("bar".as_bytes().to_vec()).is_ok());
+        builder.key_type(KeyType::String);
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push("bar".as_bytes().to_vec());
-        let req = Request::new_with_type(CommandId::Set, Some(args), KeyType::String);
+
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
