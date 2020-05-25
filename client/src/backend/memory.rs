@@ -156,40 +156,18 @@ impl Backend for MemoryBackend {
 
     async fn delete(&self, key: &[u8]) -> Result<Vec<u8>, Self::Error> {
         let req = Request::new(CommandId::Delete, Some(vec![key.to_vec()]));
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(value) => value,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        let bytes = match resp {
-            Response::Value(Value::Bytes(bytes)) => bytes,
+        match self.send(&req)? {
+            Value::Bytes(bytes) => Ok(bytes),
             other => panic!("Other response: {:?}", other),
-        };
-
-        Ok(bytes)
+        }
     }
 
     async fn echo(&self, content: &[u8]) -> Result<Vec<Vec<u8>>, Self::Error> {
         let req = Request::new(CommandId::Echo, Some(vec![content.to_vec()]));
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(value) => value,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        match resp {
-            Response::Value(Value::List(args)) => Ok(args),
+        match self.send(&req)? {
+            Value::List(list) => Ok(list),
             _ => panic!(),
         }
     }
@@ -203,40 +181,17 @@ impl Backend for MemoryBackend {
             .map(|arg| arg.as_ref().to_owned())
             .collect();
         let req = Request::new(CommandId::Exists, Some(args));
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(value) => value,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        match resp {
-            Response::Value(Value::Boolean(exists)) => Ok(exists),
+        match self.send(&req)? {
+            Value::Boolean(exists) => Ok(exists),
             _ => panic!(),
         }
     }
 
     async fn get(&self, key: &[u8]) -> Result<Value, Self::Error> {
         let req = Request::new(CommandId::Get, Some(vec![key.to_vec()]));
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(resp) => resp,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        match resp {
-            Response::Value(value) => Ok(value),
-            _ => panic!(),
-        }
+        self.send(&req)
     }
 
     async fn increment_by<T: Into<Value> + Send>(
@@ -267,20 +222,10 @@ impl Backend for MemoryBackend {
 
     async fn increment(&self, key: &[u8], kind: Option<KeyType>) -> Result<Value, Self::Error> {
         let req = request(CommandId::Increment, Some(vec![key.to_vec()]), kind);
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(value) => value,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        match resp {
-            Response::Value(Value::Float(float)) => Ok(Value::Float(float)),
-            Response::Value(Value::Integer(int)) => Ok(Value::Integer(int)),
+        match self.send(&req)? {
+            Value::Float(float) => Ok(Value::Float(float)),
+            Value::Integer(int) => Ok(Value::Integer(int)),
             _ => panic!(),
         }
     }
@@ -295,19 +240,9 @@ impl Backend for MemoryBackend {
             .map(|arg| arg.as_ref().to_owned())
             .collect();
         let req = Request::new_with_type(CommandId::Is, Some(args), key_type);
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(value) => value,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        match resp {
-            Response::Value(Value::Boolean(exists)) => Ok(exists),
+        match self.send(&req)? {
+            Value::Boolean(exists) => Ok(exists),
             _ => panic!(),
         }
     }
@@ -316,19 +251,9 @@ impl Backend for MemoryBackend {
         let mut args = Vec::new();
         args.push(key.to_vec());
         let req = Request::new(CommandId::Type, Some(args));
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(value) => value,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        match resp {
-            Response::Value(Value::Integer(int)) => {
+        match self.send(&req)? {
+            Value::Integer(int) => {
                 let number = int as u8;
 
                 number
@@ -343,19 +268,9 @@ impl Backend for MemoryBackend {
         let mut args = Vec::new();
         args.push(key.to_vec());
         let req = Request::new(CommandId::Keys, Some(args));
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(value) => value,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        match resp {
-            Response::Value(Value::List(list)) => Ok(list),
+        match self.send(&req)? {
+            Value::List(list) => Ok(list),
             _ => panic!(),
         }
     }
@@ -371,23 +286,11 @@ impl Backend for MemoryBackend {
 
     async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>, Self::Error> {
         let req = Request::new(CommandId::Rename, Some(vec![from.to_vec(), to.to_vec()]));
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(value) => value,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        let bytes = match resp {
-            Response::Value(Value::Bytes(bytes)) => bytes,
+        match self.send(&req)? {
+            Value::Bytes(bytes) => Ok(bytes),
             _ => panic!(),
-        };
-
-        Ok(bytes)
+        }
     }
 
     async fn set<T: Into<Value> + Send>(&self, key: &[u8], value: T) -> Result<Value, Self::Error> {
@@ -400,38 +303,15 @@ impl Backend for MemoryBackend {
         request::write_value_to_args(value, &mut args);
 
         let req = request(CommandId::Set, Some(args), Some(key_type));
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(value) => value,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        match resp {
-            Response::Value(value) => Ok(value),
-            _ => panic!(),
-        }
+        self.send(&req)
     }
 
     async fn stats(&self) -> Result<StatsData, Self::Error> {
         let req = request(CommandId::Stats, None, None);
-        let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
-
-        let mut ctx = Context::new();
-
-        let resp = match ctx.feed(&resp).unwrap() {
-            Instruction::Concluded(value) => value,
-            Instruction::ReadBytes(_) => unreachable!(),
-        };
-
-        let stats = match resp {
-            Response::Value(Value::Map(stats)) => stats,
+        let stats = match self.send(&req)? {
+            Value::Map(stats) => stats,
             _ => panic!(),
         };
 
