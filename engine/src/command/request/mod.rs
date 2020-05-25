@@ -1,9 +1,13 @@
+mod builder;
 mod context;
 
-pub use context::{Context, ParseError};
+pub use self::{
+    builder::{RequestBuilder, RequestBuilderError},
+    context::{Context, ParseError},
+};
 
 use super::command_id::{CommandId, KeyNotation};
-use crate::state::{KeyType, Value};
+use crate::state::KeyType;
 use alloc::{
     borrow::ToOwned,
     vec::{Drain, Vec},
@@ -89,7 +93,7 @@ impl<'a> Argument<'a> for &'a str {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Request {
     args: Option<Vec<Vec<u8>>>,
     key_type: Option<KeyType>,
@@ -97,22 +101,6 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new(kind: CommandId, args: Option<Vec<Vec<u8>>>) -> Self {
-        Self {
-            args,
-            key_type: None,
-            kind,
-        }
-    }
-
-    pub fn new_with_type(kind: CommandId, args: Option<Vec<Vec<u8>>>, key_type: KeyType) -> Self {
-        Self {
-            args,
-            key_type: Some(key_type),
-            kind,
-        }
-    }
-
     pub fn args<I: SliceIndex<[Vec<u8>]>>(&self, index: I) -> Option<&I::Output> {
         self.args.as_ref()?.get(index)
     }
@@ -218,42 +206,16 @@ impl Request {
     }
 }
 
-pub fn write_value_to_args(value: Value, to: &mut Vec<Vec<u8>>) {
-    match value {
-        Value::Boolean(bool) => {
-            let mut buf = Vec::with_capacity(1);
-            buf.push(bool as u8);
-
-            to.push(buf);
-        }
-        Value::Bytes(bytes) => to.push(bytes),
-        Value::Float(float) => to.push(float.to_be_bytes().to_vec()),
-        Value::Integer(int) => to.push(int.to_be_bytes().to_vec()),
-        Value::List(list) => {
-            for item in list {
-                to.push(item);
-            }
-        }
-        Value::Map(map) => {
-            for (k, v) in map.into_iter() {
-                to.push(k);
-                to.push(v);
-            }
-        }
-        Value::Set(set) => {
-            for item in set {
-                to.push(item);
-            }
-        }
-        Value::String(string) => to.push(string.into_bytes()),
+impl From<RequestBuilder> for Request {
+    fn from(builder: RequestBuilder) -> Self {
+        builder.into_request()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{super::CommandId, Request};
+    use super::{super::CommandId, Request, RequestBuilder};
     use crate::state::KeyType;
-    use alloc::vec::Vec;
     use core::fmt::Debug;
     use static_assertions::assert_impl_all;
 
@@ -261,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_request_into_bytes_simple() {
-        let req = Request::new(CommandId::Stats, None);
+        let req = RequestBuilder::new(CommandId::Stats).into_request();
         assert_eq!(
             req.into_bytes(),
             &[
@@ -270,7 +232,10 @@ mod tests {
             ]
         );
 
-        let req = Request::new_with_type(CommandId::Increment, None, KeyType::Float);
+        let mut builder = RequestBuilder::new(CommandId::Increment);
+        builder.key_type(KeyType::Float);
+        let req = builder.into_request();
+
         assert_eq!(
             req.into_bytes(),
             &[
@@ -283,10 +248,11 @@ mod tests {
 
     #[test]
     fn test_request_into_bytes_echo() {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push(b"bar".to_vec());
-        let req = Request::new(CommandId::Echo, Some(args));
+        let mut builder = RequestBuilder::new(CommandId::Echo);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"bar".as_ref()).is_ok());
+        let req = builder.into_request();
+
         assert_eq!(
             req.into_bytes(),
             &[
@@ -318,9 +284,10 @@ mod tests {
 
     #[test]
     fn test_request_into_bytes_increment() {
-        let mut args = Vec::new();
-        args.push(b"key".to_vec());
-        let req = Request::new_with_type(CommandId::Increment, Some(args), KeyType::Integer);
+        let mut builder = RequestBuilder::new(CommandId::Increment);
+        builder.key_type(KeyType::Integer);
+        assert!(builder.bytes(b"key".as_ref()).is_ok());
+        let req = builder.into_request();
         assert_eq!(
             req.into_bytes(),
             &[

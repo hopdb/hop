@@ -6,7 +6,7 @@ extern crate test;
 
 use alloc::vec::Vec;
 use hop_engine::{
-    command::{CommandId, Request},
+    command::{request::RequestBuilder, CommandId},
     Hop,
 };
 use test::Bencher;
@@ -14,8 +14,9 @@ use test::Bencher;
 #[bench]
 fn bench_increment(b: &mut Bencher) {
     let hop = Hop::new();
-    let args = [b"foo".to_vec()].to_vec();
-    let req = Request::new(CommandId::Increment, Some(args));
+    let mut builder = RequestBuilder::new(CommandId::Increment);
+    builder.bytes(b"foo".as_ref()).unwrap();
+    let req = builder.into_request();
     let mut resp = Vec::new();
 
     b.iter(|| {

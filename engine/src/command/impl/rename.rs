@@ -35,26 +35,20 @@ impl Dispatch for Rename {
 mod tests {
     use super::Rename;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::Value,
         Hop,
     };
     use alloc::vec::Vec;
 
-    fn args() -> Vec<Vec<u8>> {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push(b"bar".to_vec());
-
-        args
-    }
-
     #[test]
     fn test_rename_valid() {
-        let args = args();
-        let req = Request::new(CommandId::Rename, Some(args));
-        let mut resp = Vec::new();
+        let mut builder = RequestBuilder::new(CommandId::Rename);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"bar".as_ref()).is_ok());
+        let req = builder.into_request();
 
+        let mut resp = Vec::new();
         let hop = Hop::new();
         hop.state()
             .insert(b"foo".to_vec(), Value::Bytes([1, 2, 3].to_vec()));
@@ -65,11 +59,13 @@ mod tests {
 
     #[test]
     fn test_rename_src_nonexistent() {
-        let args = args();
-        let req = Request::new(CommandId::Rename, Some(args));
-        let mut resp = Vec::new();
+        let mut builder = RequestBuilder::new(CommandId::Rename);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"bar".as_ref()).is_ok());
+        let req = builder.into_request();
 
         let hop = Hop::new();
+        let mut resp = Vec::new();
 
         assert!(matches!(
             Rename::dispatch(&hop, &req, &mut resp),
@@ -79,10 +75,12 @@ mod tests {
 
     #[test]
     fn test_rename_destination_already_exists() {
-        let args = args();
-        let req = Request::new(CommandId::Rename, Some(args));
-        let mut resp = Vec::new();
+        let mut builder = RequestBuilder::new(CommandId::Rename);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"bar".as_ref()).is_ok());
+        let req = builder.into_request();
 
+        let mut resp = Vec::new();
         let hop = Hop::new();
         hop.state().insert(b"foo".to_vec(), Value::bytes());
         hop.state().insert(b"bar".to_vec(), Value::bytes());
@@ -95,19 +93,19 @@ mod tests {
 
     #[test]
     fn test_too_few_arguments() {
-        let mut args = args();
-        args.pop();
-        let req = Request::new(CommandId::Rename, Some(args.clone()));
-        let mut resp = Vec::new();
+        let mut builder = RequestBuilder::new(CommandId::Rename);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
 
+        let mut resp = Vec::new();
         let hop = Hop::new();
+
         assert!(matches!(
             Rename::dispatch(&hop, &req, &mut resp),
             Err(DispatchError::ArgumentRetrieval)
         ));
 
-        args.pop();
-        let req = Request::new(CommandId::Rename, Some(args));
+        let req = RequestBuilder::new(CommandId::Rename).into_request();
         resp.clear();
 
         assert!(matches!(

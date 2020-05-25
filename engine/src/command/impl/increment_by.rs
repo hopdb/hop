@@ -76,7 +76,7 @@ impl Dispatch for IncrementBy {
 mod tests {
     use super::IncrementBy;
     use crate::{
-        command::{request, CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::{object::Integer, Value},
         Hop,
     };
@@ -84,10 +84,10 @@ mod tests {
 
     #[test]
     fn test_decrement_by() {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        request::write_value_to_args(Value::Integer(3), &mut args);
-        let req = Request::new(CommandId::IncrementBy, Some(args));
+        let mut builder = RequestBuilder::new(CommandId::IncrementBy);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.value(Value::Integer(3)).is_ok());
+        let req = builder.into_request();
         let hop = Hop::new();
         let mut resp = Vec::new();
 
@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_no_key() {
-        let req = Request::new(CommandId::Decrement, None);
+        let req = RequestBuilder::new(CommandId::Decrement).into_request();
         let hop = Hop::new();
         let mut resp = Vec::new();
 
@@ -113,10 +113,10 @@ mod tests {
 
     #[test]
     fn test_no_amount() {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
+        let mut builder = RequestBuilder::new(CommandId::IncrementBy);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
 
-        let req = Request::new(CommandId::IncrementBy, Some(args));
         let hop = Hop::new();
         let mut resp = Vec::new();
 

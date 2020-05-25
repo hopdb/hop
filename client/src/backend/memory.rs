@@ -3,7 +3,7 @@ use crate::model::StatsData;
 use async_trait::async_trait;
 use hop_engine::{
     command::{
-        request,
+        request::{RequestBuilder, RequestBuilderError},
         response::{Context, Instruction, Response},
         CommandId, DispatchError, Request,
     },
@@ -16,30 +16,20 @@ use std::{
     fmt::{Display, Formatter, Result as FmtResult},
 };
 
-fn request(id: CommandId, args: Option<Vec<Vec<u8>>>, kind: Option<KeyType>) -> Request {
-    if let Some(kind) = kind {
-        Request::new_with_type(id, args, kind)
-    } else {
-        Request::new(id, args)
-    }
-}
-
 #[derive(Debug)]
 pub enum Error {
+    BuildingRequest { source: RequestBuilderError },
     KeyTypeInvalid { number: u8 },
     KeyTypeUnsupported { key_type: KeyType },
     RunningCommand { source: DispatchError },
 }
 
-impl From<DispatchError> for Error {
-    fn from(source: DispatchError) -> Self {
-        Self::RunningCommand { source }
-    }
-}
-
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
+            Self::BuildingRequest { source } => {
+                f.write_fmt(format_args!("failed to build request: {:?}", source))
+            }
             Self::KeyTypeInvalid { number } => f.write_fmt(format_args!(
                 "the provided key type ({}) is invalid",
                 number
@@ -56,10 +46,23 @@ impl Display for Error {
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
+            Self::BuildingRequest { .. } => None,
             Self::KeyTypeInvalid { .. } => None,
             Self::KeyTypeUnsupported { .. } => None,
             Self::RunningCommand { .. } => None,
         }
+    }
+}
+
+impl From<DispatchError> for Error {
+    fn from(source: DispatchError) -> Self {
+        Self::RunningCommand { source }
+    }
+}
+
+impl From<RequestBuilderError> for Error {
+    fn from(source: RequestBuilderError) -> Self {
+        Self::BuildingRequest { source }
     }
 }
 
@@ -73,10 +76,10 @@ impl MemoryBackend {
         Default::default()
     }
 
-    fn send(&self, req: &Request) -> Result<Value, Error> {
+    fn send(&self, req: impl Into<Request>) -> Result<Value, Error> {
         let mut resp = Vec::new();
 
-        self.hop.dispatch(&req, &mut resp)?;
+        self.hop.dispatch(&req.into(), &mut resp)?;
 
         let mut ctx = Context::new();
 
@@ -97,25 +100,30 @@ impl Backend for MemoryBackend {
         key: &[u8],
         value: T,
     ) -> Result<Value, Self::Error> {
-        let mut args = Vec::new();
-        args.push(key.to_vec());
+        let mut builder = RequestBuilder::new(CommandId::Append);
+        builder.bytes(key)?;
+
         let value = value.into();
         let key_type = value.kind();
 
         match value {
-            Value::Bytes(bytes) => args.push(bytes),
+            Value::Bytes(bytes) => {
+                builder.bytes(bytes)?;
+            }
             Value::List(list) => {
                 for item in list {
-                    args.push(item);
+                    builder.bytes(item)?;
                 }
             }
-            Value::String(string) => args.push(string.into_bytes()),
+            Value::String(string) => {
+                builder.bytes(string.into_bytes())?;
+            }
             _ => return Err(Error::KeyTypeUnsupported { key_type }),
         }
 
-        let req = request(CommandId::Append, Some(args), Some(key_type));
+        builder.key_type(key_type);
 
-        self.send(&req)
+        self.send(builder)
     }
 
     async fn decrement_by<T: Into<Value> + Send>(
@@ -123,31 +131,35 @@ impl Backend for MemoryBackend {
         key: &[u8],
         value: T,
     ) -> Result<Value, Self::Error> {
+        let mut builder = RequestBuilder::new(CommandId::DecrementBy);
+        builder.bytes(key)?;
+
         let value = value.into();
         let key_type = value.kind();
-
-        let mut args = Vec::new();
-        args.push(key.to_vec());
 
         if key_type != KeyType::Float && key_type != KeyType::Integer {
             return Err(Error::KeyTypeUnsupported { key_type });
         }
 
-        request::write_value_to_args(value, &mut args);
+        builder.value(value)?;
+        builder.key_type(key_type);
 
-        let req = Request::new_with_type(CommandId::DecrementBy, Some(args), key_type);
-
-        match self.send(&req)? {
+        match self.send(builder)? {
             Value::Float(float) => Ok(Value::Float(float)),
             Value::Integer(int) => Ok(Value::Integer(int)),
             other => panic!("Other response: {:?}", other),
         }
     }
 
-    async fn decrement(&self, key: &[u8], kind: Option<KeyType>) -> Result<Value, Self::Error> {
-        let req = request(CommandId::Decrement, Some(vec![key.to_vec()]), kind);
+    async fn decrement(&self, key: &[u8], key_type: Option<KeyType>) -> Result<Value, Self::Error> {
+        let mut builder = RequestBuilder::new(CommandId::Decrement);
+        builder.bytes(key)?;
 
-        match self.send(&req)? {
+        if let Some(key_type) = key_type {
+            builder.key_type(key_type);
+        }
+
+        match self.send(builder)? {
             Value::Float(float) => Ok(Value::Float(float)),
             Value::Integer(int) => Ok(Value::Integer(int)),
             other => panic!("Other response: {:?}", other),
@@ -155,18 +167,20 @@ impl Backend for MemoryBackend {
     }
 
     async fn delete(&self, key: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let req = Request::new(CommandId::Delete, Some(vec![key.to_vec()]));
+        let mut builder = RequestBuilder::new(CommandId::Delete);
+        builder.bytes(key)?;
 
-        match self.send(&req)? {
+        match self.send(builder)? {
             Value::Bytes(bytes) => Ok(bytes),
             other => panic!("Other response: {:?}", other),
         }
     }
 
     async fn echo(&self, content: &[u8]) -> Result<Vec<Vec<u8>>, Self::Error> {
-        let req = Request::new(CommandId::Echo, Some(vec![content.to_vec()]));
+        let mut builder = RequestBuilder::new(CommandId::Echo);
+        builder.bytes(content)?;
 
-        match self.send(&req)? {
+        match self.send(builder)? {
             Value::List(list) => Ok(list),
             _ => panic!(),
         }
@@ -176,22 +190,23 @@ impl Backend for MemoryBackend {
         &self,
         keys: T,
     ) -> Result<bool, Self::Error> {
-        let args = keys
-            .into_iter()
-            .map(|arg| arg.as_ref().to_owned())
-            .collect();
-        let req = Request::new(CommandId::Exists, Some(args));
+        let mut builder = RequestBuilder::new(CommandId::Exists);
 
-        match self.send(&req)? {
+        for key in keys {
+            builder.bytes(key.as_ref())?;
+        }
+
+        match self.send(builder)? {
             Value::Boolean(exists) => Ok(exists),
             _ => panic!(),
         }
     }
 
     async fn get(&self, key: &[u8]) -> Result<Value, Self::Error> {
-        let req = Request::new(CommandId::Get, Some(vec![key.to_vec()]));
+        let mut builder = RequestBuilder::new(CommandId::Get);
+        builder.bytes(key)?;
 
-        self.send(&req)
+        self.send(builder)
     }
 
     async fn increment_by<T: Into<Value> + Send>(
@@ -199,31 +214,35 @@ impl Backend for MemoryBackend {
         key: &[u8],
         value: T,
     ) -> Result<Value, Self::Error> {
+        let mut builder = RequestBuilder::new(CommandId::IncrementBy);
+        builder.bytes(key)?;
+
         let value = value.into();
         let key_type = value.kind();
-
-        let mut args = Vec::new();
-        args.push(key.to_vec());
 
         if key_type != KeyType::Float && key_type != KeyType::Integer {
             return Err(Error::KeyTypeUnsupported { key_type });
         }
 
-        request::write_value_to_args(value, &mut args);
+        builder.value(value)?;
+        builder.key_type(key_type);
 
-        let req = Request::new_with_type(CommandId::IncrementBy, Some(args), key_type);
-
-        match self.send(&req)? {
+        match self.send(builder)? {
             Value::Float(float) => Ok(Value::Float(float)),
             Value::Integer(int) => Ok(Value::Integer(int)),
             other => panic!("Other response: {:?}", other),
         }
     }
 
-    async fn increment(&self, key: &[u8], kind: Option<KeyType>) -> Result<Value, Self::Error> {
-        let req = request(CommandId::Increment, Some(vec![key.to_vec()]), kind);
+    async fn increment(&self, key: &[u8], key_type: Option<KeyType>) -> Result<Value, Self::Error> {
+        let mut builder = RequestBuilder::new(CommandId::Increment);
+        builder.bytes(key)?;
 
-        match self.send(&req)? {
+        if let Some(key_type) = key_type {
+            builder.key_type(key_type);
+        }
+
+        match self.send(builder)? {
             Value::Float(float) => Ok(Value::Float(float)),
             Value::Integer(int) => Ok(Value::Integer(int)),
             _ => panic!(),
@@ -235,24 +254,25 @@ impl Backend for MemoryBackend {
         key_type: KeyType,
         keys: T,
     ) -> Result<bool, Self::Error> {
-        let args = keys
-            .into_iter()
-            .map(|arg| arg.as_ref().to_owned())
-            .collect();
-        let req = Request::new_with_type(CommandId::Is, Some(args), key_type);
+        let mut builder = RequestBuilder::new(CommandId::Is);
 
-        match self.send(&req)? {
+        for key in keys {
+            builder.bytes(key.as_ref())?;
+        }
+
+        builder.key_type(key_type);
+
+        match self.send(builder)? {
             Value::Boolean(exists) => Ok(exists),
             _ => panic!(),
         }
     }
 
     async fn key_type(&self, key: &[u8]) -> Result<KeyType, Self::Error> {
-        let mut args = Vec::new();
-        args.push(key.to_vec());
-        let req = Request::new(CommandId::Type, Some(args));
+        let mut builder = RequestBuilder::new(CommandId::Type);
+        builder.bytes(key)?;
 
-        match self.send(&req)? {
+        match self.send(builder)? {
             Value::Integer(int) => {
                 let number = int as u8;
 
@@ -265,52 +285,57 @@ impl Backend for MemoryBackend {
     }
 
     async fn keys(&self, key: &[u8]) -> Result<Vec<Vec<u8>>, Self::Error> {
-        let mut args = Vec::new();
-        args.push(key.to_vec());
-        let req = Request::new(CommandId::Keys, Some(args));
+        let mut builder = RequestBuilder::new(CommandId::Keys);
+        builder.bytes(key)?;
 
-        match self.send(&req)? {
+        match self.send(builder)? {
             Value::List(list) => Ok(list),
             _ => panic!(),
         }
     }
 
-    async fn length(&self, key: &[u8], kind: Option<KeyType>) -> Result<i64, Self::Error> {
-        let req = request(CommandId::Length, Some(vec![key.to_vec()]), kind);
+    async fn length(&self, key: &[u8], key_type: Option<KeyType>) -> Result<i64, Self::Error> {
+        let mut builder = RequestBuilder::new(CommandId::Length);
+        builder.bytes(key)?;
 
-        match self.send(&req)? {
+        if let Some(key_type) = key_type {
+            builder.key_type(key_type);
+        }
+
+        match self.send(builder)? {
             Value::Integer(int) => Ok(int),
             other => panic!("Other response: {:?}", other),
         }
     }
 
     async fn rename(&self, from: &[u8], to: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let req = Request::new(CommandId::Rename, Some(vec![from.to_vec(), to.to_vec()]));
+        let mut builder = RequestBuilder::new(CommandId::Rename);
+        builder.bytes(from)?;
+        builder.bytes(to)?;
 
-        match self.send(&req)? {
+        match self.send(builder)? {
             Value::Bytes(bytes) => Ok(bytes),
             _ => panic!(),
         }
     }
 
     async fn set<T: Into<Value> + Send>(&self, key: &[u8], value: T) -> Result<Value, Self::Error> {
-        let mut args = Vec::new();
-        args.push(key.to_vec());
+        let mut builder = RequestBuilder::new(CommandId::Set);
+        builder.bytes(key)?;
 
         let value = value.into();
         let key_type = value.kind();
 
-        request::write_value_to_args(value, &mut args);
+        builder.value(value)?;
+        builder.key_type(key_type);
 
-        let req = request(CommandId::Set, Some(args), Some(key_type));
-
-        self.send(&req)
+        self.send(builder)
     }
 
     async fn stats(&self) -> Result<StatsData, Self::Error> {
-        let req = request(CommandId::Stats, None, None);
+        let builder = RequestBuilder::new(CommandId::Stats);
 
-        let stats = match self.send(&req)? {
+        let stats = match self.send(builder)? {
             Value::Map(stats) => stats,
             _ => panic!(),
         };

@@ -76,7 +76,7 @@ impl Dispatch for Length {
 mod tests {
     use super::Length;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::{KeyType, Value},
         Hop,
     };
@@ -84,10 +84,10 @@ mod tests {
 
     #[test]
     fn test_no_args() {
-        let hop = Hop::new();
-        let req = Request::new(CommandId::Length, None);
+        let req = RequestBuilder::new(CommandId::Length).into_request();
 
         let mut resp = Vec::new();
+        let hop = Hop::new();
 
         assert_eq!(
             Length::dispatch(&hop, &req, &mut resp).unwrap_err(),
@@ -97,10 +97,8 @@ mod tests {
 
     #[test]
     fn test_invalid_key_type() {
-        let hop = Hop::new();
-
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
+        let mut builder = RequestBuilder::new(CommandId::Length);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
 
         let types = [
             KeyType::Boolean,
@@ -111,9 +109,12 @@ mod tests {
         ];
 
         let mut resp = Vec::new();
+        let hop = Hop::new();
 
         for kind in types.iter() {
-            let req = Request::new_with_type(CommandId::Length, Some(args.clone()), *kind);
+            let mut builder = builder.clone();
+            builder.key_type(*kind);
+            let req = builder.into_request();
 
             assert_eq!(
                 Length::dispatch(&hop, &req, &mut resp).unwrap_err(),
@@ -126,11 +127,11 @@ mod tests {
 
     #[test]
     fn test_default_when_key_nonexistent() {
-        let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let req = Request::new(CommandId::Length, Some(args));
+        let mut builder = RequestBuilder::new(CommandId::Length);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
 
+        let hop = Hop::new();
         let mut resp = Vec::new();
 
         assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
@@ -140,15 +141,15 @@ mod tests {
 
     #[test]
     fn test_default_when_bytes_exists() {
+        let mut builder = RequestBuilder::new(CommandId::Length);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
+
+        let mut resp = Vec::new();
         let hop = Hop::new();
         hop.state()
             .0
             .insert(b"foo".to_vec(), Value::Bytes([1, 2, 3].to_vec()));
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let req = Request::new(CommandId::Length, Some(args));
-
-        let mut resp = Vec::new();
 
         assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(3).as_bytes());
@@ -156,16 +157,15 @@ mod tests {
 
     #[test]
     fn test_default_when_list_exists() {
+        let mut builder = RequestBuilder::new(CommandId::Length);
+        assert!(builder.bytes(b"hop".as_ref()).is_ok());
+        let req = builder.into_request();
+
+        let mut resp = Vec::new();
         let hop = Hop::new();
         let mut list = Vec::new();
         list.push(b"db".to_vec());
-
         hop.state().0.insert(b"hop".to_vec(), Value::List(list));
-        let mut args = Vec::new();
-        args.push(b"hop".to_vec());
-        let req = Request::new(CommandId::Length, Some(args));
-
-        let mut resp = Vec::new();
 
         assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(1).as_bytes());
@@ -173,6 +173,10 @@ mod tests {
 
     #[test]
     fn test_default_when_string_exists() {
+        let mut builder = RequestBuilder::new(CommandId::Length);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
+
         let hop = Hop::new();
         hop.state()
             .0
@@ -184,9 +188,8 @@ mod tests {
             .0
             .insert(b"cowboy".to_vec(), Value::String(cowboy.to_owned()));
 
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let req = Request::new(CommandId::Length, Some(args.clone()));
+        let mut builder = RequestBuilder::new(CommandId::Length);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
 
         let mut resp = Vec::new();
 
@@ -197,9 +200,10 @@ mod tests {
         resp.clear();
 
         // length of a simple string, 4 bytes but 1 char
-        args.pop();
-        args.push(b"cowboy".to_vec());
-        let req = Request::new(CommandId::Length, Some(args.clone()));
+        let mut builder = RequestBuilder::new(CommandId::Length);
+        assert!(builder.bytes(b"cowboy".as_ref()).is_ok());
+        let req = builder.into_request();
+
         assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(1).as_bytes());
     }

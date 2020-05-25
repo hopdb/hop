@@ -37,7 +37,7 @@ impl Dispatch for Keys {
 mod tests {
     use super::Keys;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::{KeyType, Value},
         Hop,
     };
@@ -46,13 +46,12 @@ mod tests {
 
     #[test]
     fn test_map_no_key_type_two_pairs() {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let hop = Hop::new();
-        let req = Request::new(CommandId::Keys, Some(args));
+        let mut builder = RequestBuilder::new(CommandId::Keys);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
 
         let mut resp = Vec::new();
-
+        let hop = Hop::new();
         let map = DashMap::new();
         map.insert(b"key1".to_vec(), b"value2".to_vec());
         map.insert(b"key2".to_vec(), b"value2".to_vec());
@@ -66,13 +65,13 @@ mod tests {
 
     #[test]
     fn test_map_key_type() {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let hop = Hop::new();
-        let req = Request::new_with_type(CommandId::Keys, Some(args), KeyType::Map);
+        let mut builder = RequestBuilder::new(CommandId::Keys);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        builder.key_type(KeyType::Map);
+        let req = builder.into_request();
 
         let mut resp = Vec::new();
-
+        let hop = Hop::new();
         let map = DashMap::new();
         map.insert(b"key".to_vec(), b"value".to_vec());
         hop.state().insert(b"foo".to_vec(), Value::Map(map));
@@ -83,12 +82,13 @@ mod tests {
 
     #[test]
     fn test_key_type_invalid() {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let hop = Hop::new();
-        let req = Request::new_with_type(CommandId::Keys, Some(args), KeyType::Integer);
+        let mut builder = RequestBuilder::new(CommandId::Keys);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        builder.key_type(KeyType::Integer);
+        let req = builder.into_request();
 
         let mut resp = Vec::new();
+        let hop = Hop::new();
 
         assert_eq!(
             DispatchError::KeyTypeInvalid,
@@ -98,12 +98,13 @@ mod tests {
 
     #[test]
     fn test_key_type_different() {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let hop = Hop::new();
-        let req = Request::new_with_type(CommandId::Keys, Some(args), KeyType::Map);
+        let mut builder = RequestBuilder::new(CommandId::Keys);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        builder.key_type(KeyType::Map);
+        let req = builder.into_request();
 
         let mut resp = Vec::new();
+        let hop = Hop::new();
 
         hop.state().insert(b"foo".to_vec(), Value::Integer(1));
         assert_eq!(

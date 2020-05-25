@@ -25,27 +25,19 @@ impl Dispatch for Exists {
 mod tests {
     use super::Exists;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::{KeyType, Value},
         Hop,
     };
     use alloc::vec::Vec;
 
-    fn args() -> Vec<Vec<u8>> {
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        args.push(b"bar".to_vec());
-
-        args
-    }
-
     #[test]
     fn test_one_key() {
-        let mut args = args();
-        args.pop();
-        let req = Request::new(CommandId::Exists, Some(args));
-        let mut resp = Vec::new();
+        let mut builder = RequestBuilder::new(CommandId::Exists);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
 
+        let mut resp = Vec::new();
         let hop = Hop::new();
         hop.state()
             .insert(b"foo".to_vec(), Value::Bytes([1, 2, 3].to_vec()));
@@ -56,10 +48,12 @@ mod tests {
 
     #[test]
     fn test_two_keys_both_exist() {
-        let args = args();
-        let req = Request::new(CommandId::Exists, Some(args));
-        let mut resp = Vec::new();
+        let mut builder = RequestBuilder::new(CommandId::Exists);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"bar".as_ref()).is_ok());
+        let req = builder.into_request();
 
+        let mut resp = Vec::new();
         let hop = Hop::new();
         hop.state()
             .insert(b"foo".to_vec(), Value::Bytes([1, 2, 3].to_vec()));
@@ -72,10 +66,12 @@ mod tests {
 
     #[test]
     fn test_two_keys_one_exists() {
-        let args = args();
-        let req = Request::new(CommandId::Exists, Some(args));
-        let mut resp = Vec::new();
+        let mut builder = RequestBuilder::new(CommandId::Exists);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"bar".as_ref()).is_ok());
+        let req = builder.into_request();
 
+        let mut resp = Vec::new();
         let hop = Hop::new();
         hop.state()
             .insert(b"foo".to_vec(), Value::Bytes([1, 2, 3].to_vec()));
@@ -86,11 +82,11 @@ mod tests {
 
     #[test]
     fn test_one_key_doesnt_exist() {
-        let mut args = args();
-        args.pop();
-        let req = Request::new(CommandId::Exists, Some(args));
-        let mut resp = Vec::new();
+        let mut builder = RequestBuilder::new(CommandId::Exists);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
 
+        let mut resp = Vec::new();
         let hop = Hop::new();
 
         assert!(Exists::dispatch(&hop, &req, &mut resp).is_ok());
@@ -99,7 +95,8 @@ mod tests {
 
     #[test]
     fn test_no_arguments() {
-        let req = Request::new(CommandId::Exists, None);
+        let req = RequestBuilder::new(CommandId::Exists).into_request();
+
         let mut resp = Vec::new();
 
         let hop = Hop::new();
@@ -111,7 +108,12 @@ mod tests {
 
     #[test]
     fn test_key_type_specified() {
-        let req = Request::new_with_type(CommandId::Exists, Some(args()), KeyType::List);
+        let mut builder = RequestBuilder::new(CommandId::Exists);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert!(builder.bytes(b"bar".as_ref()).is_ok());
+        builder.key_type(KeyType::List);
+        let req = builder.into_request();
+
         let mut resp = Vec::new();
 
         let hop = Hop::new();

@@ -45,7 +45,7 @@ impl Dispatch for Stats {
 mod tests {
     use super::Stats;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         metrics::Metric,
         state::KeyType,
         Hop,
@@ -54,8 +54,9 @@ mod tests {
 
     #[test]
     fn test_stats_empty() {
+        let req = RequestBuilder::new(CommandId::Stats).into_request();
+
         let hop = Hop::new();
-        let req = Request::new(CommandId::Stats, None);
         let mut resp = Vec::new();
 
         assert!(Stats::dispatch(&hop, &req, &mut resp).is_ok());
@@ -64,9 +65,9 @@ mod tests {
 
     #[test]
     fn test_stats_with_entry() {
-        let hop = Hop::new();
-        let req = Request::new(CommandId::Stats, None);
+        let req = RequestBuilder::new(CommandId::Stats).into_request();
 
+        let hop = Hop::new();
         hop.0.metrics_writer.increment(Metric::CommandsSuccessful);
 
         let mut resp = Vec::new();
@@ -79,8 +80,11 @@ mod tests {
 
     #[test]
     fn test_stats_errors_with_key_type() {
+        let mut builder = RequestBuilder::new(CommandId::Stats);
+        builder.key_type(KeyType::Map);
+        let req = builder.into_request();
+
         let hop = Hop::new();
-        let req = Request::new_with_type(CommandId::Stats, None, KeyType::Map);
         let mut resp = Vec::new();
 
         assert_eq!(

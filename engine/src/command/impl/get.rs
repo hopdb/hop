@@ -30,7 +30,7 @@ impl Dispatch for Get {
 mod tests {
     use super::Get;
     use crate::{
-        command::{CommandId, Dispatch, DispatchError, Request, Response},
+        command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
         state::{KeyType, Value},
         Hop,
     };
@@ -38,12 +38,13 @@ mod tests {
 
     #[test]
     fn test_bool() {
+        let mut builder = RequestBuilder::new(CommandId::Get);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
+
+        let mut resp = Vec::new();
         let hop = Hop::new();
         hop.state().insert(b"foo".to_vec(), Value::Boolean(false));
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let req = Request::new(CommandId::Get, Some(args));
-        let mut resp = Vec::new();
 
         assert!(Get::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(false).as_bytes());
@@ -51,13 +52,14 @@ mod tests {
 
     #[test]
     fn test_bool_specified_key_type() {
+        let mut builder = RequestBuilder::new(CommandId::Get);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        builder.key_type(KeyType::Boolean);
+        let req = builder.into_request();
+
+        let mut resp = Vec::new();
         let hop = Hop::new();
         hop.state().insert(b"foo".to_vec(), Value::Boolean(true));
-
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let req = Request::new_with_type(CommandId::Get, Some(args), KeyType::Boolean);
-        let mut resp = Vec::new();
 
         assert!(Get::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(true).as_bytes());
@@ -65,12 +67,13 @@ mod tests {
 
     #[test]
     fn test_int() {
+        let mut builder = RequestBuilder::new(CommandId::Get);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
+
+        let mut resp = Vec::new();
         let hop = Hop::new();
         hop.state().insert(b"foo".to_vec(), Value::Integer(123));
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let req = Request::new(CommandId::Get, Some(args));
-        let mut resp = Vec::new();
 
         assert!(Get::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(123).as_bytes());
@@ -78,9 +81,10 @@ mod tests {
 
     #[test]
     fn test_no_key() {
-        let hop = Hop::new();
-        let req = Request::new(CommandId::Get, None);
+        let req = RequestBuilder::new(CommandId::Get).into_request();
+
         let mut resp = Vec::new();
+        let hop = Hop::new();
 
         assert_eq!(
             DispatchError::KeyUnspecified,
@@ -90,11 +94,12 @@ mod tests {
 
     #[test]
     fn test_key_nonexistent() {
-        let hop = Hop::new();
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let req = Request::new(CommandId::Get, Some(args));
+        let mut builder = RequestBuilder::new(CommandId::Get);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        let req = builder.into_request();
+
         let mut resp = Vec::new();
+        let hop = Hop::new();
 
         assert_eq!(
             DispatchError::KeyNonexistent,
@@ -104,12 +109,14 @@ mod tests {
 
     #[test]
     fn test_key_type_different() {
+        let mut builder = RequestBuilder::new(CommandId::Get);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        builder.key_type(KeyType::Boolean);
+        let req = builder.into_request();
+
+        let mut resp = Vec::new();
         let hop = Hop::new();
         hop.state().insert(b"foo".to_vec(), Value::Integer(123));
-        let mut args = Vec::new();
-        args.push(b"foo".to_vec());
-        let req = Request::new_with_type(CommandId::Get, Some(args), KeyType::Boolean);
-        let mut resp = Vec::new();
 
         assert_eq!(
             DispatchError::KeyTypeDifferent,
