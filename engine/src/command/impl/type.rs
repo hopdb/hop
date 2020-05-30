@@ -66,8 +66,7 @@ mod tests {
 
     #[test]
     fn test_key_type_specified() {
-        let mut builder = RequestBuilder::new(CommandId::Type);
-        builder.key_type(KeyType::Boolean);
+        let builder = RequestBuilder::new_with_key_type(CommandId::Type, KeyType::Boolean);
         let req = builder.into_request();
 
         let hop = Hop::new();

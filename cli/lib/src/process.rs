@@ -192,7 +192,7 @@ where
 
 async fn process_inner<B: Backend + Send + Sync + 'static>(
     client: &Client<B>,
-    req: Request,
+    req: Request<'_>,
 ) -> Result<Cow<'static, str>, InnerProcessError<B>>
 where
     B::Error: Error,
@@ -214,7 +214,7 @@ where
         }
         CommandId::Echo => {
             if let Some(req_args) = req.args(..) {
-                let req_args = req_args.join(b" ".as_ref());
+                let req_args = req_args.collect::<Vec<_>>().join(b" ".as_ref());
                 let args = client.echo(req_args).await.map_err(backend_err)?;
 
                 let output = args
@@ -266,8 +266,9 @@ where
                 .key_type()
                 .ok_or_else(|| InnerProcessError::KeyTypeRequired)?;
             let args = req
-                .into_args()
-                .ok_or_else(|| InnerProcessError::TooFewArguments)?;
+                .args(..)
+                .ok_or_else(|| InnerProcessError::TooFewArguments)?
+                .collect::<Vec<_>>();
 
             let is_type = client.is(key_type).keys(args)?.await.map_err(backend_err)?;
 

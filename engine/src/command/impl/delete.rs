@@ -32,8 +32,8 @@ mod tests {
     };
     use alloc::vec::Vec;
 
-    fn builder() -> RequestBuilder {
-        let mut builder = RequestBuilder::new(CommandId::DecrementBy);
+    fn builder(key_type: impl Into<Option<KeyType>>) -> RequestBuilder {
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::DecrementBy, key_type);
         assert!(builder.bytes(b"foo".as_ref()).is_ok());
 
         builder
@@ -41,7 +41,7 @@ mod tests {
 
     #[test]
     fn test_valid() {
-        let req = builder().into_request();
+        let req = builder(None).into_request();
         let mut resp = Vec::new();
 
         let hop = Hop::new();
@@ -55,7 +55,7 @@ mod tests {
 
     #[test]
     fn test_nonexistent() {
-        let req = builder().into_request();
+        let req = builder(None).into_request();
         let mut resp = Vec::new();
 
         let hop = Hop::new();
@@ -68,9 +68,7 @@ mod tests {
 
     #[test]
     fn test_key_type_specified() {
-        let mut builder = builder();
-        builder.key_type(KeyType::Bytes);
-        let req = builder.into_request();
+        let req = builder(KeyType::Bytes).into_request();
         let mut resp = Vec::new();
 
         let hop = Hop::new();

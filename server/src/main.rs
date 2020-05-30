@@ -100,20 +100,14 @@ async fn handle_socket_inner(socket: TcpStream, hop: Hop) -> Result<(), Box<dyn 
         }
 
         match ctx.feed(&input) {
-            Ok(Some(req)) => {
-                match hop.dispatch(&req, &mut resp) {
-                    Ok(()) => {}
-                    Err(why) => {
-                        let res = Response::DispatchError(why);
+            Ok(Some(req)) => match hop.dispatch(&req, &mut resp) {
+                Ok(()) => {}
+                Err(why) => {
+                    let res = Response::DispatchError(why);
 
-                        res.copy_to(&mut resp);
-                    }
+                    res.copy_to(&mut resp);
                 }
-
-                if let Some(args) = req.into_args() {
-                    ctx.reset(args);
-                }
-            }
+            },
             Ok(None) => continue,
             Err(why) => {
                 let res = Response::ParseError(why);

@@ -12,6 +12,7 @@ repository = "https://github.com/hopdb/hop.git"
 version = "0.1.0"
 
 [dependencies]
+arrayvec = { default-features = false, features = ["array-sizes-129-255"], version = "^0.5.1" }
 dashmap = { default-features = false, version = "^3.11.1" }
 futures-intrusive = { default-features = false, features = ["alloc"], version = "^0.3.1" }
 hop-internal-metrics = { default-features = false, path = "../lib/metrics" }

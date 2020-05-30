@@ -97,9 +97,6 @@ mod tests {
 
     #[test]
     fn test_invalid_key_type() {
-        let mut builder = RequestBuilder::new(CommandId::Length);
-        assert!(builder.bytes(b"foo".as_ref()).is_ok());
-
         let types = [
             KeyType::Boolean,
             KeyType::Float,
@@ -112,8 +109,8 @@ mod tests {
         let hop = Hop::new();
 
         for kind in types.iter() {
-            let mut builder = builder.clone();
-            builder.key_type(*kind);
+            let mut builder = RequestBuilder::new_with_key_type(CommandId::Length, *kind);
+            assert!(builder.bytes(b"foo".as_ref()).is_ok());
             let req = builder.into_request();
 
             assert_eq!(

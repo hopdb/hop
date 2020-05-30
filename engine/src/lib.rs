@@ -12,6 +12,4 @@ pub mod pubsub;
 pub mod session;
 pub mod state;
 
-mod pool;
-
 pub use hop::Hop;
