@@ -69,18 +69,16 @@ pub fn parse(input: &str) -> Result<Request, ParseError> {
         provided_name: cmd_name.to_owned(),
     })?;
 
-    let mut builder = RequestBuilder::new(cmd_id);
+    let key_type = key_type.unwrap_or(KeyType::Bytes);
+    let mut builder = RequestBuilder::new_with_key_type(cmd_id, key_type);
 
     let mut arg_iter = split.peekable();
-    let key_type = key_type.unwrap_or(KeyType::Bytes);
 
     if arg_iter.peek().is_some() {
         for arg in input_args(arg_iter, cmd_id, key_type)? {
             builder.bytes(arg)?;
         }
     }
-
-    builder.key_type(key_type);
 
     Ok(builder.into_request())
 }

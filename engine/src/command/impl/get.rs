@@ -52,9 +52,8 @@ mod tests {
 
     #[test]
     fn test_bool_specified_key_type() {
-        let mut builder = RequestBuilder::new(CommandId::Get);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Get, KeyType::Boolean);
         assert!(builder.bytes(b"foo".as_ref()).is_ok());
-        builder.key_type(KeyType::Boolean);
         let req = builder.into_request();
 
         let mut resp = Vec::new();
@@ -109,9 +108,8 @@ mod tests {
 
     #[test]
     fn test_key_type_different() {
-        let mut builder = RequestBuilder::new(CommandId::Get);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Get, KeyType::Boolean);
         assert!(builder.bytes(b"foo".as_ref()).is_ok());
-        builder.key_type(KeyType::Boolean);
         let req = builder.into_request();
 
         let mut resp = Vec::new();

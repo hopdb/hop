@@ -9,6 +9,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "arrayvec"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "async-trait"
 version = "0.1.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -196,6 +201,7 @@ dependencies = [
 name = "hop-engine"
 version = "0.1.0"
 dependencies = [
+ "arrayvec 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "dashmap 3.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-intrusive 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hop-internal-metrics 0.1.0",
@@ -539,6 +545,7 @@ dependencies = [
 
 [metadata]
 "checksum ahash 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "9c251dce3391a07b43218ca070203ecb8f9f520d35ab71312296a59dbceab154"
+"checksum arrayvec 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 "checksum async-trait 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)" = "26c4f3195085c36ea8d24d32b2f828d23296a9370a28aa39d111f6f16bef9f3b"
 "checksum autocfg 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f8aac770f1885fd7e387acedd76065302551364496e46b3dd00860b2f8359b9d"
 "checksum bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"

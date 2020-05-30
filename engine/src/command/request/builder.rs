@@ -3,7 +3,8 @@ use crate::{
     command::CommandId,
     state::{KeyType, Value},
 };
-use alloc::vec::Vec;
+use alloc::{borrow::Cow, vec::Vec};
+use arrayvec::ArrayVec;
 use core::fmt::{Display, Formatter, Result as FmtResult};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -31,45 +32,75 @@ impl Display for RequestBuilderError {
 /// provided and that not too many arguments are given.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RequestBuilder {
-    arguments: Option<Vec<Vec<u8>>>,
+    argument_count: u8,
+    buf: Vec<u8>,
     cmd_id: CommandId,
     key_type: Option<KeyType>,
+    positions: ArrayVec<[usize; 256]>,
 }
 
 impl RequestBuilder {
     /// Create a new request builder.
     pub fn new(cmd_id: CommandId) -> Self {
+        let mut buf = Vec::new();
+        buf.push(cmd_id as u8);
+
+        // if it's a non-simple command, push the argument len now
+        if !cmd_id.is_simple() {
+            buf.push(0);
+        }
+
         Self {
-            arguments: None,
+            argument_count: 0,
+            buf,
             cmd_id,
             key_type: None,
+            positions: ArrayVec::new(),
         }
     }
 
-    /// Consume the builder and return the request serialised as bytes.
-    pub fn into_bytes(self) -> Vec<u8> {
-        self.into_request().into_bytes()
+    pub fn new_with_key_type(cmd_id: CommandId, key_type: impl Into<Option<KeyType>>) -> Self {
+        let key_type = key_type.into();
+
+        let mut buf = Vec::new();
+        let mut byte = cmd_id as u8;
+
+        if key_type.is_some() {
+            byte |= 0b1000_0000;
+        }
+
+        buf.push(byte);
+
+        if let Some(key_type) = key_type {
+            buf.push(key_type as u8);
+        }
+
+        if !cmd_id.is_simple() {
+            buf.push(0);
+        }
+
+        Self {
+            argument_count: 0,
+            buf,
+            cmd_id,
+            key_type,
+            positions: ArrayVec::new(),
+        }
     }
 
     /// Consume the builder and return the built request.
-    pub fn into_request(self) -> Request {
+    pub fn into_request(self) -> Request<'static> {
         Request {
-            args: self.arguments,
+            buf: Cow::Owned(self.buf),
             key_type: self.key_type,
             kind: self.cmd_id,
+            positions: Cow::Owned(self.positions),
         }
     }
 
     /// Retrieve an immutable reference to the command ID.
     pub fn command_id_ref(&self) -> &CommandId {
         &self.cmd_id
-    }
-
-    /// Set the key type.
-    pub fn key_type(&mut self, key_type: KeyType) -> &mut Self {
-        self.key_type.replace(key_type);
-
-        self
     }
 
     /// Retrieve an immutable reference to the key type, if any.
@@ -126,10 +157,7 @@ impl RequestBuilder {
     fn _value(&mut self, value: Value) -> Result<&mut Self, RequestBuilderError> {
         match value {
             Value::Boolean(bool) => {
-                let mut buf = Vec::with_capacity(1);
-                buf.push(bool as u8);
-
-                self.push_argument(buf)?;
+                self.push_argument([bool as u8].as_ref())?;
             }
             Value::Bytes(bytes) => {
                 if bytes.is_empty() {
@@ -138,10 +166,12 @@ impl RequestBuilder {
 
                 self.push_argument(bytes)?;
             }
-            Value::Float(float) => self.push_argument(float.to_be_bytes().to_vec())?,
-            Value::Integer(int) => self.push_argument(int.to_be_bytes().to_vec())?,
+            Value::Float(float) => {
+                self.push_argument(Cow::Borrowed(float.to_be_bytes().as_ref()))?
+            }
+            Value::Integer(int) => self.push_argument(Cow::Borrowed(int.to_be_bytes().as_ref()))?,
             Value::List(list) => {
-                if self.arguments_would_overfill(list.len()) {
+                if self.arguments_would_overfill(list.len() as u8) {
                     return Err(RequestBuilderError::TooManyArguments);
                 }
 
@@ -154,7 +184,7 @@ impl RequestBuilder {
                 }
             }
             Value::Map(map) => {
-                if self.arguments_would_overfill(map.len()) {
+                if self.arguments_would_overfill(map.len() as u8) {
                     return Err(RequestBuilderError::TooManyArguments);
                 }
 
@@ -168,7 +198,7 @@ impl RequestBuilder {
                 }
             }
             Value::Set(set) => {
-                if self.arguments_would_overfill(set.len()) {
+                if self.arguments_would_overfill(set.len() as u8) {
                     return Err(RequestBuilderError::TooManyArguments);
                 }
 
@@ -185,25 +215,19 @@ impl RequestBuilder {
                     return Err(RequestBuilderError::ValueEmpty);
                 }
 
-                self.push_argument(string.into_bytes())?;
+                self.push_argument(string.as_bytes())?;
             }
         }
 
         Ok(self)
     }
 
-    /// Retrieve an immutable reference to an argument.
-    pub fn argument_ref(&self, idx: usize) -> Option<&[u8]> {
-        let arg = self.arguments.as_ref()?.get(idx)?;
-
-        Some(arg.as_slice())
+    fn arguments_would_overfill(&self, amount: u8) -> bool {
+        self.argument_count.checked_add(amount).is_none()
     }
 
-    fn arguments_would_overfill(&self, len: usize) -> bool {
-        match self.arguments.as_ref() {
-            Some(arguments) => arguments.len() + len > 255,
-            None => len > 255,
-        }
+    fn update_count(&mut self) {
+        self.buf[1 + self.key_type.is_some() as usize] = self.argument_count;
     }
 
     /// Pushes an argument to the list.
@@ -214,35 +238,47 @@ impl RequestBuilder {
     /// arguments is already full.
     ///
     /// [`RequestBuilderError::TooManyArguments`]: enum.RequestBuilderError.html#variant.TooManyArguments
-    fn push_argument(&mut self, argument: Vec<u8>) -> Result<(), RequestBuilderError> {
-        if let Some(arguments) = self.arguments.as_mut() {
-            if arguments.len() >= 255 {
-                return Err(RequestBuilderError::TooManyArguments);
+    fn push_argument<'a>(
+        &mut self,
+        argument: impl Into<Cow<'a, [u8]>>,
+    ) -> Result<(), RequestBuilderError> {
+        let argument = argument.into();
+        let argument_len = argument.len();
+
+        let argument_len_bytes = (argument_len as u32).to_be_bytes();
+        self.buf.extend_from_slice(&argument_len_bytes);
+
+        match argument {
+            Cow::Borrowed(arg) => self.buf.extend_from_slice(arg),
+            Cow::Owned(mut arg) => {
+                self.buf.append(&mut arg);
             }
-
-            arguments.push(argument);
-        } else {
-            let mut arguments = Vec::new();
-            arguments.push(argument);
-
-            self.arguments.replace(arguments);
         }
+
+        self.argument_count += 1;
+        self.update_count();
+
+        let base = self.key_type.is_some() as usize;
+        let position = match self.positions.last().copied() {
+            Some(position) => position + 4 + argument_len,
+            None => {
+                // skip command id
+                //
+                // key type (1 if exists) + arg count + arg len as u32 + arg len
+                base + 1 + 4 + argument_len
+            }
+        };
+        self.positions.push(position);
 
         Ok(())
     }
 }
 
-impl From<Request> for RequestBuilder {
+impl From<Request<'_>> for RequestBuilder {
     fn from(request: Request) -> Self {
-        let mut builder = Self::new(request.kind);
-
-        if let Some(key_type) = request.key_type {
-            builder.key_type(key_type);
-        }
-
-        if let Some(args) = request.args {
-            builder.arguments.replace(args);
-        }
+        let mut builder = Self::new_with_key_type(request.kind, request.key_type);
+        builder.buf = request.buf.into_owned();
+        builder.positions = request.positions.into_owned();
 
         builder
     }
@@ -255,6 +291,8 @@ mod tests {
         command::{CommandId, Request},
         state::{KeyType, Value},
     };
+    use alloc::borrow::Cow;
+    use arrayvec::ArrayVec;
 
     #[test]
     fn test_cmd_id() {
@@ -263,65 +301,135 @@ mod tests {
         assert_eq!(
             builder.into_request(),
             Request {
-                args: None,
+                buf: [CommandId::Stats as u8].as_ref().into(),
                 kind: CommandId::Stats,
                 key_type: None,
+                positions: Cow::Owned(ArrayVec::new()),
             }
         );
     }
 
     #[test]
     fn test_key_type() {
-        let mut builder = RequestBuilder::new(CommandId::Decrement);
-        builder.key_type(KeyType::Integer);
+        let builder = RequestBuilder::new_with_key_type(CommandId::Decrement, KeyType::Integer);
 
         assert_eq!(
             builder.into_request(),
             Request {
-                args: None,
+                buf: [
+                    0b1000_0000 | CommandId::Decrement as u8,
+                    KeyType::Integer as u8,
+                    0
+                ]
+                .as_ref()
+                .into(),
                 kind: CommandId::Decrement,
                 key_type: Some(KeyType::Integer),
+                positions: Cow::Owned(ArrayVec::new()),
             }
         );
     }
 
     #[test]
     fn test_arg_bytes() {
-        let mut builder = RequestBuilder::new(CommandId::Append);
-        builder.key_type(KeyType::List);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Append, KeyType::List);
         assert!(builder.bytes(b"foo".as_ref()).is_ok());
 
         let mut expected_args = Vec::new();
-        expected_args.push(b"foo".to_vec());
+        expected_args.push(b"foo".as_ref());
+
+        let mut positions = ArrayVec::new();
+        positions.push(9);
 
         assert_eq!(
             builder.into_request(),
             Request {
-                args: Some(expected_args),
+                buf: [
+                    0b1000_0000 | CommandId::Append as u8,
+                    KeyType::List as u8,
+                    1,
+                    0,
+                    0,
+                    0,
+                    3,
+                    b'f',
+                    b'o',
+                    b'o',
+                ]
+                .as_ref()
+                .into(),
                 kind: CommandId::Append,
                 key_type: Some(KeyType::List),
+                positions: Cow::Owned(positions),
             }
         );
     }
 
     #[test]
     fn test_arg_value() {
-        let mut builder = RequestBuilder::new(CommandId::Set);
-        builder.key_type(KeyType::String);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Set, KeyType::String);
         assert!(builder.bytes(b"foo".as_ref()).is_ok());
         assert!(builder.value(Value::Integer(123)).is_ok());
 
         let mut expected_args = Vec::new();
-        expected_args.push(b"foo".to_vec());
-        expected_args.push(123i64.to_be_bytes().to_vec());
+        expected_args.push(b"foo".as_ref());
+        expected_args.push(123i64.to_be_bytes().as_ref());
+
+        let mut positions = ArrayVec::new();
+        positions.push(9);
+        positions.push(21);
 
         assert_eq!(
             builder.into_request(),
             Request {
-                args: Some(expected_args),
+                buf: [
+                    0b1000_0000 | CommandId::Set as u8,
+                    KeyType::String as u8,
+                    2,
+                    0,
+                    0,
+                    0,
+                    3,
+                    b'f',
+                    b'o',
+                    b'o',
+                    0,
+                    0,
+                    0,
+                    8,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    123,
+                ]
+                .as_ref()
+                .into(),
                 kind: CommandId::Set,
                 key_type: Some(KeyType::String),
+                positions: Cow::Owned(positions),
             }
         );
+    }
+
+    #[test]
+    fn test_positions() {
+        let mut builder = RequestBuilder::new(CommandId::Decrement);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+
+        assert_eq!(
+            builder.buf.as_slice(),
+            [CommandId::Decrement as u8, 1, 0, 0, 0, 3, b'f', b'o', b'o',]
+        );
+        assert_eq!(1, builder.positions.len());
+        assert_eq!(Some(8), builder.positions.first().copied());
+
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Get, KeyType::Boolean);
+        assert!(builder.bytes(b"foo".as_ref()).is_ok());
+        assert_eq!(1, builder.positions.len());
+        assert_eq!(Some(9), builder.positions.first().copied());
     }
 }

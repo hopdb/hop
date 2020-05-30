@@ -76,7 +76,7 @@ impl MemoryBackend {
         Default::default()
     }
 
-    fn send(&self, req: impl Into<Request>) -> Result<Value, Error> {
+    fn send<'a>(&self, req: impl Into<Request<'a>>) -> Result<Value, Error> {
         let mut resp = Vec::new();
 
         self.hop.dispatch(&req.into(), &mut resp)?;
@@ -100,11 +100,11 @@ impl Backend for MemoryBackend {
         key: &[u8],
         value: T,
     ) -> Result<Value, Self::Error> {
-        let mut builder = RequestBuilder::new(CommandId::Append);
-        builder.bytes(key)?;
-
         let value = value.into();
         let key_type = value.kind();
+
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Append, key_type);
+        builder.bytes(key)?;
 
         match value {
             Value::Bytes(bytes) => {
@@ -121,8 +121,6 @@ impl Backend for MemoryBackend {
             _ => return Err(Error::KeyTypeUnsupported { key_type }),
         }
 
-        builder.key_type(key_type);
-
         self.send(builder)
     }
 
@@ -131,18 +129,17 @@ impl Backend for MemoryBackend {
         key: &[u8],
         value: T,
     ) -> Result<Value, Self::Error> {
-        let mut builder = RequestBuilder::new(CommandId::DecrementBy);
-        builder.bytes(key)?;
-
         let value = value.into();
         let key_type = value.kind();
+
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::DecrementBy, key_type);
+        builder.bytes(key)?;
 
         if key_type != KeyType::Float && key_type != KeyType::Integer {
             return Err(Error::KeyTypeUnsupported { key_type });
         }
 
         builder.value(value)?;
-        builder.key_type(key_type);
 
         match self.send(builder)? {
             Value::Float(float) => Ok(Value::Float(float)),
@@ -152,12 +149,8 @@ impl Backend for MemoryBackend {
     }
 
     async fn decrement(&self, key: &[u8], key_type: Option<KeyType>) -> Result<Value, Self::Error> {
-        let mut builder = RequestBuilder::new(CommandId::Decrement);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Decrement, key_type);
         builder.bytes(key)?;
-
-        if let Some(key_type) = key_type {
-            builder.key_type(key_type);
-        }
 
         match self.send(builder)? {
             Value::Float(float) => Ok(Value::Float(float)),
@@ -214,18 +207,17 @@ impl Backend for MemoryBackend {
         key: &[u8],
         value: T,
     ) -> Result<Value, Self::Error> {
-        let mut builder = RequestBuilder::new(CommandId::IncrementBy);
-        builder.bytes(key)?;
-
         let value = value.into();
         let key_type = value.kind();
+
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::IncrementBy, key_type);
+        builder.bytes(key)?;
 
         if key_type != KeyType::Float && key_type != KeyType::Integer {
             return Err(Error::KeyTypeUnsupported { key_type });
         }
 
         builder.value(value)?;
-        builder.key_type(key_type);
 
         match self.send(builder)? {
             Value::Float(float) => Ok(Value::Float(float)),
@@ -235,12 +227,8 @@ impl Backend for MemoryBackend {
     }
 
     async fn increment(&self, key: &[u8], key_type: Option<KeyType>) -> Result<Value, Self::Error> {
-        let mut builder = RequestBuilder::new(CommandId::Increment);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Increment, key_type);
         builder.bytes(key)?;
-
-        if let Some(key_type) = key_type {
-            builder.key_type(key_type);
-        }
 
         match self.send(builder)? {
             Value::Float(float) => Ok(Value::Float(float)),
@@ -254,13 +242,11 @@ impl Backend for MemoryBackend {
         key_type: KeyType,
         keys: T,
     ) -> Result<bool, Self::Error> {
-        let mut builder = RequestBuilder::new(CommandId::Is);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Is, key_type);
 
         for key in keys {
             builder.bytes(key.as_ref())?;
         }
-
-        builder.key_type(key_type);
 
         match self.send(builder)? {
             Value::Boolean(exists) => Ok(exists),
@@ -295,12 +281,8 @@ impl Backend for MemoryBackend {
     }
 
     async fn length(&self, key: &[u8], key_type: Option<KeyType>) -> Result<i64, Self::Error> {
-        let mut builder = RequestBuilder::new(CommandId::Length);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Length, key_type);
         builder.bytes(key)?;
-
-        if let Some(key_type) = key_type {
-            builder.key_type(key_type);
-        }
 
         match self.send(builder)? {
             Value::Integer(int) => Ok(int),
@@ -320,14 +302,12 @@ impl Backend for MemoryBackend {
     }
 
     async fn set<T: Into<Value> + Send>(&self, key: &[u8], value: T) -> Result<Value, Self::Error> {
-        let mut builder = RequestBuilder::new(CommandId::Set);
-        builder.bytes(key)?;
-
         let value = value.into();
         let key_type = value.kind();
 
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Set, key_type);
+        builder.bytes(key)?;
         builder.value(value)?;
-        builder.key_type(key_type);
 
         self.send(builder)
     }

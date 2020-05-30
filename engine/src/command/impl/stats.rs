@@ -80,8 +80,7 @@ mod tests {
 
     #[test]
     fn test_stats_errors_with_key_type() {
-        let mut builder = RequestBuilder::new(CommandId::Stats);
-        builder.key_type(KeyType::Map);
+        let builder = RequestBuilder::new_with_key_type(CommandId::Stats, KeyType::Map);
         let req = builder.into_request();
 
         let hop = Hop::new();

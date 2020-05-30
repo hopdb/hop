@@ -9,10 +9,10 @@ impl Dispatch for Is {
         let key_type = req
             .key_type()
             .ok_or_else(|| DispatchError::KeyTypeRequired)?;
-        let args = req.args(..).ok_or(DispatchError::ArgumentRetrieval)?;
+        let mut args = req.args(..).ok_or(DispatchError::ArgumentRetrieval)?;
         let state = hop.state();
 
-        let all = args.iter().all(|key| match state.key_ref(key) {
+        let all = args.all(|key| match state.key_ref(key) {
             Some(value) => value.value().kind() == key_type,
             None => false,
         });
@@ -35,9 +35,8 @@ mod tests {
 
     #[test]
     fn test_one_arg() {
-        let mut builder = RequestBuilder::new(CommandId::Is);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Is, KeyType::String);
         assert!(builder.bytes(b"foo".as_ref()).is_ok());
-        builder.key_type(KeyType::String);
         let req = builder.into_request();
 
         let hop = Hop::new();
@@ -51,10 +50,9 @@ mod tests {
 
     #[test]
     fn test_two_args() {
-        let mut builder = RequestBuilder::new(CommandId::Is);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Is, KeyType::String);
         assert!(builder.bytes(b"foo".as_ref()).is_ok());
         assert!(builder.bytes(b"bar".as_ref()).is_ok());
-        builder.key_type(KeyType::String);
         let req = builder.into_request();
 
         let hop = Hop::new();
@@ -69,10 +67,9 @@ mod tests {
 
     #[test]
     fn test_two_mismatched() {
-        let mut builder = RequestBuilder::new(CommandId::Is);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Is, KeyType::String);
         assert!(builder.bytes(b"foo".as_ref()).is_ok());
         assert!(builder.bytes(b"bar".as_ref()).is_ok());
-        builder.key_type(KeyType::String);
         let req = builder.into_request();
 
         let hop = Hop::new();
@@ -87,8 +84,7 @@ mod tests {
 
     #[test]
     fn test_no_arguments() {
-        let mut builder = RequestBuilder::new(CommandId::Is);
-        builder.key_type(KeyType::Bytes);
+        let builder = RequestBuilder::new_with_key_type(CommandId::Is, KeyType::Bytes);
         let req = builder.into_request();
 
         let hop = Hop::new();

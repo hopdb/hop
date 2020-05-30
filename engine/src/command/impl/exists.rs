@@ -10,10 +10,10 @@ impl Dispatch for Exists {
             return Err(DispatchError::KeyTypeUnexpected);
         }
 
-        let args = req.args(..).ok_or(DispatchError::ArgumentRetrieval)?;
+        let mut args = req.args(..).ok_or(DispatchError::ArgumentRetrieval)?;
         let state = hop.state();
 
-        let all = args.iter().all(|key| state.contains_key(key));
+        let all = args.all(|key| state.contains_key(key));
 
         response::write_bool(resp, all);
 
@@ -108,10 +108,9 @@ mod tests {
 
     #[test]
     fn test_key_type_specified() {
-        let mut builder = RequestBuilder::new(CommandId::Exists);
+        let mut builder = RequestBuilder::new_with_key_type(CommandId::Exists, KeyType::List);
         assert!(builder.bytes(b"foo".as_ref()).is_ok());
         assert!(builder.bytes(b"bar".as_ref()).is_ok());
-        builder.key_type(KeyType::List);
         let req = builder.into_request();
 
         let mut resp = Vec::new();

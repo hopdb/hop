@@ -36,7 +36,7 @@ impl Dispatch for Append {
                     .typed_key::<List>(key)
                     .ok_or(DispatchError::KeyTypeDifferent)?;
 
-                list.append(&mut args.to_owned());
+                list.append(&mut args.map(ToOwned::to_owned).collect());
 
                 response::write_list(resp, list.iter());
             }
