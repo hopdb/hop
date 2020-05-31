@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn test_command_is_int() {
         let req = super::parse("is:int foo bar").unwrap();
-        assert_eq!(CommandId::Is, req.kind());
+        assert_eq!(CommandId::Is, req.command_id());
         assert_eq!(Some(KeyType::Integer), req.key_type());
         assert_eq!(Some(b"foo".as_ref()), req.arg(0));
         assert_eq!(Some(b"bar".as_ref()), req.arg(1));
@@ -289,15 +289,15 @@ mod tests {
     #[test]
     fn test_parse() {
         let req = super::parse("echo").unwrap();
-        assert_eq!(CommandId::Echo, req.kind());
+        assert_eq!(CommandId::Echo, req.command_id());
         assert!(req.args(..).is_none());
 
         let req = super::parse("increment:int").unwrap();
-        assert_eq!(CommandId::Increment, req.kind());
+        assert_eq!(CommandId::Increment, req.command_id());
         assert_eq!(Some(KeyType::Integer), req.key_type());
 
         let req = super::parse("increment:by:int foo 3").unwrap();
-        assert_eq!(CommandId::IncrementBy, req.kind());
+        assert_eq!(CommandId::IncrementBy, req.command_id());
         assert_eq!(Some(KeyType::Integer), req.key_type());
         assert!(req.args(..).is_some());
         assert_eq!(2, req.arg_count());

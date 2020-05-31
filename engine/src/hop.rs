@@ -168,7 +168,7 @@ impl Hop {
     /// Dispatch a request to the engine, providing a response to write the
     /// response to on success.
     pub fn dispatch(&self, req: &Request, res: &mut Vec<u8>) -> DispatchResult<()> {
-        let res = match req.kind() {
+        let res = match req.command_id() {
             CommandId::Append => Append::dispatch(self, req, res),
             CommandId::DecrementBy => DecrementBy::dispatch(self, req, res),
             CommandId::Decrement => Decrement::dispatch(self, req, res),

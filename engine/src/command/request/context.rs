@@ -4,7 +4,7 @@ use alloc::borrow::Cow;
 use arrayvec::ArrayVec;
 use core::convert::{TryFrom, TryInto};
 
-type Conclusion<'a> = ContextConclusion<(Option<KeyType>, CommandId)>;
+type Conclusion<'a> = ContextConclusion<(CommandId, Option<KeyType>)>;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[repr(u8)]
@@ -29,12 +29,12 @@ impl TryFrom<u8> for ParseError {
 enum Stage {
     Init,
     Kind {
-        cmd_type: CommandId,
+        command_id: CommandId,
         key_type: Option<KeyType>,
     },
     ArgumentParsing {
         argument_count: u8,
-        cmd_type: CommandId,
+        command_id: CommandId,
         key_type: Option<KeyType>,
     },
 }
@@ -73,25 +73,26 @@ impl Context {
 
                 match self.stage {
                     Stage::Init => self.stage_init(buf)?,
-                    Stage::Kind { cmd_type, key_type } => {
-                        self.stage_kind(buf, key_type, cmd_type)?
-                    }
+                    Stage::Kind {
+                        command_id,
+                        key_type,
+                    } => self.stage_kind(buf, key_type, command_id)?,
                     Stage::ArgumentParsing {
                         argument_count,
-                        cmd_type,
+                        command_id,
                         key_type,
-                    } => self.stage_argument_parsing(buf, cmd_type, key_type, argument_count)?,
+                    } => self.stage_argument_parsing(buf, command_id, key_type, argument_count)?,
                 }
             };
 
             match conclusion {
-                Conclusion::Finished((key_type, kind)) => {
+                Conclusion::Finished((command_id, key_type)) => {
                     self.reset();
 
                     return Ok(Some(Request {
                         buf: Cow::Borrowed(buf),
+                        command_id,
                         key_type,
-                        kind,
                         positions: Cow::Borrowed(&self.positions),
                     }));
                 }
@@ -120,15 +121,18 @@ impl Context {
             None
         };
 
-        let cmd_type = CommandId::try_from(byte).map_err(|_| ParseError::CommandIdInvalid)?;
+        let command_id = CommandId::try_from(byte).map_err(|_| ParseError::CommandIdInvalid)?;
 
         // If the command type is simple and has no arguments or keys, then
         // we can just return a successful command here.
-        if cmd_type.is_simple() {
-            return Ok(Conclusion::Finished((None, cmd_type)));
+        if command_id.is_simple() {
+            return Ok(Conclusion::Finished((command_id, None)));
         }
 
-        self.stage = Stage::Kind { cmd_type, key_type };
+        self.stage = Stage::Kind {
+            command_id,
+            key_type,
+        };
         self.idx = self.idx.wrapping_add(1);
 
         Ok(Conclusion::Next)
@@ -138,7 +142,7 @@ impl Context {
         &mut self,
         buf: &[u8],
         key_type: Option<KeyType>,
-        cmd_type: CommandId,
+        command_id: CommandId,
     ) -> Result<Conclusion, ParseError> {
         let argument_count = match buf.get(self.idx) {
             Some(argument_count) => *argument_count,
@@ -147,7 +151,7 @@ impl Context {
 
         self.stage = Stage::ArgumentParsing {
             argument_count,
-            cmd_type,
+            command_id,
             key_type,
         };
         self.idx = self.idx.saturating_add(1);
@@ -158,7 +162,7 @@ impl Context {
     fn stage_argument_parsing<'a>(
         &'a mut self,
         buf: &'a [u8],
-        cmd_type: CommandId,
+        command_id: CommandId,
         key_type: Option<KeyType>,
         argument_count: u8,
     ) -> Result<Conclusion, ParseError> {
@@ -178,7 +182,7 @@ impl Context {
         self.idx += 4 + arg_len;
 
         if self.positions.len() == argument_count as usize {
-            Ok(Conclusion::Finished((key_type, cmd_type)))
+            Ok(Conclusion::Finished((command_id, key_type)))
         } else {
             Ok(Conclusion::Next)
         }
@@ -252,7 +256,7 @@ mod tests {
             .expect("parses correctly")
             .expect("returns a command");
 
-        assert_eq!(cmd.kind, CommandId::Increment);
+        assert_eq!(cmd.command_id, CommandId::Increment);
 
         Ok(())
     }

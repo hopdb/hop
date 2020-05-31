@@ -197,7 +197,7 @@ async fn process_inner<B: Backend + Send + Sync + 'static>(
 where
     B::Error: Error,
 {
-    match req.kind() {
+    match req.command_id() {
         CommandId::Decrement => {
             let key = req.key().ok_or_else(|| InnerProcessError::KeyUnspecified)?;
 
