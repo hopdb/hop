@@ -73,9 +73,10 @@ impl Context {
 
                 match self.stage {
                     Stage::Init => self.stage_init(buf)?,
-                    Stage::Kind { command_id, key_type } => {
-                        self.stage_kind(buf, key_type, command_id)?
-                    }
+                    Stage::Kind {
+                        command_id,
+                        key_type,
+                    } => self.stage_kind(buf, key_type, command_id)?,
                     Stage::ArgumentParsing {
                         argument_count,
                         command_id,
@@ -128,7 +129,10 @@ impl Context {
             return Ok(Conclusion::Finished((command_id, None)));
         }
 
-        self.stage = Stage::Kind { command_id, key_type };
+        self.stage = Stage::Kind {
+            command_id,
+            key_type,
+        };
         self.idx = self.idx.wrapping_add(1);
 
         Ok(Conclusion::Next)
