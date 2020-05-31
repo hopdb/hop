@@ -1,9 +1,6 @@
 use super::super::{response, Dispatch, DispatchError, DispatchResult, Request};
 use crate::{
-    state::{
-        object::{Float, Integer},
-        KeyType, Value,
-    },
+    state::{KeyType, Value},
     Hop,
 };
 use alloc::vec::Vec;
@@ -17,10 +14,8 @@ impl IncrementBy {
         amount: f64,
         resp: &mut Vec<u8>,
     ) -> DispatchResult<()> {
-        let mut float = hop
-            .state()
-            .typed_key::<Float>(key)
-            .ok_or(DispatchError::KeyUnspecified)?;
+        let mut key = hop.state().key_or_insert_with(key, Value::integer);
+        let float = key.as_float_mut().ok_or(DispatchError::KeyTypeDifferent)?;
 
         *float += amount;
 
@@ -35,10 +30,10 @@ impl IncrementBy {
         amount: i64,
         resp: &mut Vec<u8>,
     ) -> DispatchResult<()> {
-        let mut int = hop
-            .state()
-            .typed_key::<Integer>(key)
-            .ok_or(DispatchError::KeyUnspecified)?;
+        let mut key = hop.state().key_or_insert_with(key, Value::integer);
+        let int = key
+            .as_integer_mut()
+            .ok_or(DispatchError::KeyTypeDifferent)?;
 
         *int += amount;
 
@@ -77,7 +72,7 @@ mod tests {
     use super::IncrementBy;
     use crate::{
         command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
-        state::{object::Integer, Value},
+        state::Value,
         Hop,
     };
     use alloc::vec::Vec;
@@ -94,8 +89,11 @@ mod tests {
         assert!(IncrementBy::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(Response::from(3i64).as_bytes(), resp);
         assert_eq!(
-            Some(3),
-            hop.state().typed_key::<Integer>(b"foo").as_deref().copied()
+            Some(&3),
+            hop.state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_integer_ref)
         );
     }
 

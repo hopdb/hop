@@ -1,9 +1,6 @@
 use super::super::{response, Dispatch, DispatchError, DispatchResult, Request};
 use crate::{
-    state::{
-        object::{Bytes, List, Str},
-        KeyType, Value,
-    },
+    state::{KeyType, Value},
     Hop,
 };
 use alloc::vec::Vec;
@@ -12,10 +9,11 @@ pub struct Length;
 
 impl Length {
     fn bytes(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
-        let bytes = match hop.state().typed_key::<Bytes>(key) {
-            Some(bytes) => bytes,
-            None => return Err(DispatchError::KeyTypeDifferent),
-        };
+        let key = hop
+            .state()
+            .key_ref(key)
+            .ok_or(DispatchError::KeyNonexistent)?;
+        let bytes = key.as_bytes_ref().ok_or(DispatchError::KeyTypeDifferent)?;
 
         response::write_int(resp, bytes.len() as i64);
 
@@ -23,10 +21,11 @@ impl Length {
     }
 
     fn list(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
-        let list = match hop.state().typed_key::<List>(key) {
-            Some(list) => list,
-            None => return Err(DispatchError::KeyTypeDifferent),
-        };
+        let key = hop
+            .state()
+            .key_ref(key)
+            .ok_or(DispatchError::KeyNonexistent)?;
+        let list = key.as_list_ref().ok_or(DispatchError::KeyTypeDifferent)?;
 
         response::write_int(resp, list.len() as i64);
 
@@ -34,10 +33,11 @@ impl Length {
     }
 
     fn string(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
-        let string = match hop.state().typed_key::<Str>(key) {
-            Some(string) => string,
-            None => return Err(DispatchError::KeyTypeDifferent),
-        };
+        let key = hop
+            .state()
+            .key_ref(key)
+            .ok_or(DispatchError::KeyNonexistent)?;
+        let string = key.as_string_ref().ok_or(DispatchError::KeyTypeDifferent)?;
 
         response::write_int(resp, string.chars().count() as i64);
 

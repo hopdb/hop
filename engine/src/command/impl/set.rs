@@ -1,9 +1,6 @@
 use crate::{
     command::{response, Dispatch, DispatchError, DispatchResult, Request},
-    state::{
-        object::{Boolean, Bytes, Float, Integer, List, Map, Set as SetObject, Str},
-        KeyType, Value,
-    },
+    state::{KeyType, Value},
     Hop,
 };
 use alloc::{borrow::ToOwned, vec::Vec};
@@ -14,9 +11,9 @@ impl Set {
     fn boolean(hop: &Hop, req: &Request, resp: &mut Vec<u8>, key: &[u8]) -> DispatchResult<()> {
         let arg = req.typed_arg(1).ok_or(DispatchError::ArgumentRetrieval)?;
         hop.state().remove(key);
-        let mut boolean = hop
-            .state()
-            .typed_key::<Boolean>(key)
+        let mut key = hop.state().key_or_insert_with(key, Value::boolean);
+        let boolean = key
+            .as_boolean_mut()
             .ok_or(DispatchError::KeyTypeDifferent)?;
 
         *boolean = arg;
@@ -31,10 +28,8 @@ impl Set {
             .typed_arg::<&[u8]>(1)
             .ok_or(DispatchError::ArgumentRetrieval)?;
         hop.state().remove(key);
-        let mut bytes = hop
-            .state()
-            .typed_key::<Bytes>(key)
-            .ok_or(DispatchError::KeyTypeDifferent)?;
+        let mut key = hop.state().key_or_insert_with(key, Value::bytes);
+        let bytes = key.as_bytes_mut().ok_or(DispatchError::KeyTypeDifferent)?;
 
         *bytes = arg.to_vec();
 
@@ -46,10 +41,8 @@ impl Set {
     fn float(hop: &Hop, req: &Request, resp: &mut Vec<u8>, key: &[u8]) -> DispatchResult<()> {
         let arg = req.typed_arg(1).ok_or(DispatchError::ArgumentRetrieval)?;
         hop.state().remove(key);
-        let mut float = hop
-            .state()
-            .typed_key::<Float>(key)
-            .ok_or(DispatchError::KeyTypeDifferent)?;
+        let mut key = hop.state().key_or_insert_with(key, Value::float);
+        let float = key.as_float_mut().ok_or(DispatchError::KeyTypeDifferent)?;
 
         *float = arg;
 
@@ -61,9 +54,9 @@ impl Set {
     fn integer(hop: &Hop, req: &Request, resp: &mut Vec<u8>, key: &[u8]) -> DispatchResult<()> {
         let arg = req.typed_arg(1).ok_or(DispatchError::ArgumentRetrieval)?;
         hop.state().remove(key);
-        let mut int = hop
-            .state()
-            .typed_key::<Integer>(key)
+        let mut key = hop.state().key_or_insert_with(key, Value::integer);
+        let int = key
+            .as_integer_mut()
             .ok_or(DispatchError::KeyTypeDifferent)?;
 
         *int = arg;
@@ -76,10 +69,8 @@ impl Set {
     fn list(hop: &Hop, req: &Request, resp: &mut Vec<u8>, key: &[u8]) -> DispatchResult<()> {
         let args = req.args(1..).ok_or(DispatchError::ArgumentRetrieval)?;
         hop.state().remove(key);
-        let mut list = hop
-            .state()
-            .typed_key::<List>(key)
-            .ok_or(DispatchError::KeyTypeDifferent)?;
+        let mut key = hop.state().key_or_insert_with(key, Value::list);
+        let list = key.as_list_mut().ok_or(DispatchError::KeyTypeDifferent)?;
 
         *list = args.map(ToOwned::to_owned).collect();
         let args = req.args(1..).ok_or(DispatchError::ArgumentRetrieval)?;
@@ -92,10 +83,8 @@ impl Set {
     fn map(hop: &Hop, req: &Request, resp: &mut Vec<u8>, key: &[u8]) -> DispatchResult<()> {
         let args = req.typed_args().ok_or(DispatchError::ArgumentRetrieval)?;
         hop.state().remove(key);
-        let mut map = hop
-            .state()
-            .typed_key::<Map>(key)
-            .ok_or(DispatchError::KeyTypeDifferent)?;
+        let mut key = hop.state().key_or_insert_with(key, Value::map);
+        let map = key.as_map_mut().ok_or(DispatchError::KeyTypeDifferent)?;
 
         response::write_map(resp, &args);
 
@@ -107,10 +96,8 @@ impl Set {
     fn set(hop: &Hop, req: &Request, resp: &mut Vec<u8>, key: &[u8]) -> DispatchResult<()> {
         let args = req.typed_args().ok_or(DispatchError::ArgumentRetrieval)?;
         hop.state().remove(key);
-        let mut set = hop
-            .state()
-            .typed_key::<SetObject>(key)
-            .ok_or(DispatchError::KeyTypeDifferent)?;
+        let mut key = hop.state().key_or_insert_with(key, Value::set);
+        let set = key.as_set_mut().ok_or(DispatchError::KeyTypeDifferent)?;
 
         response::write_set(resp, &args);
 
@@ -124,10 +111,8 @@ impl Set {
             .typed_arg::<&str>(1)
             .ok_or(DispatchError::ArgumentRetrieval)?;
         hop.state().remove(key);
-        let mut string = hop
-            .state()
-            .typed_key::<Str>(key)
-            .ok_or(DispatchError::KeyTypeDifferent)?;
+        let mut key = hop.state().key_or_insert_with(key, Value::string);
+        let string = key.as_string_mut().ok_or(DispatchError::KeyTypeDifferent)?;
 
         *string = arg.to_owned();
 
@@ -171,10 +156,7 @@ mod tests {
     use super::Set;
     use crate::{
         command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
-        state::{
-            object::{Boolean, Bytes, Float, Integer, List, Map, Set as SetObject, Str},
-            KeyType,
-        },
+        state::{KeyType, Value},
         Hop,
     };
     use alloc::vec::Vec;
@@ -222,7 +204,13 @@ mod tests {
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(true).as_bytes());
-        assert!(hop.state().typed_key::<Boolean>(b"foo").as_deref() == Some(&true));
+        assert_eq!(
+            Some(&true),
+            hop.state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_boolean_ref)
+        );
     }
 
     #[test]
@@ -238,7 +226,13 @@ mod tests {
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(b"bar baz".to_vec()).as_bytes());
-        assert!(hop.state().typed_key::<Bytes>(b"foo").as_deref() == Some(&b"bar baz".to_vec()));
+        assert_eq!(
+            Some(b"bar baz".as_ref()),
+            hop.state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_bytes_ref)
+        );
     }
 
     #[test]
@@ -254,7 +248,13 @@ mod tests {
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(2f64).as_bytes());
-        assert!(hop.state().typed_key::<Float>(b"foo").as_deref() == Some(&2f64));
+        assert_eq!(
+            Some(&2f64),
+            hop.state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_float_ref)
+        );
     }
 
     #[test]
@@ -270,7 +270,13 @@ mod tests {
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(2i64).as_bytes());
-        assert!(hop.state().typed_key::<Integer>(b"foo").as_deref() == Some(&2));
+        assert_eq!(
+            Some(&2),
+            hop.state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_integer_ref),
+        );
     }
 
     #[test]
@@ -287,12 +293,13 @@ mod tests {
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
-        assert!(
+        assert_eq!(
+            Some(3),
             hop.state()
-                .typed_key::<List>(b"foo")
+                .key_ref(b"foo")
                 .as_deref()
-                .map(|x| x.len())
-                == Some(3)
+                .and_then(Value::as_list_ref)
+                .map(|list| list.len()),
         );
     }
 
@@ -311,12 +318,13 @@ mod tests {
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
-        assert!(
+        assert_eq!(
+            Some(2),
             hop.state()
-                .typed_key::<Map>(b"foo")
+                .key_ref(b"foo")
                 .as_deref()
-                .map(|x| x.len())
-                == Some(2)
+                .and_then(Value::as_map_ref)
+                .map(|map| map.len()),
         );
     }
 
@@ -333,12 +341,13 @@ mod tests {
         let mut resp = Vec::new();
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
-        assert!(
+        assert_eq!(
+            Some(2),
             hop.state()
-                .typed_key::<SetObject>(b"foo")
+                .key_ref(b"foo")
                 .as_deref()
-                .map(|x| x.len())
-                == Some(2)
+                .and_then(Value::as_set_ref)
+                .map(|set| set.len()),
         );
     }
 
@@ -355,6 +364,12 @@ mod tests {
 
         assert!(Set::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from("bar".to_owned()).as_bytes());
-        assert!(hop.state().typed_key::<Str>(b"foo").as_deref() == Some(&"bar".to_owned()));
+        assert_eq!(
+            Some("bar"),
+            hop.state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_string_ref)
+        );
     }
 }

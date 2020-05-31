@@ -1,18 +1,16 @@
 use super::super::{response, Dispatch, DispatchError, DispatchResult, Request};
-use crate::{
-    state::{object::Map, KeyType},
-    Hop,
-};
+use crate::{state::KeyType, Hop};
 use alloc::vec::Vec;
 
 pub struct Keys;
 
 impl Keys {
     fn map(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
-        let map = hop
+        let key = hop
             .state()
-            .typed_key::<Map>(key)
-            .ok_or_else(|| DispatchError::KeyTypeDifferent)?;
+            .key_ref(key)
+            .ok_or(DispatchError::KeyNonexistent)?;
+        let map = key.as_map_ref().ok_or(DispatchError::KeyTypeDifferent)?;
         let iter = map.iter().map(|r| r.key().to_vec());
 
         response::write_list(resp, iter);

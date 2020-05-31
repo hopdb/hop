@@ -20,7 +20,7 @@ mod tests {
     use super::Decrement;
     use crate::{
         command::{request::RequestBuilder, CommandId, Dispatch, DispatchError, Response},
-        state::object::Integer,
+        state::Value,
         Hop,
     };
     use alloc::vec::Vec;
@@ -36,8 +36,11 @@ mod tests {
         assert!(Decrement::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(Response::from(-1i64).as_bytes(), resp);
         assert_eq!(
-            Some(-1),
-            hop.state().typed_key::<Integer>(b"foo").as_deref().copied()
+            Some(&-1),
+            hop.state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_integer_ref)
         );
     }
 

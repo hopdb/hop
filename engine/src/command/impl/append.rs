@@ -1,9 +1,6 @@
 use super::super::{response, Dispatch, DispatchError, DispatchResult, Request};
 use crate::{
-    state::{
-        object::{Bytes, List, Str},
-        KeyType,
-    },
+    state::{KeyType, Value},
     Hop,
 };
 use alloc::borrow::ToOwned;
@@ -19,10 +16,8 @@ impl Dispatch for Append {
 
         match req.key_type() {
             Some(KeyType::Bytes) | None => {
-                let mut bytes = hop
-                    .state()
-                    .typed_key::<Bytes>(key)
-                    .ok_or(DispatchError::KeyTypeDifferent)?;
+                let mut key = hop.state().key_or_insert_with(key, Value::bytes);
+                let bytes = key.as_bytes_mut().ok_or(DispatchError::KeyTypeDifferent)?;
 
                 for arg in args {
                     bytes.extend_from_slice(arg);
@@ -31,20 +26,16 @@ impl Dispatch for Append {
                 response::write_bytes(resp, bytes.as_ref());
             }
             Some(KeyType::List) => {
-                let mut list = hop
-                    .state()
-                    .typed_key::<List>(key)
-                    .ok_or(DispatchError::KeyTypeDifferent)?;
+                let mut key = hop.state().key_or_insert_with(key, Value::list);
+                let list = key.as_list_mut().ok_or(DispatchError::KeyTypeDifferent)?;
 
                 list.append(&mut args.map(ToOwned::to_owned).collect());
 
                 response::write_list(resp, list.iter());
             }
             Some(KeyType::String) => {
-                let mut string = hop
-                    .state()
-                    .typed_key::<Str>(key)
-                    .ok_or(DispatchError::KeyTypeDifferent)?;
+                let mut key = hop.state().key_or_insert_with(key, Value::string);
+                let string = key.as_string_mut().ok_or(DispatchError::KeyTypeDifferent)?;
 
                 for arg in args {
                     if let Ok(arg) = str::from_utf8(arg) {

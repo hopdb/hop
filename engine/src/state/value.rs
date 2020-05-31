@@ -32,32 +32,176 @@ impl Value {
         Self::Boolean(false)
     }
 
+    pub fn as_boolean_ref(&self) -> Option<&bool> {
+        match self {
+            Self::Boolean(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn as_boolean_mut(&mut self) -> Option<&mut bool> {
+        match self {
+            Self::Boolean(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn is_boolean(&self) -> bool {
+        matches!(self, Value::Boolean(_))
+    }
+
     pub fn bytes() -> Self {
         Self::Bytes(Vec::new())
+    }
+
+    pub fn as_bytes_ref(&self) -> Option<&[u8]> {
+        match self {
+            Self::Bytes(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn as_bytes_mut(&mut self) -> Option<&mut Vec<u8>> {
+        match self {
+            Self::Bytes(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn is_bytes(&self) -> bool {
+        matches!(self, Value::Bytes(_))
     }
 
     pub fn float() -> Self {
         Self::Float(0.0)
     }
 
+    pub fn as_float_ref(&self) -> Option<&f64> {
+        match self {
+            Self::Float(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn as_float_mut(&mut self) -> Option<&mut f64> {
+        match self {
+            Self::Float(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn is_float(&self) -> bool {
+        matches!(self, Value::Float(_))
+    }
+
     pub fn integer() -> Self {
         Self::Integer(0)
+    }
+
+    pub fn as_integer_ref(&self) -> Option<&i64> {
+        match self {
+            Self::Integer(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn as_integer_mut(&mut self) -> Option<&mut i64> {
+        match self {
+            Self::Integer(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn is_integer(&self) -> bool {
+        matches!(self, Value::Integer(_))
     }
 
     pub fn list() -> Self {
         Self::List(Vec::new())
     }
 
+    pub fn as_list_ref(&self) -> Option<&[Vec<u8>]> {
+        match self {
+            Self::List(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn as_list_mut(&mut self) -> Option<&mut Vec<Vec<u8>>> {
+        match self {
+            Self::List(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn is_list(&self) -> bool {
+        matches!(self, Value::List(_))
+    }
+
     pub fn map() -> Self {
         Self::Map(DashMap::new())
+    }
+
+    pub fn as_map_ref(&self) -> Option<&DashMap<Vec<u8>, Vec<u8>>> {
+        match self {
+            Self::Map(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn as_map_mut(&mut self) -> Option<&mut DashMap<Vec<u8>, Vec<u8>>> {
+        match self {
+            Self::Map(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn is_map(&self) -> bool {
+        matches!(self, Value::Map(_))
     }
 
     pub fn set() -> Self {
         Self::Set(DashSet::new())
     }
 
+    pub fn as_set_ref(&self) -> Option<&DashSet<Vec<u8>>> {
+        match self {
+            Self::Set(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn as_set_mut(&mut self) -> Option<&mut DashSet<Vec<u8>>> {
+        match self {
+            Self::Set(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn is_set(&self) -> bool {
+        matches!(self, Value::Set(_))
+    }
+
     pub fn string() -> Self {
         Self::String(String::new())
+    }
+
+    pub fn as_string_ref(&self) -> Option<&str> {
+        match self {
+            Self::String(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn as_string_mut(&mut self) -> Option<&mut String> {
+        match self {
+            Self::String(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    pub fn is_string(&self) -> bool {
+        matches!(self, Value::Boolean(_))
     }
 }
 

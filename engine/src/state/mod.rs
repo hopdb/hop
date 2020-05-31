@@ -1,9 +1,7 @@
-pub mod object;
 pub mod value;
 
 pub use self::value::Value;
 
-use self::object::Object;
 use alloc::{borrow::ToOwned, string::String, sync::Arc, vec::Vec};
 use core::convert::TryFrom;
 use dashmap::{
@@ -137,6 +135,20 @@ impl State {
         self.0.get(key)
     }
 
+    /// Retrieve a mutable reference to a key-value pair by key.
+    ///
+    /// Returns `None` if the key does not exist.
+    /// ```
+    pub fn key_mut<'a>(&'a self, key: &[u8]) -> Option<RefMut<'a, Key, Value>> {
+        if key.starts_with(b"__hop__:") {
+            panic!("Accessed internal key: {}", String::from_utf8_lossy(key));
+        }
+
+        debug_assert!(!key.is_empty());
+
+        self.0.get_mut(key)
+    }
+
     /// Retrieve a key's value, providing a function returning the value to
     /// insert if the key doesn't exist.
     ///
@@ -176,37 +188,6 @@ impl State {
                     continue;
                 }
             }
-        }
-    }
-
-    /// Retrieve a key's value if it matches a given type.
-    ///
-    /// If the key exists, but is not the right type, then `None` is returned.
-    /// If the key doesn't exist, then the default for the type is inserted
-    /// and returned.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # fn try_main() -> Option<()> {
-    /// use hop_engine::state::{object::{Integer, Object}, State};
-    ///
-    /// let state = State::new();
-    /// // Get the key "some:key" as an integer if it's not already a different
-    /// // type.
-    /// let mut int = state.typed_key::<Integer>(b"some:key")?;
-    ///
-    /// *int += 100;
-    /// # Some(()) }
-    /// # try_main().unwrap();
-    /// ```
-    pub fn typed_key<'a, K: Object<'a>>(&'a self, key: &[u8]) -> Option<K> {
-        let key = self.key_or_insert_with(key, K::default);
-
-        if key.value().kind() == K::key_type() {
-            Some(K::new(key))
-        } else {
-            None
         }
     }
 }

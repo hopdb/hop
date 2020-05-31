@@ -327,10 +327,7 @@ impl Backend for MemoryBackend {
 #[cfg(test)]
 mod tests {
     use super::{Backend, Error, MemoryBackend};
-    use hop_engine::state::{
-        object::{Boolean, Bytes, Float, Integer, Str},
-        KeyType, Value,
-    };
+    use hop_engine::state::{KeyType, Value};
     use static_assertions::assert_impl_all;
     use std::fmt::Debug;
 
@@ -395,17 +392,27 @@ mod tests {
         assert!(
             matches!(backend.set(b"foo", true).await, Ok(Value::Boolean(bool)) if bool == true)
         );
-        assert!(matches!(
-            backend.hop.state().typed_key::<Boolean>(b"foo").as_deref(),
-            Some(true)
-        ));
+        assert_eq!(
+            Some(&true),
+            backend
+                .hop
+                .state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_boolean_ref),
+        );
         assert!(
             matches!(backend.set(b"bar", false).await, Ok(Value::Boolean(bool)) if bool == false)
         );
-        assert!(matches!(
-            backend.hop.state().typed_key::<Boolean>(b"bar").as_deref(),
-            Some(false)
-        ));
+        assert_eq!(
+            Some(&false),
+            backend
+                .hop
+                .state()
+                .key_ref(b"bar")
+                .as_deref()
+                .and_then(Value::as_boolean_ref),
+        );
     }
 
     #[tokio::test]
@@ -414,8 +421,14 @@ mod tests {
         assert!(
             matches!(backend.set(b"foo", [1u8, 2, 3].to_vec()).await, Ok(Value::Bytes(bytes)) if bytes == [1, 2, 3])
         );
-        assert!(
-            matches!(backend.hop.state().typed_key::<Bytes>(b"foo").as_deref(), Some(vec) if *vec == [1u8, 2, 3].to_vec())
+        assert_eq!(
+            Some([1u8, 2, 3].as_ref()),
+            backend
+                .hop
+                .state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_bytes_ref),
         );
     }
 
@@ -426,7 +439,13 @@ mod tests {
             backend.set(b"foo", 1.23).await,
             Ok(Value::Float(_))
         ));
-        assert!(backend.hop.state().typed_key::<Float>(b"foo").is_some());
+        assert!(backend
+            .hop
+            .state()
+            .key_ref(b"foo")
+            .as_deref()
+            .and_then(Value::as_float_ref)
+            .is_some());
     }
 
     #[tokio::test]
@@ -437,7 +456,12 @@ mod tests {
             Ok(Value::Integer(123))
         ));
         assert!(matches!(
-            backend.hop.state().typed_key::<Integer>(b"foo").as_deref(),
+            backend
+                .hop
+                .state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_integer_ref),
             Some(123)
         ));
     }
@@ -448,8 +472,14 @@ mod tests {
         assert!(
             matches!(backend.set(b"foo", "bar".to_owned()).await, Ok(Value::String(str)) if str == "bar")
         );
-        assert!(
-            matches!(backend.hop.state().typed_key::<Str>(b"foo").as_deref(), Some(s) if s == "bar")
+        assert_eq!(
+            Some("bar"),
+            backend
+                .hop
+                .state()
+                .key_ref(b"foo")
+                .as_deref()
+                .and_then(Value::as_string_ref),
         );
     }
 }
