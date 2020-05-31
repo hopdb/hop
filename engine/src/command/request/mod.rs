@@ -123,12 +123,16 @@ impl<'a> Iterator for Arguments<'a> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Request<'a> {
     buf: Cow<'a, [u8]>,
+    command_id: CommandId,
     key_type: Option<KeyType>,
-    kind: CommandId,
     positions: Cow<'a, ArrayVec<[usize; 256]>>,
 }
 
 impl<'a> Request<'a> {
+    pub fn command_id(&self) -> CommandId {
+        self.command_id
+    }
+
     pub fn args(&self, range: impl RangeBounds<usize>) -> Option<Arguments<'_>> {
         if self.arg_count() == 0 {
             return None;
@@ -183,7 +187,7 @@ impl<'a> Request<'a> {
     }
 
     pub fn key(&self) -> Option<&[u8]> {
-        if self.kind.key_notation() == KeyNotation::None {
+        if self.command_id.key_notation() == KeyNotation::None {
             return None;
         }
 
@@ -200,10 +204,6 @@ impl<'a> Request<'a> {
     /// [`Append`]: impl/struct.Append.html
     pub fn key_type(&self) -> Option<KeyType> {
         self.key_type
-    }
-
-    pub fn kind(&self) -> CommandId {
-        self.kind
     }
 
     // pub fn into_args(mut self) -> Option<Vec<Vec<u8>>> {

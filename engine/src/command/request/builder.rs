@@ -34,36 +34,36 @@ impl Display for RequestBuilderError {
 pub struct RequestBuilder {
     argument_count: u8,
     buf: Vec<u8>,
-    cmd_id: CommandId,
+    command_id: CommandId,
     key_type: Option<KeyType>,
     positions: ArrayVec<[usize; 256]>,
 }
 
 impl RequestBuilder {
     /// Create a new request builder.
-    pub fn new(cmd_id: CommandId) -> Self {
+    pub fn new(command_id: CommandId) -> Self {
         let mut buf = Vec::new();
-        buf.push(cmd_id as u8);
+        buf.push(command_id as u8);
 
         // if it's a non-simple command, push the argument len now
-        if !cmd_id.is_simple() {
+        if !command_id.is_simple() {
             buf.push(0);
         }
 
         Self {
             argument_count: 0,
             buf,
-            cmd_id,
+            command_id,
             key_type: None,
             positions: ArrayVec::new(),
         }
     }
 
-    pub fn new_with_key_type(cmd_id: CommandId, key_type: impl Into<Option<KeyType>>) -> Self {
+    pub fn new_with_key_type(command_id: CommandId, key_type: impl Into<Option<KeyType>>) -> Self {
         let key_type = key_type.into();
 
         let mut buf = Vec::new();
-        let mut byte = cmd_id as u8;
+        let mut byte = command_id as u8;
 
         if key_type.is_some() {
             byte |= 0b1000_0000;
@@ -75,14 +75,14 @@ impl RequestBuilder {
             buf.push(key_type as u8);
         }
 
-        if !cmd_id.is_simple() {
+        if !command_id.is_simple() {
             buf.push(0);
         }
 
         Self {
             argument_count: 0,
             buf,
-            cmd_id,
+            command_id,
             key_type,
             positions: ArrayVec::new(),
         }
@@ -92,15 +92,15 @@ impl RequestBuilder {
     pub fn into_request(self) -> Request<'static> {
         Request {
             buf: Cow::Owned(self.buf),
+            command_id: self.command_id,
             key_type: self.key_type,
-            kind: self.cmd_id,
             positions: Cow::Owned(self.positions),
         }
     }
 
     /// Retrieve an immutable reference to the command ID.
     pub fn command_id_ref(&self) -> &CommandId {
-        &self.cmd_id
+        &self.command_id
     }
 
     /// Retrieve an immutable reference to the key type, if any.
@@ -276,7 +276,7 @@ impl RequestBuilder {
 
 impl From<Request<'_>> for RequestBuilder {
     fn from(request: Request) -> Self {
-        let mut builder = Self::new_with_key_type(request.kind, request.key_type);
+        let mut builder = Self::new_with_key_type(request.command_id, request.key_type);
         builder.buf = request.buf.into_owned();
         builder.positions = request.positions.into_owned();
 
@@ -302,7 +302,7 @@ mod tests {
             builder.into_request(),
             Request {
                 buf: [CommandId::Stats as u8].as_ref().into(),
-                kind: CommandId::Stats,
+                command_id: CommandId::Stats,
                 key_type: None,
                 positions: Cow::Owned(ArrayVec::new()),
             }
@@ -323,7 +323,7 @@ mod tests {
                 ]
                 .as_ref()
                 .into(),
-                kind: CommandId::Decrement,
+                command_id: CommandId::Decrement,
                 key_type: Some(KeyType::Integer),
                 positions: Cow::Owned(ArrayVec::new()),
             }
@@ -358,7 +358,7 @@ mod tests {
                 ]
                 .as_ref()
                 .into(),
-                kind: CommandId::Append,
+                command_id: CommandId::Append,
                 key_type: Some(KeyType::List),
                 positions: Cow::Owned(positions),
             }
@@ -408,7 +408,7 @@ mod tests {
                 ]
                 .as_ref()
                 .into(),
-                kind: CommandId::Set,
+                command_id: CommandId::Set,
                 key_type: Some(KeyType::String),
                 positions: Cow::Owned(positions),
             }
