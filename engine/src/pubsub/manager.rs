@@ -26,7 +26,7 @@ impl PubSubManager {
     /// Returns the new subscription if subscribing was successful. Returns None
     /// if the subscription already existed.
     pub fn subscribe(&self, object_key: Key, session_id: SessionId) -> Option<Weak<Subscription>> {
-        let session = self.0.sessions.entry(session_id.clone()).or_default();
+        let session = self.0.sessions.entry(session_id).or_default();
 
         let subscription = match session.entry(object_key.clone()) {
             Entry::Occupied(_) => return None,
