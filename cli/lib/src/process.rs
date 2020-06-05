@@ -74,7 +74,9 @@ where
 
 enum InnerProcessError<B: Backend> {
     Backend { source: <B as Backend>::Error },
+    BadRequest,
     BuildingRequest,
+    Dispatching,
     KeyDestinationRequired,
     KeyNonexistent,
     KeyRequiredMinimum,
@@ -117,8 +119,14 @@ where
     Ok(match process_inner(client, req).await {
         Ok(output) => output,
         Err(InnerProcessError::Backend { source }) => return Err(ProcessError::Backend { source }),
+        Err(InnerProcessError::BadRequest) => {
+            "The server rejected the request due to being invalid.".into()
+        }
         Err(InnerProcessError::BuildingRequest) => {
             "Building the request failed, such as due to too many arguments.".into()
+        }
+        Err(InnerProcessError::Dispatching) => {
+            "The engine failed to properly run the request.".into()
         }
         Err(InnerProcessError::KeyDestinationRequired) => {
             "The destination key name is required.".into()
@@ -165,7 +173,9 @@ where
     let err = match b.downcast::<MemoryError>() {
         Ok(memory_error) => {
             return match *memory_error {
+                MemoryError::BadRequest { .. } => InnerProcessError::BadRequest,
                 MemoryError::BuildingRequest { .. } => InnerProcessError::BuildingRequest,
+                MemoryError::Dispatching { .. } => InnerProcessError::Dispatching,
                 MemoryError::KeyTypeInvalid { .. } => InnerProcessError::KeyTypeInvalid,
                 MemoryError::KeyTypeUnsupported { .. } => InnerProcessError::KeyTypeInvalid,
                 MemoryError::RunningCommand { source } => match source {
