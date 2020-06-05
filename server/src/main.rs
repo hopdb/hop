@@ -16,7 +16,6 @@ use std::{
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::{TcpListener, TcpStream},
-    runtime::Builder as RuntimeBuilder,
     stream::StreamExt,
     task,
 };
@@ -44,15 +43,10 @@ impl Config {
     }
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
-    let mut runtime = RuntimeBuilder::new().threaded_scheduler().build()?;
-
-    runtime.block_on(run())
-}
-
-async fn run() -> Result<(), Box<dyn Error>> {
     let config = Config::new();
 
     debug!("Binding socket");
