@@ -3,7 +3,7 @@ use crate::model::StatsData;
 use async_trait::async_trait;
 use hop_engine::{
     command::{
-        request::{RequestBuilder, RequestBuilderError},
+        request::{ParseError as RequestParseError, RequestBuilder, RequestBuilderError},
         response::{Context, Instruction, Response},
         CommandId, DispatchError, Request,
     },
@@ -18,25 +18,33 @@ use std::{
 
 #[derive(Debug)]
 pub enum Error {
+    BadRequest { source: RequestParseError },
     BuildingRequest { source: RequestBuilderError },
+    Dispatching { source: DispatchError },
     KeyTypeInvalid { number: u8 },
-    KeyTypeUnsupported { key_type: KeyType },
+    KeyTypeUnsupported { key_type: KeyType, value: Value },
     RunningCommand { source: DispatchError },
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
+            Self::BadRequest { source } => {
+                f.write_fmt(format_args!("request is invalid: {:?}", source))
+            }
             Self::BuildingRequest { source } => {
                 f.write_fmt(format_args!("failed to build request: {:?}", source))
+            }
+            Self::Dispatching { source } => {
+                f.write_fmt(format_args!("dispatching the request failed: {:?}", source))
             }
             Self::KeyTypeInvalid { number } => f.write_fmt(format_args!(
                 "the provided key type ({}) is invalid",
                 number
             )),
-            Self::KeyTypeUnsupported { key_type } => f.write_fmt(format_args!(
-                "key type {} is not supported by this command",
-                *key_type as u8
+            Self::KeyTypeUnsupported { key_type, value } => f.write_fmt(format_args!(
+                "key type {} is not supported by this command (value: {:?})",
+                *key_type as u8, value,
             )),
             Self::RunningCommand { source } => f.write_fmt(format_args!("{}", source)),
         }
@@ -46,7 +54,9 @@ impl Display for Error {
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
+            Self::BadRequest { .. } => None,
             Self::BuildingRequest { .. } => None,
+            Self::Dispatching { .. } => None,
             Self::KeyTypeInvalid { .. } => None,
             Self::KeyTypeUnsupported { .. } => None,
             Self::RunningCommand { .. } => None,
@@ -85,7 +95,12 @@ impl MemoryBackend {
 
         match ctx.feed(&resp).unwrap() {
             Instruction::Concluded(Response::Value(value)) => Ok(value),
-            Instruction::Concluded(_) => panic!("got an error"),
+            Instruction::Concluded(Response::DispatchError(source)) => {
+                Err(Error::Dispatching { source })
+            }
+            Instruction::Concluded(Response::ParseError(source)) => {
+                Err(Error::BadRequest { source })
+            }
             Instruction::ReadBytes(_) => unreachable!(),
         }
     }
@@ -118,7 +133,7 @@ impl Backend for MemoryBackend {
             Value::String(string) => {
                 builder.bytes(string.into_bytes())?;
             }
-            _ => return Err(Error::KeyTypeUnsupported { key_type }),
+            value => return Err(Error::KeyTypeUnsupported { key_type, value }),
         }
 
         self.send(builder)
@@ -136,7 +151,7 @@ impl Backend for MemoryBackend {
         builder.bytes(key)?;
 
         if key_type != KeyType::Float && key_type != KeyType::Integer {
-            return Err(Error::KeyTypeUnsupported { key_type });
+            return Err(Error::KeyTypeUnsupported { key_type, value });
         }
 
         builder.value(value)?;
@@ -214,7 +229,7 @@ impl Backend for MemoryBackend {
         builder.bytes(key)?;
 
         if key_type != KeyType::Float && key_type != KeyType::Integer {
-            return Err(Error::KeyTypeUnsupported { key_type });
+            return Err(Error::KeyTypeUnsupported { key_type, value });
         }
 
         builder.value(value)?;
