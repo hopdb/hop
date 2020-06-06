@@ -29,6 +29,30 @@ impl Length {
         Ok(())
     }
 
+    fn map(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
+        let key = hop
+            .state()
+            .key_ref(key)
+            .ok_or(DispatchError::KeyNonexistent)?;
+        let map = key.as_map_ref().ok_or(DispatchError::KeyTypeDifferent)?;
+
+        response::write_int(resp, map.len() as i64);
+
+        Ok(())
+    }
+
+    fn set(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
+        let key = hop
+            .state()
+            .key_ref(key)
+            .ok_or(DispatchError::KeyNonexistent)?;
+        let set = key.as_set_ref().ok_or(DispatchError::KeyTypeDifferent)?;
+
+        response::write_int(resp, set.len() as i64);
+
+        Ok(())
+    }
+
     fn string(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = hop
             .state()
@@ -53,6 +77,8 @@ impl Dispatch for Length {
         match key_type {
             KeyType::Bytes => Self::bytes(hop, key, resp),
             KeyType::List => Self::list(hop, key, resp),
+            KeyType::Map => Self::map(hop, key, resp),
+            KeyType::Set => Self::set(hop, key, resp),
             KeyType::String => Self::string(hop, key, resp),
             _ => Err(DispatchError::KeyTypeInvalid),
         }
@@ -68,6 +94,7 @@ mod tests {
         Hop,
     };
     use alloc::{borrow::ToOwned, vec::Vec};
+    use dashmap::{DashMap, DashSet};
 
     #[test]
     fn test_no_args() {
@@ -84,13 +111,7 @@ mod tests {
 
     #[test]
     fn test_invalid_key_type() {
-        let types = [
-            KeyType::Boolean,
-            KeyType::Float,
-            KeyType::Integer,
-            KeyType::Map,
-            KeyType::Set,
-        ];
+        let types = [KeyType::Boolean, KeyType::Float, KeyType::Integer];
 
         let mut resp = Vec::new();
         let hop = Hop::new();
@@ -151,6 +172,38 @@ mod tests {
         let mut list = Vec::new();
         list.push(b"db".to_vec());
         hop.state().0.insert(b"hop".to_vec(), Value::List(list));
+
+        assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
+        assert_eq!(resp, Response::from(1).as_bytes());
+    }
+
+    #[test]
+    fn test_default_when_map_exists() {
+        let mut builder = RequestBuilder::new(CommandId::Length);
+        assert!(builder.bytes(b"hop".as_ref()).is_ok());
+        let req = builder.into_request();
+
+        let mut resp = Vec::new();
+        let hop = Hop::new();
+        let map = DashMap::new();
+        map.insert(b"foo".to_vec(), b"bar".to_vec());
+        hop.state().0.insert(b"hop".to_vec(), Value::Map(map));
+
+        assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
+        assert_eq!(resp, Response::from(1).as_bytes());
+    }
+
+    #[test]
+    fn test_default_when_set_exists() {
+        let mut builder = RequestBuilder::new(CommandId::Length);
+        assert!(builder.bytes(b"hop".as_ref()).is_ok());
+        let req = builder.into_request();
+
+        let mut resp = Vec::new();
+        let hop = Hop::new();
+        let set = DashSet::new();
+        set.insert(b"foo".to_vec());
+        hop.state().0.insert(b"hop".to_vec(), Value::Set(set));
 
         assert!(Length::dispatch(&hop, &req, &mut resp).is_ok());
         assert_eq!(resp, Response::from(1).as_bytes());
