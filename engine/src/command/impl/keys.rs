@@ -22,11 +22,14 @@ impl Keys {
 impl Dispatch for Keys {
     fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
+        let key_type = req
+            .key_type()
+            .or_else(|| hop.state().key_type(key))
+            .unwrap_or(KeyType::Map);
 
-        match req.key_type() {
-            Some(KeyType::Map) => Self::map(hop, key, resp),
-            Some(_) => Err(DispatchError::KeyTypeInvalid),
-            None => Self::map(hop, key, resp),
+        match key_type {
+            KeyType::Map => Self::map(hop, key, resp),
+            _ => Err(DispatchError::KeyTypeInvalid),
         }
     }
 }

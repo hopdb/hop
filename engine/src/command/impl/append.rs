@@ -61,12 +61,16 @@ impl Dispatch for Append {
     fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = req.arg(0).ok_or(DispatchError::KeyUnspecified)?;
         let args = req.args(1..).ok_or(DispatchError::ArgumentRetrieval)?;
+        let key_type = req
+            .key_type()
+            .or_else(|| hop.state().key_type(key))
+            .unwrap_or(KeyType::Bytes);
 
-        match req.key_type() {
-            Some(KeyType::Bytes) | None => Self::bytes(hop, args, resp, key),
-            Some(KeyType::List) => Self::list(hop, args, resp, key),
-            Some(KeyType::String) => Self::string(hop, args, resp, key),
-            Some(_) => Err(DispatchError::KeyTypeDifferent),
+        match key_type {
+            KeyType::Bytes => Self::bytes(hop, args, resp, key),
+            KeyType::List => Self::list(hop, args, resp, key),
+            KeyType::String => Self::string(hop, args, resp, key),
+            _ => Err(DispatchError::KeyTypeDifferent),
         }
     }
 }

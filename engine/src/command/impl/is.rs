@@ -11,9 +11,11 @@ impl Dispatch for Is {
             .ok_or_else(|| DispatchError::KeyTypeRequired)?;
         let mut args = req.args(..).ok_or(DispatchError::ArgumentRetrieval)?;
 
-        let all = args.all(|key| match hop.state().key_ref(key) {
-            Some(value) => value.value().kind() == key_type,
-            None => false,
+        let all = args.all(|key| {
+            hop.state()
+                .key_type(key)
+                .map(|k| k == key_type)
+                .unwrap_or(false)
         });
 
         response::write_bool(resp, all);

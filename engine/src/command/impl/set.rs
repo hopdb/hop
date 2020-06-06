@@ -131,12 +131,10 @@ impl Dispatch for Set {
             return Err(DispatchError::ArgumentRetrieval);
         }
 
-        let key_type = req.key_type().unwrap_or_else(|| {
-            hop.state()
-                .key_or_insert_with(key, Value::bytes)
-                .value()
-                .kind()
-        });
+        let key_type = req
+            .key_type()
+            .or_else(|| hop.state().key_type(key))
+            .unwrap_or(KeyType::Bytes);
 
         match key_type {
             KeyType::Bytes => Self::bytes(hop, req, resp, key),

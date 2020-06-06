@@ -14,12 +14,12 @@ impl Dispatch for Type {
             return Err(DispatchError::KeyTypeUnexpected);
         }
 
-        let key = hop
+        let key_type = hop
             .state()
-            .key_ref(key)
+            .key_type(key)
             .ok_or_else(|| DispatchError::KeyNonexistent)?;
 
-        response::write_int(resp, key.kind() as i64);
+        response::write_int(resp, key_type as i64);
 
         Ok(())
     }
