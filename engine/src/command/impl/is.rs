@@ -10,9 +10,8 @@ impl Dispatch for Is {
             .key_type()
             .ok_or_else(|| DispatchError::KeyTypeRequired)?;
         let mut args = req.args(..).ok_or(DispatchError::ArgumentRetrieval)?;
-        let state = hop.state();
 
-        let all = args.all(|key| match state.key_ref(key) {
+        let all = args.all(|key| match hop.state().key_ref(key) {
             Some(value) => value.value().kind() == key_type,
             None => false,
         });

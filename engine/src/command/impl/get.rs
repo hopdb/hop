@@ -9,8 +9,8 @@ pub struct Get;
 impl Dispatch for Get {
     fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
-        let state = hop.state();
-        let r = state
+        let r = hop
+            .state()
             .key_ref(key)
             .ok_or_else(|| DispatchError::KeyNonexistent)?;
 

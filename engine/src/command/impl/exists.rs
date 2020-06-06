@@ -11,9 +11,8 @@ impl Dispatch for Exists {
         }
 
         let mut args = req.args(..).ok_or(DispatchError::ArgumentRetrieval)?;
-        let state = hop.state();
 
-        let all = args.all(|key| state.contains_key(key));
+        let all = args.all(|key| hop.state().contains_key(key));
 
         response::write_bool(resp, all);
 

@@ -1,8 +1,8 @@
 use super::{
     super::{Dispatch, DispatchError, DispatchResult, Request},
-    decrement_by::DecrementBy,
+    increment_by::IncrementBy,
 };
-use crate::Hop;
+use crate::{state::KeyType, Hop};
 use alloc::vec::Vec;
 
 pub struct Decrement;
@@ -11,7 +11,11 @@ impl Dispatch for Decrement {
     fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
 
-        DecrementBy::decrement(hop, key, resp)
+        if req.key_type() == Some(KeyType::Float) {
+            IncrementBy::increment_float_by(hop, key, -1f64, resp)
+        } else {
+            IncrementBy::increment_int_by(hop, key, -1, resp)
+        }
     }
 }
 

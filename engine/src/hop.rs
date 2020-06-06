@@ -217,6 +217,7 @@ impl Hop {
     }
 
     /// Return an immutable reference to the state.
+    #[inline]
     pub fn state(&self) -> &State {
         &self.0.state
     }

@@ -1,8 +1,5 @@
 use super::super::{response, Dispatch, DispatchError, DispatchResult, Request};
-use crate::{
-    state::{KeyType, Value},
-    Hop,
-};
+use crate::{state::Value, Hop};
 use alloc::vec::Vec;
 
 pub struct IncrementBy;
@@ -40,16 +37,6 @@ impl IncrementBy {
         response::write_int(resp, *int);
 
         Ok(())
-    }
-
-    pub fn increment(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
-        hop.state().key_or_insert_with(b"foo", Value::integer);
-
-        match hop.state().key_ref(key).map(|r| r.value().kind()) {
-            Some(KeyType::Float) => Self::increment_float_by(hop, key, 1f64, resp),
-            Some(KeyType::Integer) => Self::increment_int_by(hop, key, 1, resp),
-            _ => Err(DispatchError::KeyTypeDifferent),
-        }
     }
 }
 
