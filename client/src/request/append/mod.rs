@@ -5,7 +5,7 @@ mod append_string;
 pub use self::{append_bytes::AppendBytes, append_list::AppendList, append_string::AppendString};
 
 use crate::Backend;
-use std::sync::Arc;
+use alloc::{string::String, sync::Arc, vec::Vec};
 
 /// A request to append to a key.
 pub struct AppendUnconfigured<B: Backend, K: AsRef<[u8]> + Send + Unpin> {
@@ -65,6 +65,7 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> AppendUnconfigured<B, K
 mod tests {
     use super::AppendUnconfigured;
     use crate::backend::MemoryBackend;
+    use alloc::vec::Vec;
     use static_assertions::assert_impl_all;
 
     assert_impl_all!(AppendUnconfigured<MemoryBackend, Vec<u8>>: Send);

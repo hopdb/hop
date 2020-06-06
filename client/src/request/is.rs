@@ -1,12 +1,12 @@
 use super::{CommandConfigurationError, MaybeInFlightFuture};
 use crate::Backend;
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use core::{
     future::Future,
     pin::Pin,
     task::{Context, Poll},
 };
 use hop_engine::state::KeyType;
-use std::sync::Arc;
 
 /// Request to determine whether one or more keys exist.
 ///
@@ -138,6 +138,7 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + 'a + Send + Unpin>
 mod tests {
     use super::{Is, IsConfigured};
     use crate::backend::MemoryBackend;
+    use alloc::vec::Vec;
     use static_assertions::assert_impl_all;
 
     assert_impl_all!(Is<MemoryBackend>: Send);

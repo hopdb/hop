@@ -1,9 +1,9 @@
 use super::MaybeInFlightFuture;
 use crate::Backend;
-use std::{
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use core::{
     future::Future,
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll},
 };
 
@@ -47,6 +47,7 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Send + Unpin> Futu
 mod tests {
     use super::Echo;
     use crate::backend::MemoryBackend;
+    use alloc::vec::Vec;
     use static_assertions::assert_impl_all;
 
     assert_impl_all!(Echo<MemoryBackend, Vec<u8>>: Send);

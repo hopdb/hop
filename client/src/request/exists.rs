@@ -1,11 +1,11 @@
 use super::{CommandConfigurationError, MaybeInFlightFuture};
 use crate::Backend;
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use core::{
     future::Future,
     pin::Pin,
     task::{Context, Poll},
 };
-use std::sync::Arc;
 
 /// Request to determine whether one or more keys exist.
 ///
@@ -133,6 +133,7 @@ impl<'a, B: Backend + Send + 'static, K: AsRef<[u8]> + 'a + Send + Unpin> Future
 mod tests {
     use super::{Exists, ExistsConfigured};
     use crate::backend::MemoryBackend;
+    use alloc::vec::Vec;
     use static_assertions::assert_impl_all;
 
     assert_impl_all!(Exists<MemoryBackend>: Send);

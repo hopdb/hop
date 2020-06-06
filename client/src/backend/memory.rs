@@ -1,6 +1,11 @@
 use super::Backend;
 use crate::model::StatsData;
+use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
+use core::{
+    convert::TryInto,
+    fmt::{Display, Formatter, Result as FmtResult},
+};
 use hop_engine::{
     command::{
         request::{ParseError as RequestParseError, RequestBuilder, RequestBuilderError},
@@ -9,11 +14,6 @@ use hop_engine::{
     },
     state::{KeyType, Value},
     Hop,
-};
-use std::{
-    convert::TryInto,
-    error::Error as StdError,
-    fmt::{Display, Formatter, Result as FmtResult},
 };
 
 #[derive(Debug)]
@@ -51,15 +51,21 @@ impl Display for Error {
     }
 }
 
-impl StdError for Error {
-    fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        match self {
-            Self::BadRequest { .. } => None,
-            Self::BuildingRequest { .. } => None,
-            Self::Dispatching { .. } => None,
-            Self::KeyTypeInvalid { .. } => None,
-            Self::KeyTypeUnsupported { .. } => None,
-            Self::RunningCommand { .. } => None,
+#[cfg(all(not(no_std), feature = "std"))]
+mod if_std {
+    use super::Error;
+    use std::error::Error as StdError;
+
+    impl StdError for Error {
+        fn source(&self) -> Option<&(dyn StdError + 'static)> {
+            match self {
+                Self::BadRequest { .. } => None,
+                Self::BuildingRequest { .. } => None,
+                Self::Dispatching { .. } => None,
+                Self::KeyTypeInvalid { .. } => None,
+                Self::KeyTypeUnsupported { .. } => None,
+                Self::RunningCommand { .. } => None,
+            }
         }
     }
 }

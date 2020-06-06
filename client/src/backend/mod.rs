@@ -1,14 +1,15 @@
 pub mod memory;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "tokio"))]
 pub mod server;
 
 pub use self::memory::MemoryBackend;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "tokio"))]
 pub use self::server::ServerBackend;
 
 use crate::model::StatsData;
+use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
 use hop_engine::state::{KeyType, Value};
 
