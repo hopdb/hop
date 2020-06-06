@@ -19,7 +19,7 @@ impl Dispatch for Type {
             .key_ref(key)
             .ok_or_else(|| DispatchError::KeyNonexistent)?;
 
-        response::write_int(resp, key.kind() as u8 as i64);
+        response::write_int(resp, key.kind() as i64);
 
         Ok(())
     }

@@ -48,26 +48,18 @@ impl Length {
 impl Dispatch for Length {
     fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
+        let key_type = req.key_type().unwrap_or_else(|| {
+            hop.state()
+                .key_or_insert_with(key, Value::bytes)
+                .value()
+                .kind()
+        });
 
-        match req.key_type() {
-            Some(KeyType::Bytes) => Self::bytes(hop, key, resp),
-            Some(KeyType::List) => Self::list(hop, key, resp),
-            Some(KeyType::String) => Self::string(hop, key, resp),
-            Some(_) => Err(DispatchError::KeyTypeInvalid),
-            None => {
-                let kind = hop
-                    .state()
-                    .key_or_insert_with(key, Value::bytes)
-                    .value()
-                    .kind();
-
-                match kind {
-                    KeyType::Bytes => Self::bytes(hop, key, resp),
-                    KeyType::List => Self::list(hop, key, resp),
-                    KeyType::String => Self::string(hop, key, resp),
-                    _ => Err(DispatchError::KeyTypeInvalid),
-                }
-            }
+        match key_type {
+            KeyType::Bytes => Self::bytes(hop, key, resp),
+            KeyType::List => Self::list(hop, key, resp),
+            KeyType::String => Self::string(hop, key, resp),
+            _ => Err(DispatchError::KeyTypeInvalid),
         }
     }
 }

@@ -11,9 +11,10 @@ impl Dispatch for Delete {
         }
 
         let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
-        let state = hop.state();
-
-        let (k, _) = state.remove(key).ok_or(DispatchError::PreconditionFailed)?;
+        let (k, _) = hop
+            .state()
+            .remove(key)
+            .ok_or(DispatchError::PreconditionFailed)?;
 
         let response = Response::from(k);
         response.copy_to(resp);

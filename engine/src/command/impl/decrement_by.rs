@@ -1,64 +1,20 @@
-use super::super::{response, Dispatch, DispatchError, DispatchResult, Request};
-use crate::{
-    state::{KeyType, Value},
-    Hop,
+use super::{
+    super::{Dispatch, DispatchError, DispatchResult, Request},
+    increment_by::IncrementBy,
 };
+use crate::Hop;
 use alloc::vec::Vec;
 
 pub struct DecrementBy;
-
-impl DecrementBy {
-    pub fn decrement_float_by(
-        hop: &Hop,
-        key: &[u8],
-        amount: f64,
-        resp: &mut Vec<u8>,
-    ) -> DispatchResult<()> {
-        let mut key = hop.state().key_or_insert_with(key, Value::float);
-        let float = key.as_float_mut().ok_or(DispatchError::KeyUnspecified)?;
-
-        *float -= amount as f64;
-
-        response::write_float(resp, *float);
-
-        Ok(())
-    }
-
-    pub fn decrement_int_by(
-        hop: &Hop,
-        key: &[u8],
-        amount: i64,
-        resp: &mut Vec<u8>,
-    ) -> DispatchResult<()> {
-        let mut key = hop.state().key_or_insert_with(key, Value::integer);
-        let int = key.as_integer_mut().ok_or(DispatchError::KeyUnspecified)?;
-
-        *int -= amount;
-
-        response::write_int(resp, *int);
-
-        Ok(())
-    }
-
-    pub fn decrement(hop: &Hop, key: &[u8], resp: &mut Vec<u8>) -> DispatchResult<()> {
-        hop.state().key_or_insert_with(b"foo", Value::integer);
-
-        match hop.state().key_ref(key).map(|r| r.value().kind()) {
-            Some(KeyType::Float) => Self::decrement_float_by(hop, key, 1f64, resp),
-            Some(KeyType::Integer) => Self::decrement_int_by(hop, key, 1, resp),
-            _ => Err(DispatchError::KeyTypeDifferent),
-        }
-    }
-}
 
 impl Dispatch for DecrementBy {
     fn dispatch(hop: &Hop, req: &Request, resp: &mut Vec<u8>) -> DispatchResult<()> {
         let key = req.key().ok_or(DispatchError::KeyUnspecified)?;
 
         if let Some(int) = req.typed_arg::<i64>(1) {
-            Self::decrement_int_by(hop, key, int, resp)
+            IncrementBy::increment_int_by(hop, key, 0 - int, resp)
         } else if let Some(float) = req.typed_arg::<f64>(1) {
-            Self::decrement_float_by(hop, key, float, resp)
+            IncrementBy::increment_float_by(hop, key, 0f64 - float, resp)
         } else {
             Err(DispatchError::ArgumentRetrieval)
         }
