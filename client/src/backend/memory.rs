@@ -348,6 +348,7 @@ impl Backend for MemoryBackend {
 #[cfg(test)]
 mod tests {
     use super::{Backend, Error, MemoryBackend};
+    use dashmap::{DashMap, DashSet};
     use hop_engine::state::{KeyType, Value};
     use static_assertions::assert_impl_all;
     use std::fmt::Debug;
@@ -395,7 +396,52 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_length() {
+    async fn test_length_bytes() {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"foo".as_ref());
+        let backend = MemoryBackend::new();
+        assert!(backend.set(b"foo", Value::Bytes(bytes)).await.is_ok());
+        assert_eq!(
+            3,
+            backend.length(b"foo", Some(KeyType::Bytes)).await.unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_length_list() {
+        let mut list = Vec::new();
+        list.push(b"foo".to_vec());
+        list.push(b"bar".to_vec());
+        let backend = MemoryBackend::new();
+        assert!(backend.set(b"foo", Value::List(list)).await.is_ok());
+        assert_eq!(
+            2,
+            backend.length(b"foo", Some(KeyType::List)).await.unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_length_map() {
+        let map = DashMap::new();
+        map.insert(b"foo".to_vec(), b"value".to_vec());
+        map.insert(b"bar".to_vec(), b"value".to_vec());
+        let backend = MemoryBackend::new();
+        assert!(backend.set(b"foo", Value::Map(map)).await.is_ok());
+        assert_eq!(2, backend.length(b"foo", Some(KeyType::Map)).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_length_set() {
+        let set = DashSet::new();
+        set.insert(b"foo".to_vec());
+        set.insert(b"bar".to_vec());
+        let backend = MemoryBackend::new();
+        assert!(backend.set(b"foo", Value::Set(set)).await.is_ok());
+        assert_eq!(2, backend.length(b"foo", Some(KeyType::Set)).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_length_string() {
         let backend = MemoryBackend::new();
         assert!(backend
             .set(b"foo", Value::String("foo".to_owned()))

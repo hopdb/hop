@@ -34,9 +34,23 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> Length<'a, B, K> {
         self
     }
 
-    /// Retrieve the length *only* if the key is list.
+    /// Retrieve the length *only* if the key is a list.
     pub fn list(mut self) -> Self {
         self.kind.replace(KeyType::List);
+
+        self
+    }
+
+    /// Retrieve the length *only* if the key is a map.
+    pub fn map(mut self) -> Self {
+        self.kind.replace(KeyType::Map);
+
+        self
+    }
+
+    /// Retrieve the length *only* if the key is a set.
+    pub fn set(mut self) -> Self {
+        self.kind.replace(KeyType::Set);
 
         self
     }
