@@ -1,6 +1,12 @@
 #![deny(clippy::all, clippy::cargo)]
 #![forbid(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(all(feature = "tokio", not(feature = "std")))]
+compile_error!("If you enable the `tokio` feature you must enable the `std` feature");
+
+extern crate alloc;
 
 pub mod backend;
 pub mod model;
@@ -8,9 +14,9 @@ pub mod request;
 
 pub use hop_engine::state::{KeyType, Value};
 
+use alloc::sync::Arc;
 use backend::{Backend, MemoryBackend};
 use request::{append::AppendUnconfigured, get::GetUnconfigured, set::SetUnconfigured, *};
-use std::sync::Arc;
 
 /// A client for interfacing over Hop instances.
 #[derive(Clone, Debug)]
@@ -24,7 +30,7 @@ impl<B: Backend> Client<B> {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "tokio"))]
 impl Client<backend::ServerBackend> {
     /// Connect to a server instance of Hop by address.
     ///
@@ -462,8 +468,8 @@ impl<B: Backend> Client<B> {
 #[cfg(test)]
 mod tests {
     use super::{backend::MemoryBackend, Client};
+    use core::fmt::Debug;
     use static_assertions::assert_impl_all;
-    use std::fmt::Debug;
 
     assert_impl_all!(Client<MemoryBackend>: Debug, Send, Sync);
 }

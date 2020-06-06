@@ -12,7 +12,7 @@ repository = "https://github.com/hopdb/hop.git"
 version = "0.1.0"
 
 [dependencies]
-hop = { default-features = false, path = "../../client" }
+hop = { default-features = false, features = ["std"], path = "../../client" }
 hop-engine = { default-features = false, path = "../../engine" }
 
 [lib]

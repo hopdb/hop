@@ -15,8 +15,9 @@ pub use self::{
 };
 
 use crate::Backend;
+use alloc::{string::String, sync::Arc, vec::Vec};
+use core::iter::FromIterator;
 use hop_engine::state::Value;
-use std::{iter::FromIterator, sync::Arc};
 
 /// An Set request that hasn't been configured with a value to set.
 ///
@@ -283,6 +284,7 @@ impl<'a, B: Backend, K: AsRef<[u8]> + 'a + Send + Unpin> SetUnconfigured<B, K> {
 mod tests {
     use super::SetUnconfigured;
     use crate::backend::MemoryBackend;
+    use alloc::vec::Vec;
     use static_assertions::assert_impl_all;
 
     assert_impl_all!(SetUnconfigured<MemoryBackend, Vec<u8>>: Send);

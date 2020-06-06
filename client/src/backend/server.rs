@@ -1,6 +1,12 @@
 use super::Backend;
 use crate::model::StatsData;
+use alloc::{boxed::Box, vec::Vec};
 use async_trait::async_trait;
+use core::{
+    convert::TryInto,
+    fmt::{Display, Formatter, Result as FmtResult},
+    result::Result as StdResult,
+};
 use hop_engine::{
     command::{
         request::{ParseError, Request, RequestBuilder, RequestBuilderError},
@@ -9,13 +15,7 @@ use hop_engine::{
     },
     state::{KeyType, Value},
 };
-use std::{
-    convert::TryInto,
-    error::Error as StdError,
-    fmt::{Display, Formatter, Result as FmtResult},
-    io::Error as IoError,
-    result::Result as StdResult,
-};
+use std::{error::Error as StdError, io::Error as IoError};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader},
     net::{
@@ -402,8 +402,8 @@ impl Backend for ServerBackend {
 #[cfg(test)]
 mod tests {
     use super::{Error, ServerBackend};
+    use core::fmt::Debug;
     use static_assertions::assert_impl_all;
-    use std::fmt::Debug;
 
     assert_impl_all!(Error: Debug, Send, Sync);
     assert_impl_all!(ServerBackend: Debug, Send, Sync);

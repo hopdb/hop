@@ -1,13 +1,15 @@
+use alloc::vec::Vec;
+use core::convert::TryInto;
+use dashmap::DashMap;
 use hop_engine::metrics::Metric;
-use std::{collections::HashMap, convert::TryInto};
 
 #[derive(Clone, Debug)]
 pub struct StatsData {
-    inner: HashMap<Vec<u8>, Vec<u8>>,
+    inner: DashMap<Vec<u8>, Vec<u8>>,
 }
 
 impl StatsData {
-    pub(crate) fn new(map: HashMap<Vec<u8>, Vec<u8>>) -> Self {
+    pub(crate) fn new(map: DashMap<Vec<u8>, Vec<u8>>) -> Self {
         Self { inner: map }
     }
 
@@ -39,8 +41,8 @@ impl StatsData {
 #[cfg(test)]
 mod tests {
     use super::StatsData;
+    use core::fmt::Debug;
     use static_assertions::assert_impl_all;
-    use std::fmt::Debug;
 
     assert_impl_all!(StatsData: Clone, Debug);
 }

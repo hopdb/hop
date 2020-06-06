@@ -14,13 +14,13 @@ pub use self::{
 
 use super::MaybeInFlightFuture;
 use crate::Backend;
-use hop_engine::state::Value;
-use std::{
+use alloc::{boxed::Box, sync::Arc};
+use core::{
     future::Future,
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll},
 };
+use hop_engine::state::Value;
 
 /// A Get request that hasn't been configured with a type of value to get.
 ///
@@ -293,6 +293,7 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Send + Unpin + 'a>
 mod tests {
     use super::GetUnconfigured;
     use crate::backend::MemoryBackend;
+    use alloc::vec::Vec;
     use static_assertions::assert_impl_all;
 
     assert_impl_all!(GetUnconfigured<MemoryBackend, Vec<u8>>: Send);

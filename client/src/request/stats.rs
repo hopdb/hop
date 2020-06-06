@@ -1,9 +1,9 @@
 use super::MaybeInFlightFuture;
 use crate::{model::StatsData, Backend};
-use std::{
+use alloc::{boxed::Box, sync::Arc};
+use core::{
     future::Future,
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll},
 };
 

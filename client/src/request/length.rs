@@ -1,12 +1,12 @@
 use super::MaybeInFlightFuture;
 use crate::Backend;
-use hop_engine::state::KeyType;
-use std::{
+use alloc::{boxed::Box, sync::Arc};
+use core::{
     future::Future,
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll},
 };
+use hop_engine::state::KeyType;
 
 /// Request to retrieve the length of a key, optionally only if it is of a
 /// certain type.
@@ -81,6 +81,7 @@ impl<'a, B: Backend + Send + Sync + 'static, K: AsRef<[u8]> + Send + Unpin> Futu
 mod tests {
     use super::Length;
     use crate::backend::MemoryBackend;
+    use alloc::vec::Vec;
     use static_assertions::assert_impl_all;
 
     assert_impl_all!(Length<MemoryBackend, Vec<u8>>: Send);

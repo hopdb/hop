@@ -1,9 +1,9 @@
 use super::MaybeInFlightFuture;
 use crate::Backend;
-use std::{
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use core::{
     future::Future,
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll},
 };
 
@@ -63,6 +63,7 @@ impl<
 mod tests {
     use super::Rename;
     use crate::backend::MemoryBackend;
+    use alloc::vec::Vec;
     use static_assertions::assert_impl_all;
 
     assert_impl_all!(Rename<MemoryBackend, Vec<u8>, Vec<u8>>: Send);
