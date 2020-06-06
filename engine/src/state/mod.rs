@@ -190,11 +190,28 @@ impl State {
             }
         }
     }
+
+    /// Retrieve the key type of a key's value, if it exists.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use hop_engine::state::{KeyType, State, Value};
+    ///
+    /// let state = State::new();
+    /// assert!(state.key_type(b"foo").is_none());
+    ///
+    /// state.insert(b"foo".to_vec(), Value::Boolean(true));
+    /// assert_eq!(Some(KeyType::Boolean), state.key_type(b"foo"));
+    /// ```
+    pub fn key_type(&self, key: &[u8]) -> Option<KeyType> {
+        self.0.get(key).map(|r| r.value().kind())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{KeyType, State};
+    use super::{KeyType, State, Value};
     use core::{convert::TryFrom, fmt::Debug, hash::Hash};
     use static_assertions::assert_impl_all;
 
@@ -208,4 +225,20 @@ mod tests {
         TryFrom<u8>
     );
     assert_impl_all!(State: Clone, Debug, Default);
+
+    #[test]
+    fn test_key_type_nonexistent_key() {
+        let state = State::new();
+        assert!(state.key_type(b"foo").is_none());
+    }
+
+    #[test]
+    fn test_key_type_with_key() {
+        let state = State::new();
+        state.insert(b"foo".to_vec(), Value::Bytes([1, 2].to_vec()));
+        assert_eq!(Some(KeyType::Bytes), state.key_type(b"foo"));
+
+        state.insert(b"bar".to_vec(), Value::Integer(123));
+        assert_eq!(Some(KeyType::Integer), state.key_type(b"bar"));
+    }
 }
