@@ -13,11 +13,11 @@ pub fn key_type_name(key_type: KeyType) -> &'static str {
     }
 }
 
-pub fn list(items: Vec<Vec<u8>>) -> String {
+pub fn list<T: IntoIterator<Item = U>, U: AsRef<[u8]>>(items: T) -> String {
     let mut output = String::new();
 
     for item in items {
-        output.push_str(String::from_utf8_lossy(&item).as_ref());
+        output.push_str(&String::from_utf8_lossy(item.as_ref()));
         output.push('\n');
     }
 
@@ -26,13 +26,13 @@ pub fn list(items: Vec<Vec<u8>>) -> String {
     output
 }
 
-pub fn map<T: IntoIterator<Item = (Vec<u8>, Vec<u8>)>>(pairs: T) -> String {
+pub fn map<T: IntoIterator<Item = (U, V)>, U: AsRef<[u8]>, V: AsRef<[u8]>>(pairs: T) -> String {
     let mut output = String::new();
 
     for (k, v) in pairs {
-        output.push_str(String::from_utf8_lossy(&k).as_ref());
+        output.push_str(&String::from_utf8_lossy(k.as_ref()));
         output.push('=');
-        output.push_str(String::from_utf8_lossy(&v).as_ref());
+        output.push_str(&String::from_utf8_lossy(v.as_ref()));
         output.push('\n');
     }
 
@@ -48,8 +48,8 @@ pub fn value(value: Value) -> String {
         Value::Float(float) => float.to_string(),
         Value::Integer(int) => int.to_string(),
         Value::List(value_list) => list(value_list),
-        Value::Map(value_map) => map(value_map.into_iter()),
-        Value::Set(set) => list(set.into_iter().collect()),
+        Value::Map(value_map) => map(value_map),
+        Value::Set(set) => list(set),
         Value::String(string) => string,
     }
 }
