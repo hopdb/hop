@@ -255,3 +255,15 @@ impl<T: Eq + Hash> Writer<T> {
         self.metrics.strong_count() > 0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Metrics, Reader, Snapshot, Writer};
+    use core::fmt::Debug;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Metrics<()>: Debug, Default, Send, Sync);
+    assert_impl_all!(Reader<()>: Clone, Debug, Send, Sync);
+    assert_impl_all!(Snapshot<()>: Clone, Debug, Send, Sync);
+    assert_impl_all!(Writer<()>: Clone, Debug, Send, Sync);
+}

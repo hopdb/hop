@@ -220,6 +220,7 @@ name = "hop-internal-metrics"
 version = "0.1.0"
 dependencies = [
  "dashmap 3.11.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "static_assertions 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

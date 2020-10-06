@@ -13,3 +13,6 @@ version = "0.1.0"
 
 [dependencies]
 dashmap = { default-features = false, version = "3" }
+
+[dev-dependencies]
+static_assertions = { default-features = false, version = "1" }
