@@ -14,4 +14,4 @@ version = "0.1.0"
 [dependencies]
 hop = { default-features = false, path = "../../client" }
 hop-cli-lib = { default-features = false, path = "../lib" }
-tokio = { default-features = false, features = ["io-std", "io-util", "macros"], version = "^0.2.20" }
+tokio = { default-features = false, features = ["io-std", "io-util", "macros"], version = "0.2" }

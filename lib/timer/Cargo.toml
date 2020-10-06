@@ -13,7 +13,7 @@ repository = "https://github.com/hopdb/hop.git"
 version = "0.1.0"
 
 [dependencies]
-libc = { default-features = false, version = "^0.2.70" }
+libc = { default-features = false, version = "0.2" }
 
 [features]
 default = []

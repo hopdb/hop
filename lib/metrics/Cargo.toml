@@ -12,4 +12,4 @@ repository = "https://github.com/hopdb/hop.git"
 version = "0.1.0"
 
 [dependencies]
-dashmap = { default-features = false, version = "^3.11.1" }
+dashmap = { default-features = false, version = "3" }

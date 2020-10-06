@@ -12,9 +12,9 @@ repository = "https://github.com/hopdb/hop.git"
 version = "0.1.0"
 
 [dependencies]
-arrayvec = { default-features = false, features = ["array-sizes-129-255"], version = "^0.5.1" }
-dashmap = { default-features = false, version = "^3.11.1" }
-futures-intrusive = { default-features = false, features = ["alloc"], version = "^0.3.1" }
+arrayvec = { default-features = false, features = ["array-sizes-129-255"], version = "0.5" }
+dashmap = { default-features = false, version = "3" }
+futures-intrusive = { default-features = false, features = ["alloc"], version = "0.3" }
 hop-internal-metrics = { default-features = false, path = "../lib/metrics" }
 log = { default-features = false, optional = true, version = "0.4" }
 
@@ -23,4 +23,4 @@ default = ["log"]
 
 [dev-dependencies]
 static_assertions = { default-features = false, version = "^1.0.0" }
-tokio = { default-features = false, features = ["macros", "rt-threaded"], version = "^0.2.21" }
+tokio = { default-features = false, features = ["macros", "rt-threaded"], version = "0.2" }
