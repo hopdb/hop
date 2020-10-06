@@ -268,8 +268,11 @@ fn monotonic_time() -> timespec {
 #[cfg(test)]
 mod tests {
     use super::Timer;
-    use core::time::Duration;
+    use core::{fmt::Debug, time::Duration};
     use libc::timespec;
+    use static_assertions::assert_impl_all;
+
+    assert_impl_all!(Timer: Clone, Debug, Default, Eq, PartialEq, Send, Sync);
 
     #[test]
     fn test_now() {
