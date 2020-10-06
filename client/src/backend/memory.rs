@@ -456,9 +456,10 @@ mod tests {
     #[tokio::test]
     async fn test_set_bool() {
         let backend = MemoryBackend::new();
-        assert!(
-            matches!(backend.set(b"foo", true).await, Ok(Value::Boolean(bool)) if bool == true)
-        );
+        assert!(matches!(
+            backend.set(b"foo", true).await,
+            Ok(Value::Boolean(true))
+        ));
         assert_eq!(
             Some(&true),
             backend
@@ -468,9 +469,10 @@ mod tests {
                 .as_deref()
                 .and_then(Value::as_boolean_ref),
         );
-        assert!(
-            matches!(backend.set(b"bar", false).await, Ok(Value::Boolean(bool)) if bool == false)
-        );
+        assert!(matches!(
+            backend.set(b"bar", false).await,
+            Ok(Value::Boolean(false))
+        ));
         assert_eq!(
             Some(&false),
             backend

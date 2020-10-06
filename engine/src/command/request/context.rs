@@ -236,7 +236,7 @@ mod tests {
         //   size)
         // - the rest of the bytes, up to the defined length of the argument,
         //   is the argument
-        let mut cmd = [
+        let cmd = [
             // command type 0 is "increment int"
             0, // there is 1 argument
             1, // the argument has a length of 3 bytes
@@ -252,7 +252,7 @@ mod tests {
         let mut ctx = Context::new();
         // but here we're feeding in all the data in one go
         let cmd = ctx
-            .feed(&mut cmd)
+            .feed(&cmd)
             .expect("parses correctly")
             .expect("returns a command");
 

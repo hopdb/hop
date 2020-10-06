@@ -353,7 +353,7 @@ mod tests {
     fn test_str() {
         let mut builder = RequestBuilder::new_with_key_type(CommandId::Set, KeyType::String);
         assert!(builder.bytes(b"foo".as_ref()).is_ok());
-        assert!(builder.bytes("bar".as_bytes().to_vec()).is_ok());
+        assert!(builder.bytes(b"bar".to_vec()).is_ok());
         let req = builder.into_request();
 
         let hop = Hop::new();

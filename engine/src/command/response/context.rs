@@ -691,7 +691,7 @@ mod tests {
         .to_vec();
         assert!(matches!(
             ctx.feed(&buf),
-            Ok(Instruction::Concluded(Response::Value(Value::List(list)))) if list == &[b"foo", b"bar"]));
+            Ok(Instruction::Concluded(Response::Value(Value::List(list)))) if list == [b"foo", b"bar"]));
     }
 
     #[test]
