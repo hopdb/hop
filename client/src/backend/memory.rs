@@ -348,8 +348,10 @@ impl Backend for MemoryBackend {
 #[cfg(test)]
 mod tests {
     use super::{Backend, Error, MemoryBackend};
-    use dashmap::{DashMap, DashSet};
-    use hop_engine::state::{KeyType, Value};
+    use hop_engine::{
+        dashmap::{DashMap, DashSet},
+        state::{KeyType, Value},
+    };
     use static_assertions::assert_impl_all;
     use std::fmt::Debug;
 

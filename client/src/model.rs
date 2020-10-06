@@ -1,7 +1,6 @@
 use alloc::vec::Vec;
 use core::convert::TryInto;
-use dashmap::DashMap;
-use hop_engine::metrics::Metric;
+use hop_engine::{dashmap::DashMap, metrics::Metric};
 
 #[derive(Clone, Debug)]
 pub struct StatsData {

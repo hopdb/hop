@@ -3,6 +3,8 @@
 #![allow(clippy::multiple_crate_versions)]
 #![cfg_attr(not(test), no_std)]
 
+pub extern crate dashmap;
+
 extern crate alloc;
 
 pub mod command;

@@ -6,8 +6,7 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
-use dashmap::DashMap;
-use hop_engine::state::Value;
+use hop_engine::{dashmap::DashMap, state::Value};
 
 /// A configured `set` command that will resolve to a map when `await`ed.
 ///

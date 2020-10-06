@@ -13,7 +13,6 @@ version = "0.1.0"
 
 [dependencies]
 async-trait = { default-features = false, version = "0.1" }
-dashmap = { default-features = false, version = "3" }
 hop-engine = { default-features = false, path = "../engine" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

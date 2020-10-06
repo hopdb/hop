@@ -6,8 +6,7 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
-use dashmap::DashSet;
-use hop_engine::state::Value;
+use hop_engine::{dashmap::DashSet, state::Value};
 
 /// A configured `get` command that will resolve to a set when `await`ed.
 ///
